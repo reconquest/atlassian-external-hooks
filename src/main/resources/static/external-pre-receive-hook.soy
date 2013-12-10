@@ -1,0 +1,23 @@
+{namespace com.ngs.stash.externalhooks.hook.externalprereceivehook}
+
+/**
+ * @param? config
+ * @param? errors
+ */
+{template .view}
+    {call aui.form.textField}
+        {param id: 'exe' /}
+        {param value: $config ? $config['exe'] : null /}
+        {param labelContent: 'Executable:'  /}
+        {param descriptionText: 'Path to executable to run.' /}
+        {param errorTexts: $errors ? $errors['exe'] : null /}
+    {/call}
+    {call aui.form.textareaField}
+        {param id: 'params' /}
+        {param value: $config ? $config['params'] : null /}
+        {param labelContent: 'Positional parameters:'  /}
+        {param rows: 10 /}
+        {param descriptionText: 'A list of positional parameters that will be passed to an executable (one per line).' /}
+        {param errorTexts: $errors ? $errors['params'] : null /}
+    {/call}
+{/template}
