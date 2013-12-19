@@ -20,6 +20,7 @@
   </web-resource>
   <!-- import from the product container -->
   <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
+  <component-import key="stashAuthenticationContext" interface="com.atlassian.stash.user.StashAuthenticationContext" />
   <repository-hook name="External Pre Receive Hook" i18n-name-key="external-pre-receive-hook.name" key="external-pre-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
     <description key="external-pre-receive-hook.description">The External Pre Receive Hook Plugin</description>
     <icon>icon-example.png</icon>

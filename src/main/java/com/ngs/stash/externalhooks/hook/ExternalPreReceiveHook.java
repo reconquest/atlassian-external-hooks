@@ -5,14 +5,21 @@ import com.atlassian.stash.hook.repository.*;
 import com.atlassian.stash.repository.*;
 import com.atlassian.stash.setting.*;
 import com.atlassian.stash.env.SystemProperties;
+import com.atlassian.stash.user.StashAuthenticationContext;
 import java.util.Collection;
 import java.io.*;
+import java.util.Map;
 import java.util.List;
 import java.util.Arrays;
 import java.util.LinkedList;
 
 public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, RepositorySettingsValidator
 {
+    private StashAuthenticationContext authCtx;
+    public ExternalPreReceiveHook(StashAuthenticationContext authenticationContext) {
+        authCtx = authenticationContext;
+    }
+
     /**
      * Call external executable as git hook.
      */
@@ -31,6 +38,9 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
         }
 
         ProcessBuilder pb = new ProcessBuilder(exe);
+        Map<String, String> env = pb.environment();
+        env.put("STASH_USER_NAME", authCtx.getCurrentUser().getName());
+        env.put("STASH_USER_EMAIL", authCtx.getCurrentUser().getEmailAddress());
         pb.directory(new File(repo_path));
         pb.redirectErrorStream(true);
         try {
