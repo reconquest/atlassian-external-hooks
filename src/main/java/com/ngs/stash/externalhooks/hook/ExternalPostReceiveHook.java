@@ -5,6 +5,9 @@ import com.atlassian.stash.hook.repository.*;
 import com.atlassian.stash.repository.*;
 import com.atlassian.stash.setting.*;
 import com.atlassian.stash.env.SystemProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.io.*;
 import java.util.List;
@@ -14,6 +17,8 @@ import java.util.LinkedList;
 
 public class ExternalPostReceiveHook implements AsyncPostReceiveRepositoryHook, RepositorySettingsValidator
 {
+    private static final Logger log = LoggerFactory.getLogger(ExternalPostReceiveHook.class);
+
     /**
      * Call external executable as git hook.
      */
@@ -48,9 +53,9 @@ public class ExternalPostReceiveHook implements AsyncPostReceiveRepositoryHook, 
 
             process.waitFor();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error running {} in {}", exe, repo_path, e);
         }
     }
 
