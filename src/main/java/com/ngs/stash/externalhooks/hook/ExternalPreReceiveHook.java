@@ -6,6 +6,9 @@ import com.atlassian.stash.repository.*;
 import com.atlassian.stash.setting.*;
 import com.atlassian.stash.env.SystemProperties;
 import com.atlassian.stash.user.StashAuthenticationContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.io.*;
 import java.util.Map;
@@ -15,6 +18,7 @@ import java.util.LinkedList;
 
 public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, RepositorySettingsValidator
 {
+    private static final Logger log = LoggerFactory.getLogger(ExternalPreReceiveHook.class);
     private StashAuthenticationContext authCtx;
     public ExternalPreReceiveHook(StashAuthenticationContext authenticationContext) {
         authCtx = authenticationContext;
@@ -66,10 +70,10 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
 
             return process.waitFor() == 0;
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
             return false;
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error running {} in {}", exe, repo_path, e);
             return false;
         }
     }
