@@ -14,13 +14,17 @@ import java.io.*;
 import java.util.Map;
 import java.util.List;
 import java.util.LinkedList;
+import com.atlassian.stash.user.Permission;
+import com.atlassian.stash.user.PermissionService;
 
 public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, RepositorySettingsValidator
 {
     private static final Logger log = LoggerFactory.getLogger(ExternalPreReceiveHook.class);
     private StashAuthenticationContext authCtx;
-    public ExternalPreReceiveHook(StashAuthenticationContext authenticationContext) {
+    private PermissionService permissions;
+    public ExternalPreReceiveHook(StashAuthenticationContext authenticationContext, PermissionService permissions) {
         this.authCtx = authenticationContext;
+        this.permissions = permissions;
     }
 
     /**
@@ -42,11 +46,18 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
         }
 
         StashUser currentUser = authCtx.getCurrentUser();
+        boolean isAdmin =
+           permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_ADMIN) ||
+           permissions.hasProjectPermission(currentUser, repo.getProject(), Permission.PROJECT_ADMIN) ||
+           permissions.hasAnyUserPermission(currentUser, Permission.SYS_ADMIN) ||
+           permissions.hasAnyUserPermission(currentUser, Permission.ADMIN)
+        ;
         ProcessBuilder pb = new ProcessBuilder(exe);
         Map<String, String> env = pb.environment();
         env.put("STASH_USER_NAME", currentUser.getName());
         env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
         env.put("STASH_REPO_NAME", repo.getName());
+        env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
         pb.directory(new File(repo_path));
         pb.redirectErrorStream(true);
         try {
