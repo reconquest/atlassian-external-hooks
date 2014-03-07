@@ -44,12 +44,7 @@ public class ExternalPostReceiveHook implements AsyncPostReceiveRepositoryHook, 
         }
 
         StashUser currentUser = authCtx.getCurrentUser();
-        boolean isAdmin =
-           permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_ADMIN) ||
-           permissions.hasProjectPermission(currentUser, repo.getProject(), Permission.PROJECT_ADMIN) ||
-           permissions.hasAnyUserPermission(currentUser, Permission.SYS_ADMIN) ||
-           permissions.hasAnyUserPermission(currentUser, Permission.ADMIN)
-        ;
+        boolean isAdmin = permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_ADMIN);
         ProcessBuilder pb = new ProcessBuilder(exe);
         Map<String, String> env = pb.environment();
         env.put("STASH_USER_NAME", currentUser.getName());
