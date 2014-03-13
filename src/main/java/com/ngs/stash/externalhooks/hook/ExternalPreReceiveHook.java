@@ -89,8 +89,12 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
     @Override
     public void validate(Settings settings, SettingsValidationErrors errors, Repository repository)
     {
-        if (settings.getString("exe", "").isEmpty())
-        {
+        if (!permissions.hasGlobalPermission(authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
+            errors.addFieldError("exe", "You should be Stash Administrator to edit this field.");
+            return;
+        }
+
+        if (settings.getString("exe", "").isEmpty()) {
             errors.addFieldError("exe", "Executable is blank, please specify something");
         }
     }
