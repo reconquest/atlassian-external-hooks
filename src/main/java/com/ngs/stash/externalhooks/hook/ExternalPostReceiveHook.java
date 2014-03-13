@@ -5,6 +5,7 @@ import com.atlassian.stash.repository.*;
 import com.atlassian.stash.setting.*;
 import com.atlassian.stash.env.SystemProperties;
 import com.atlassian.stash.user.*;
+import com.ngs.stash.externalhooks.hook.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Collection;
@@ -24,53 +25,15 @@ public class ExternalPostReceiveHook implements AsyncPostReceiveRepositoryHook, 
         this.authCtx = authenticationContext;
         this.permissions = permissions;
     }
-        
+
     /**
      * Call external executable as git hook.
      */
     @Override
     public void postReceive(RepositoryHookContext context, Collection<RefChange> refChanges)
     {
-        Repository repo = context.getRepository();
-        String repo_path = System.getProperty(SystemProperties.HOME_DIR_SYSTEM_PROPERTY) +
-            "/data/repositories/" + repo.getId();
-
-        List<String> exe = new LinkedList<String>();
-        exe.add(context.getSettings().getString("exe"));
-        if (context.getSettings().getString("params") != null) {
-            for (String arg : context.getSettings().getString("params").split("\r\n")) {
-                exe.add(arg);
-            }
-        }
-
-        StashUser currentUser = authCtx.getCurrentUser();
-        boolean isAdmin = permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_ADMIN);
-        ProcessBuilder pb = new ProcessBuilder(exe);
-        Map<String, String> env = pb.environment();
-        env.put("STASH_USER_NAME", currentUser.getName());
-        env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
-        env.put("STASH_REPO_NAME", repo.getName());
-        env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
-        pb.directory(new File(repo_path));
-        pb.redirectErrorStream(true);
-        try {
-            Process process = pb.start();
-            InputStream input = process.getInputStream();
-            OutputStream output = process.getOutputStream();
-
-            for (RefChange refChange : refChanges) {
-                output.write((refChange.getFromHash() + " " +
-                    refChange.getToHash() + " " +
-                    refChange.getRefId() + "\n").getBytes("UTF-8"));
-            }
-            output.close();
-
-            process.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (IOException e) {
-            log.error("Error running {} in {}", exe, repo_path, e);
-        }
+        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx, this.permissions);
+        impl.onReceive(context, refChanges, null);
     }
 
     @Override
