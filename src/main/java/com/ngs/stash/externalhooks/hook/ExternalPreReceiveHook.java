@@ -57,7 +57,7 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
         pb.redirectErrorStream(true);
         try {
             Process process = pb.start();
-            InputStream input = process.getInputStream();
+            InputStreamReader input = new InputStreamReader(process.getInputStream(), "UTF-8");
             OutputStream output = process.getOutputStream();
 
             for (RefChange refChange : refChanges) {
