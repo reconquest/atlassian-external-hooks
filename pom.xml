@@ -4,12 +4,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>1.3-2</version>
+    <version>1.3-5</version>
     <organization>
         <name>NGS</name>
         <url>http://ngs.ru/</url>
     </organization>
-    <name>external-hooks</name>
+    <name>External Hooks</name>
     <description>This plugin provides Post and Pre receive hooks using any external executable</description>
     <packaging>atlassian-plugin</packaging>
     <dependencyManagement>
