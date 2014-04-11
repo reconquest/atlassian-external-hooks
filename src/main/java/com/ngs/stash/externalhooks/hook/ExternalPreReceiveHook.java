@@ -76,7 +76,9 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
                         hookResponse.err().print("Hook response exceeds 65K length limit.\n");
                         hookResponse.err().print("Further output will be trimmed.\n");
 
-                        break;
+                        process.destroy();
+
+                        return true;
                     }
 
                     String char_to_write = Character.toString((char)data);
