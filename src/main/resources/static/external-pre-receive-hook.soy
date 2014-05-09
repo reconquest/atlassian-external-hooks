@@ -20,4 +20,22 @@
         {param descriptionText: 'A list of positional parameters that will be passed to an executable (one per line).' /}
         {param errorTexts: $errors ? $errors['params'] : null /}
     {/call}
+    {call aui.form.checkboxField}
+       {param legendContent: 'Response output' /}
+       {param fields: [[
+         'id': 'clipOutput',
+         'labelText': 'Clip large output',
+         'isChecked': $config ? $config['clipOutput'] : 'true'
+       ]] /}
+       {param descriptionText: 'When the hook response exceeds 65K, stop processing and return' /}
+    {/call}
+    {call aui.form.checkboxField}
+       {param legendContent: '' /}
+       {param fields: [[
+         'id': 'rejectWhenClipped',
+         'labelText': 'Reject push when output is clipped',
+         'isChecked': $config ? $config['rejectWhenClipped'] : 'true'
+       ]] /}
+       {param descriptionText: 'When the hook response is clipped, reject the push' /}
+    {/call}
 {/template}
