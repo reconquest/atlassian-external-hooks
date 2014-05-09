@@ -70,15 +70,17 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
             if (hookResponse != null) {
                 int data;
                 int count = 0;
+                boolean clipOutput = context.getSettings().getBoolean("clipOutput", true);
                 while ((data = input.read()) >= 0) {
-                    if (count >= 65000) {
+                    if (clipOutput && count >= 65000) {
                         hookResponse.err().print("\n");
                         hookResponse.err().print("Hook response exceeds 65K length limit.\n");
                         hookResponse.err().print("Further output will be trimmed.\n");
 
                         process.destroy();
-
-                        return true;
+                        //if no setting, default is to reject
+                        boolean rejectWhenClipped = context.getSettings().getBoolean("rejectWhenClipped", true);
+                        return rejectWhenClipped;
                     }
 
                     String char_to_write = Character.toString((char)data);
