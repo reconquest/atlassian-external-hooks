@@ -78,7 +78,7 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
 
                         process.destroy();
 
-                        return true;
+                        return false;
                     }
 
                     String char_to_write = Character.toString((char)data);
