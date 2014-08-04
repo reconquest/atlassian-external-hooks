@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>1.3-8</version>
+    <version>1.3-9</version>
     <organization>
         <name>NGS</name>
         <url>http://ngs.ru/</url>
