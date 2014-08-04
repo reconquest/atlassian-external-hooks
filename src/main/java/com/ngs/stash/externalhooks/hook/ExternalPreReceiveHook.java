@@ -35,7 +35,7 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
     {
         Repository repo = context.getRepository();
         String repo_path = System.getProperty(SystemProperties.HOME_DIR_SYSTEM_PROPERTY) +
-            "/data/repositories/" + repo.getId();
+            "/shared/data/repositories/" + repo.getId();
 
         List<String> exe = new LinkedList<String>();
         exe.add(context.getSettings().getString("exe"));
