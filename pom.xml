@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>1.3-9</version>
+    <version>1.3-10</version>
     <organization>
         <name>NGS</name>
         <url>http://ngs.ru/</url>
@@ -100,8 +100,8 @@
         </plugins>
     </build>
     <properties>
-        <stash.version>3.2.0</stash.version>
-        <stash.data.version>3.2.0</stash.data.version>
+        <stash.version>3.1.3</stash.version>
+        <stash.data.version>3.1.3</stash.data.version>
         <amps.version>5.0.3</amps.version>
         <plugin.testrunner.version>1.1.4</plugin.testrunner.version>
     </properties>

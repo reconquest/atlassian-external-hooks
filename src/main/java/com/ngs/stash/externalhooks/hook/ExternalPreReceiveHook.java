@@ -14,6 +14,7 @@ import java.io.*;
 import java.util.Map;
 import java.util.List;
 import java.util.LinkedList;
+import java.nio.file.Files;
 import com.atlassian.stash.user.Permission;
 import com.atlassian.stash.user.PermissionService;
 
@@ -34,8 +35,14 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
     public boolean onReceive(RepositoryHookContext context, Collection<RefChange> refChanges, HookResponse hookResponse)
     {
         Repository repo = context.getRepository();
-        String repo_path = System.getProperty(SystemProperties.HOME_DIR_SYSTEM_PROPERTY) +
-            "/shared/data/repositories/" + repo.getId();
+        String homeDir = System.getProperty(SystemProperties.HOME_DIR_SYSTEM_PROPERTY);
+
+        // compat with Stash < 3.2.0
+        String repoPath = homeDir + "/data/repositories/" + repo.getId();
+        String newRepoPath = homeDir + "/shared/data/repositories/" + repo.getId();
+        if (new File(newRepoPath).exists()) {
+            repoPath = newRepoPath;
+        }
 
         List<String> exe = new LinkedList<String>();
         exe.add(context.getSettings().getString("exe"));
@@ -53,7 +60,7 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
         env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
         env.put("STASH_REPO_NAME", repo.getName());
         env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
-        pb.directory(new File(repo_path));
+        pb.directory(new File(repoPath));
         pb.redirectErrorStream(true);
         try {
             Process process = pb.start();
@@ -81,11 +88,11 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
                         return false;
                     }
 
-                    String char_to_write = Character.toString((char)data);
+                    String charToWrite = Character.toString((char)data);
 
-                    count += char_to_write.getBytes("utf-8").length;
+                    count += charToWrite.getBytes("utf-8").length;
 
-                    hookResponse.err().print(char_to_write);
+                    hookResponse.err().print(charToWrite);
                 }
 
             }
@@ -95,7 +102,7 @@ public class ExternalPreReceiveHook implements PreReceiveRepositoryHook, Reposit
             Thread.currentThread().interrupt();
             return false;
         } catch (IOException e) {
-            log.error("Error running {} in {}", exe, repo_path, e);
+            log.error("Error running {} in {}", exe, repoPath, e);
             return false;
         }
     }
