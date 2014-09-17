@@ -197,7 +197,7 @@ public class ExternalPreReceiveHook
             if (!permissions.hasGlobalPermission(
                     authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
                 errors.addFieldError("exe",
-                    "You should be an Administrator to edit this field " +
+                    "You should be a Bitbucket System Administrator to edit this field " +
                     "without \"safe mode\" option.");
                 return;
             }
