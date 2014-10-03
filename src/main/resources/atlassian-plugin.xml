@@ -30,11 +30,11 @@
       <directory location="/static/"/>
     </config-form>
   </repository-hook>
-  <repository-hook name="External Post Receive Hook" i18n-name-key="external-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPostReceiveHook">
-    <description key="external-post-receive-hook.description">The External Post Receive Hook Plugin</description>
+  <repository-hook name="External Async Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
+    <description key="external-post-receive-hook.description">The External Async Post Receive Hook Plugin</description>
     <icon>icon-example.png</icon>
-    <config-form name="External Post Receive Hook Config" key="external-post-receive-hook-config">
-      <view>com.ngs.stash.externalhooks.hook.externalpostreceivehook.view</view>
+    <config-form name="External Async Post Receive Hook Config" key="external-post-receive-hook-config">
+      <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
       <directory location="/static/"/>
     </config-form>
   </repository-hook>

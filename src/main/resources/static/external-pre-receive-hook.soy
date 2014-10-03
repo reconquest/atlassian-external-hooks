@@ -7,11 +7,24 @@
 {template .view}
     {call aui.form.textField}
         {param id: 'exe' /}
-        {param value: $config ? $config['exe'] : null /}
-        {param labelContent: 'Executable:'  /}
+        {param value: $config ? $config['exe'] : '' /}
+        {param labelContent: 'Executable:' /}
         {param descriptionText: 'Path to executable to run.' /}
         {param errorTexts: $errors ? $errors['exe'] : null /}
     {/call}
+
+    {call aui.form.checkboxField}
+        {param legendContent: 'Safe mode' /}
+        {param fields: [
+            [
+                'id': 'safe_path',
+                'labelText': 'Look for hooks only in safe dir',
+                'descriptionText': 'Hooks will be searched only in <stash-home-dir>/external-hooks/',
+                'isChecked': $config ? $config['safe_path'] : false
+            ]
+        ]/}
+    {/call}
+
     {call aui.form.textareaField}
         {param id: 'params' /}
         {param value: $config ? $config['params'] : null /}
@@ -20,4 +33,10 @@
         {param descriptionText: 'A list of positional parameters that will be passed to an executable (one per line).' /}
         {param errorTexts: $errors ? $errors['params'] : null /}
     {/call}
+
+    <div class="field-group">
+        <div class="description">
+        Learn more about this fields at the <a href="https://github.com/ngsru/atlassian-external-hooks/wiki/Configuration" target="_blank">official documentation</a>.
+        </div>
+    </div>
 {/template}
