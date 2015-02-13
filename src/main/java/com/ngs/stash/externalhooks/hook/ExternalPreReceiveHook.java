@@ -78,7 +78,11 @@ public class ExternalPreReceiveHook
 
         Map<String, String> env = pb.environment();
         env.put("STASH_USER_NAME", currentUser.getName());
-        env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
+        if (currentUser.getEmailAddress() != null) {
+            env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
+        } else {
+            log.error("Can't get user email address. getEmailAddress() call returns null");
+        }
         env.put("STASH_REPO_NAME", repo.getName());
 
         boolean isAdmin = permissions.hasRepositoryPermission(
