@@ -108,21 +108,22 @@ public class ExternalPreReceiveHook
             }
             output.close();
 
+            boolean trimmed = false;
             if (hookResponse != null) {
                 int data;
                 int count = 0;
                 while ((data = input.read()) >= 0) {
                     if (count >= 65000) {
-                        hookResponse.err().
-                            print("\n");
-                        hookResponse.err().
-                            print("Hook response exceeds 65K length limit.\n");
-                        hookResponse.err().
-                            print("Further output will be trimmed.\n");
-
-                        process.destroy();
-
-                        return false;
+                        if (!trimmed) {
+                            hookResponse.err().
+                                print("\n");
+                            hookResponse.err().
+                                print("Hook response exceeds 65K length limit.\n");
+                            hookResponse.err().
+                                print("Further output will be trimmed.\n");
+                            trimmed = true;
+                        }
+                        continue;
                     }
 
                     String charToWrite = Character.toString((char)data);
