@@ -57,7 +57,7 @@ public class ExternalPreReceiveHook
         Repository repo = context.getRepository();
 
         // compat with Stash < 3.2.0
-        String repoPath = this.properties.getRepositoriesDir().getAbsolutePath();
+        String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
 
         Settings settings = context.getSettings();
         List<String> exe = new LinkedList<String>();
