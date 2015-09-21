@@ -6,6 +6,8 @@ import com.atlassian.stash.repository.*;
 import com.atlassian.stash.setting.*;
 import com.atlassian.stash.env.SystemProperties;
 import com.atlassian.stash.user.*;
+import com.atlassian.stash.nav.*;
+import com.atlassian.stash.server.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,18 +29,19 @@ public class ExternalPreReceiveHook
 
     private StashAuthenticationContext authCtx;
     private PermissionService permissions;
-    private String safeBaseDir;
-    private String homeDir;
+    private NavBuilder nav;
+    private ApplicationPropertiesService properties;
 
     public ExternalPreReceiveHook(
         StashAuthenticationContext authenticationContext,
-        PermissionService permissions
+        PermissionService permissions,
+        NavBuilder navBuilder,
+        ApplicationPropertiesService properties
     ) {
         this.authCtx = authenticationContext;
         this.permissions = permissions;
-        this.homeDir = System.getProperty(
-            SystemProperties.HOME_DIR_SYSTEM_PROPERTY);
-        this.safeBaseDir = this.homeDir + "/external-hooks/";
+        this.nav = navBuilder;
+        this.properties = properties;
     }
 
     /**
@@ -53,13 +56,7 @@ public class ExternalPreReceiveHook
         Repository repo = context.getRepository();
 
         // compat with Stash < 3.2.0
-        String repoPath = this.homeDir + "/data/repositories/" +
-            repo.getId();
-        String newRepoPath = this.homeDir + "/shared/data/repositories/" +
-            repo.getId();
-        if (new File(newRepoPath).exists()) {
-            repoPath = newRepoPath;
-        }
+        String repoPath = this.properties.getRepositoriesDir().getAbsolutePath();
 
         Settings settings = context.getSettings();
         List<String> exe = new LinkedList<String>();
@@ -88,6 +85,21 @@ public class ExternalPreReceiveHook
         boolean isAdmin = permissions.hasRepositoryPermission(
             currentUser, repo, Permission.REPO_ADMIN);
         env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
+
+        env.put(
+            "STASH_REPO_CLONE_URL",
+            this.nav.project(repo.getProject().getKey()).
+                repo(repo.getSlug()).clone(repo.getScmId()).
+                buildAbsolute()
+        );
+
+        env.put(
+            "STASH_BASE_URL",
+            this.properties.getBaseUrl().toString()
+        );
+
+        env.put("STASH_PROJECT_NAME", repo.getProject().getName());
+        env.put("STASH_PROJECT_KEY", repo.getProject().getKey());
 
         pb.directory(new File(repoPath));
         pb.redirectErrorStream(true);
@@ -200,7 +212,10 @@ public class ExternalPreReceiveHook
             if (path == null) {
                 executable = null;
             } else {
-                executable = new File(this.safeBaseDir, path);
+                String safeBaseDir =
+                    this.properties.getHomeDir().getAbsolutePath() +
+                    "/external-hooks/";
+                executable = new File(safeBaseDir, path);
             }
         }
 
