@@ -6,8 +6,8 @@ import com.atlassian.stash.repository.*;
 import com.atlassian.stash.setting.*;
 import com.atlassian.stash.env.SystemProperties;
 import com.atlassian.stash.user.*;
-import com.atlassian.stash.nav.*;
 import com.atlassian.stash.server.*;
+import com.atlassian.stash.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +17,7 @@ import java.io.*;
 import java.util.Map;
 import java.util.List;
 import java.util.LinkedList;
+import java.util.Set;
 import java.nio.file.Files;
 import com.atlassian.stash.user.Permission;
 import com.atlassian.stash.user.PermissionService;
@@ -29,18 +30,18 @@ public class ExternalPreReceiveHook
 
     private StashAuthenticationContext authCtx;
     private PermissionService permissions;
-    private NavBuilder nav;
+    private RepositoryService repoService;
     private ApplicationPropertiesService properties;
 
     public ExternalPreReceiveHook(
         StashAuthenticationContext authenticationContext,
         PermissionService permissions,
-        NavBuilder navBuilder,
+        RepositoryService repoService,
         ApplicationPropertiesService properties
     ) {
         this.authCtx = authenticationContext;
         this.permissions = permissions;
-        this.nav = navBuilder;
+        this.repoService = repoService;
         this.properties = properties;
     }
 
@@ -86,12 +87,24 @@ public class ExternalPreReceiveHook
             currentUser, repo, Permission.REPO_ADMIN);
         env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
 
-        env.put(
-            "STASH_REPO_CLONE_URL",
-            this.nav.project(repo.getProject().getKey()).
-                repo(repo.getSlug()).clone(repo.getScmId()).
-                buildAbsolute()
+        RepositoryCloneLinksRequest.Builder cloneLinksRequestBuilder =
+            new RepositoryCloneLinksRequest.Builder();
+
+        cloneLinksRequestBuilder.repository(repo);
+
+        RepositoryCloneLinksRequest cloneLinksRequest =
+            cloneLinksRequestBuilder.build();
+
+        Set<NamedLink> cloneLinks = this.repoService.getCloneLinks(
+            cloneLinksRequest
         );
+
+        for (NamedLink link : cloneLinks) {
+            env.put(
+                "STASH_REPO_CLONE_" + link.getName().toUpperCase(),
+                link.getHref()
+            );
+        }
 
         env.put(
             "STASH_BASE_URL",
