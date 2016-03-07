@@ -10,7 +10,7 @@
         <url>http://ngs.ru/</url>
     </organization>
     <name>External Hooks</name>
-    <description>This plugin provides Post and Pre receive hooks using any external executable</description>
+    <description>This plugin provides Merge Check, Post and Pre receive hooks using any external executable</description>
     <packaging>atlassian-plugin</packaging>
     <dependencyManagement>
         <dependencies>
