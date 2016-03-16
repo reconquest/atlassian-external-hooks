@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>2.5-1</version>
+    <version>3.0-1</version>
     <organization>
         <name>NGS</name>
         <url>http://ngs.ru/</url>
@@ -12,46 +12,28 @@
     <name>External Hooks</name>
     <description>This plugin provides Post and Pre receive hooks using any external executable</description>
     <packaging>atlassian-plugin</packaging>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.atlassian.stash</groupId>
-                <artifactId>stash-parent</artifactId>
-                <version>${stash.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>com.atlassian.sal</groupId>
-            <artifactId>sal-api</artifactId>
+            <groupId>com.atlassian.bitbucket.server</groupId>
+            <artifactId>bitbucket-api</artifactId>
+            <version>${bitbucket.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.atlassian.stash</groupId>
-            <artifactId>stash-api</artifactId>
+            <groupId>com.atlassian.bitbucket.server</groupId>
+            <artifactId>bitbucket-spi</artifactId>
+            <version>${bitbucket.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.atlassian.stash</groupId>
-            <artifactId>stash-spi</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.atlassian.stash</groupId>
-            <artifactId>stash-page-objects</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
+        <!--<dependency>-->
+        <!--    <groupId>javax.servlet</groupId>-->
+        <!--    <artifactId>javax.servlet-api</artifactId>-->
+        <!--    <scope>provided</scope>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
+            <version>1.7.12</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -70,35 +52,33 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>com.atlassian.maven.plugins</groupId>
-                <artifactId>maven-stash-plugin</artifactId>
-                <version>${amps.version}</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <products>
-                        <product>
-                            <id>stash</id>
-                            <instanceId>stash</instanceId>
-                            <version>${stash.version}</version>
-                            <dataVersion>${stash.data.version}</dataVersion>
-                        </product>
-                    </products>
-                    <useFastdevCli>false</useFastdevCli>
-                </configuration>
-            </plugin>
-            <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>bitbucket-maven-plugin</artifactId>
+                <version>${amps.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <products>
+                        <product>
+                            <id>bitbucket</id>
+                            <instanceId>bitbucket</instanceId>
+                            <version>${bitbucket.version}</version>
+                            <dataVersion>${bitbucket.data.version}</dataVersion>
+                        </product>
+                    </products>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <properties>
-        <stash.version>3.1.3</stash.version>
-        <stash.data.version>3.1.3</stash.data.version>
-        <amps.version>5.0.4</amps.version>
-        <plugin.testrunner.version>1.1.4</plugin.testrunner.version>
+        <bitbucket.version>4.0.0-rc12</bitbucket.version>
+        <bitbucket.data.version>${bitbucket.version}</bitbucket.data.version>
+        <amps.version>6.1.0</amps.version>
     </properties>
 </project>

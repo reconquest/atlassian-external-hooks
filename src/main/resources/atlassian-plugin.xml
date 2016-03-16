@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
+<atlassian-plugin key="com.ngs.stash.externalhooks.external-hooks" name="${project.name}" plugins-version="2">
   <plugin-info>
     <description>${project.description}</description>
     <version>${project.version}</version>
@@ -20,8 +20,8 @@
   </web-resource>
   <!-- import from the product container -->
   <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
-  <component-import key="stashAuthenticationContext" interface="com.atlassian.stash.user.StashAuthenticationContext" />
-  <component-import key="permissions" interface="com.atlassian.stash.user.PermissionService" />
+  <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
+  <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />
   <repository-hook name="External Pre Receive Hook" i18n-name-key="external-pre-receive-hook.name" key="external-pre-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
     <description key="external-pre-receive-hook.description">The External Pre Receive Hook Plugin</description>
     <icon>icon-example.png</icon>
