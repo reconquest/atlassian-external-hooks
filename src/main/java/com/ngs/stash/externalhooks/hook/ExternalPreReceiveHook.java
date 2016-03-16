@@ -56,7 +56,7 @@ public class ExternalPreReceiveHook
     ) {
         Repository repo = context.getRepository();
 
-        // compat with  < 3.2.0
+        // compat with < 3.2.0
         String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
 
         Settings settings = context.getSettings();
@@ -179,7 +179,7 @@ public class ExternalPreReceiveHook
             if (!permissions.hasGlobalPermission(
                     authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
                 errors.addFieldError("exe",
-                    "You should be  Administrator to edit this field " +
+                    "You should be an Administrator to edit this field " +
                     "without \"safe mode\" option.");
                 return;
             }
