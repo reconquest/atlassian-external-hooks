@@ -21,19 +21,23 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.nio.file.Files;
 
+import com.atlassian.bitbucket.pull.*;
+import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.http;
+import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.ssh;
 
-public class ExternalPreReceiveHook
-    implements PreReceiveRepositoryHook, RepositorySettingsValidator
+
+public class ExternalMergeCheckHook
+    implements RepositoryMergeRequestCheck, RepositorySettingsValidator
 {
     private static final Logger log = LoggerFactory.getLogger(
-        ExternalPreReceiveHook.class);
+        ExternalMergeCheckHook.class);
 
     private AuthenticationContext authCtx;
     private PermissionService permissions;
     private RepositoryService repoService;
     private ApplicationPropertiesService properties;
 
-    public ExternalPreReceiveHook(
+    public ExternalMergeCheckHook(
         AuthenticationContext authenticationContext,
         PermissionService permissions,
         RepositoryService repoService,
@@ -49,14 +53,13 @@ public class ExternalPreReceiveHook
      * Call external executable as git hook.
      */
     @Override
-    public boolean onReceive(
-        RepositoryHookContext context,
-        Collection<RefChange> refChanges,
-        HookResponse hookResponse
+    public void check(
+        RepositoryMergeRequestCheckContext context
     ) {
-        Repository repo = context.getRepository();
+        PullRequest pr = context.getMergeRequest().getPullRequest();
+        Repository repo = pr.getToRef().getRepository();
 
-        // compat with  < 3.2.0
+        // compat with Stash < 3.2.0
         String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
 
         Settings settings = context.getSettings();
@@ -114,6 +117,40 @@ public class ExternalPreReceiveHook
         env.put("STASH_PROJECT_NAME", repo.getProject().getName());
         env.put("STASH_PROJECT_KEY", repo.getProject().getKey());
 
+        // Using the same env variables as
+        // https://github.com/tomasbjerre/pull-request-notifier-for-bitbucket
+        env.put("PULL_REQUEST_FROM_HASH", pr.getFromRef().getLatestCommit());
+        env.put("PULL_REQUEST_FROM_ID", pr.getFromRef().getId());
+        env.put("PULL_REQUEST_FROM_BRANCH", pr.getFromRef().getDisplayId());
+        env.put("PULL_REQUEST_FROM_REPO_ID", pr.getFromRef().getRepository().getId() + "");
+        env.put("PULL_REQUEST_FROM_REPO_NAME", pr.getFromRef().getRepository().getName() + "");
+        env.put("PULL_REQUEST_FROM_REPO_PROJECT_ID", pr.getFromRef().getRepository().getProject().getId() + "");
+        env.put("PULL_REQUEST_FROM_REPO_PROJECT_KEY", pr.getFromRef().getRepository().getProject().getKey());
+        env.put("PULL_REQUEST_FROM_REPO_SLUG", pr.getFromRef().getRepository().getSlug() + "");
+        env.put("PULL_REQUEST_FROM_SSH_CLONE_URL", cloneUrlFromRepository(ssh, pr.getFromRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_FROM_HTTP_CLONE_URL", cloneUrlFromRepository(http, pr.getFromRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_URL", getPullRequestUrl(properties, pr));
+        env.put("PULL_REQUEST_ID", pr.getId() + "");
+        env.put("PULL_REQUEST_VERSION", pr.getVersion() + "");
+        env.put("PULL_REQUEST_AUTHOR_ID", pr.getAuthor().getUser().getId() + "");
+        env.put("PULL_REQUEST_AUTHOR_DISPLAY_NAME", pr.getAuthor().getUser().getDisplayName());
+        env.put("PULL_REQUEST_AUTHOR_NAME", pr.getAuthor().getUser().getName());
+        env.put("PULL_REQUEST_AUTHOR_EMAIL", pr.getAuthor().getUser().getEmailAddress());
+        env.put("PULL_REQUEST_AUTHOR_SLUG", pr.getAuthor().getUser().getSlug());
+        env.put("PULL_REQUEST_TO_HASH", pr.getToRef().getLatestCommit());
+        env.put("PULL_REQUEST_TO_ID", pr.getToRef().getId());
+        env.put("PULL_REQUEST_TO_BRANCH", pr.getToRef().getDisplayId());
+        env.put("PULL_REQUEST_TO_REPO_ID", pr.getToRef().getRepository().getId() + "");
+        env.put("PULL_REQUEST_TO_REPO_NAME", pr.getToRef().getRepository().getName() + "");
+        env.put("PULL_REQUEST_TO_REPO_PROJECT_ID", pr.getToRef().getRepository().getProject().getId() + "");
+        env.put("PULL_REQUEST_TO_REPO_PROJECT_KEY", pr.getToRef().getRepository().getProject().getKey());
+        env.put("PULL_REQUEST_TO_REPO_SLUG", pr.getToRef().getRepository().getSlug() + "");
+        env.put("PULL_REQUEST_TO_SSH_CLONE_URL", cloneUrlFromRepository(ssh, pr.getToRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_TO_HTTP_CLONE_URL", cloneUrlFromRepository(http, pr.getToRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_TITLE", pr.getTitle());
+
+        String summaryMsg = "Merge request failed";
+
         pb.directory(new File(repoPath));
         pb.redirectErrorStream(true);
         try {
@@ -122,51 +159,53 @@ public class ExternalPreReceiveHook
                 process.getInputStream(), "UTF-8");
             OutputStream output = process.getOutputStream();
 
-            for (RefChange refChange : refChanges) {
-                output.write(
-                    (
-                        refChange.getFromHash() + " " +
-                        refChange.getToHash() + " " +
-                        refChange.getRefId() + "\n"
-                    ).getBytes("UTF-8")
-                );
-            }
+            output.write((
+                          pr.getToRef().getLatestCommit() + " " +
+                          pr.getFromRef().getLatestCommit() + " " +
+                          pr.getToRef().getId() + "\n"
+                          ).getBytes("UTF-8"));
             output.close();
 
+            String hookResponse = "";
             boolean trimmed = false;
-            if (hookResponse != null) {
-                int data;
-                int count = 0;
-                while ((data = input.read()) >= 0) {
-                    if (count >= 65000) {
-                        if (!trimmed) {
-                            hookResponse.err().
-                                print("\n");
-                            hookResponse.err().
-                                print("Hook response exceeds 65K length limit.\n");
-                            hookResponse.err().
-                                print("Further output will be trimmed.\n");
-                            trimmed = true;
-                        }
-                        continue;
+            int data;
+            int count = 0;
+            while ((data = input.read()) >= 0) {
+                if (count >= 65000) {
+                    if (!trimmed) {
+                        hookResponse += "\n";
+                        hookResponse += "Hook response exceeds 65K length limit.\n";
+                        hookResponse += "Further output will be trimmed.\n";
+                        trimmed = true;
                     }
-
-                    String charToWrite = Character.toString((char)data);
-
-                    count += charToWrite.getBytes("utf-8").length;
-
-                    hookResponse.err().print(charToWrite);
+                    continue;
                 }
 
+                String charToWrite = Character.toString((char)data);
+
+                count += charToWrite.getBytes("utf-8").length;
+
+                hookResponse += charToWrite;
             }
 
-            return process.waitFor() == 0;
+            boolean Accepted = process.waitFor() == 0;
+            if (!Accepted) {
+                String prePrefix = "<pre style=\"overflow: auto; white-space: nowrap;\">";
+                String preSuffix = "</pre>";
+                String detailedMsg = prePrefix + hookResponse.replaceAll("(\r\n|\n)", "<br/>").replaceAll(" ", " ") + preSuffix;
+                context.getMergeRequest().veto(summaryMsg, detailedMsg);
+            }
+            return;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return false;
+            String detailedMsg = "Interrupted";
+            context.getMergeRequest().veto(summaryMsg, detailedMsg);
+            return;
         } catch (IOException e) {
             log.error("Error running {} in {}", exe, repoPath, e);
-            return false;
+            String detailedMsg = "I/O error";
+            context.getMergeRequest().veto(summaryMsg, detailedMsg);
+            return;
         }
     }
 
@@ -179,7 +218,7 @@ public class ExternalPreReceiveHook
             if (!permissions.hasGlobalPermission(
                     authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
                 errors.addFieldError("exe",
-                    "You should be  Administrator to edit this field " +
+                    "You should be Stash Administrator to edit this field " +
                     "without \"safe mode\" option.");
                 return;
             }
@@ -233,5 +272,28 @@ public class ExternalPreReceiveHook
         }
 
         return executable;
+    }
+
+    public enum REPO_PROTOCOL {
+        ssh, http
+    }
+
+    private static String cloneUrlFromRepository(
+        REPO_PROTOCOL protocol,
+        Repository repository,
+        RepositoryService repoService
+    ) {
+      RepositoryCloneLinksRequest request = new RepositoryCloneLinksRequest.Builder().protocol(protocol.name())
+          .repository(repository).build();
+      final Set<NamedLink> cloneLinks = repoService.getCloneLinks(request);
+      return cloneLinks.iterator().hasNext() ? cloneLinks.iterator().next().getHref() : "";
+    }
+
+    private static String getPullRequestUrl(
+        ApplicationPropertiesService propertiesService,
+        PullRequest pullRequest
+    ) {
+        return propertiesService.getBaseUrl() + "/projects/" + pullRequest.getToRef().getRepository().getProject().getKey()
+            + "/repos/" + pullRequest.getToRef().getRepository().getSlug() + "/pull-requests/" + pullRequest.getId();
     }
 }
