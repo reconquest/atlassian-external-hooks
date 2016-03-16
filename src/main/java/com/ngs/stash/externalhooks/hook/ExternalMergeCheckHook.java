@@ -21,7 +21,9 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.nio.file.Files;
 
+import java.util.ArrayList;
 import com.atlassian.bitbucket.pull.*;
+import com.ngs.stash.externalhooks.hook.helpers.*;
 // import com.google.common.base.Predicate;
 // import static com.google.common.base.Charsets.UTF_8;
 // import static com.google.common.base.Joiner.on;
@@ -66,64 +68,26 @@ public class ExternalMergeCheckHook
     ) {
         PullRequest pr = context.getMergeRequest().getPullRequest();
         Repository repo = pr.getToRef().getRepository();
-
-        // compat with Stash < 3.2.0
-        String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
-
         Settings settings = context.getSettings();
+
+        // compat with < 3.2.0
+        String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
         List<String> exe = new LinkedList<String>();
-        exe.add(this.getExecutable(
-            settings.getString("exe"),
-            settings.getBoolean("safe_path", false)).getPath());
 
-        if (settings.getString("params") != null) {
-            for (String arg : settings.getString("params").split("\r\n")) {
-                exe.add(arg);
-            }
-        }
+        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings);
 
-        ApplicationUser currentUser = authCtx.getCurrentUser();
-        ProcessBuilder pb = new ProcessBuilder(exe);
+        List<RefChange> refChanges = new ArrayList<RefChange>();
+        refChanges.add(new ExternalRefChange(pr.getToRef().getId(),
+                                             pr.getToRef().getLatestCommit(),
+                                             pr.getFromRef().getLatestCommit(),
+                                             RefChangeType.UPDATE));
+
+        Writer outWriter = new StringWriter();
+        Writer errWriter = new StringWriter();
+        HookResponse hookResponse = new ExternalHookResponse(new PrintWriter(outWriter),
+                                                             new PrintWriter(errWriter));
 
         Map<String, String> env = pb.environment();
-        env.put("STASH_USER_NAME", currentUser.getName());
-        if (currentUser.getEmailAddress() != null) {
-            env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
-        } else {
-            log.error("Can't get user email address. getEmailAddress() call returns null");
-        }
-        env.put("STASH_REPO_NAME", repo.getName());
-
-        boolean isAdmin = permissions.hasRepositoryPermission(
-            currentUser, repo, Permission.REPO_ADMIN);
-        env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
-
-        RepositoryCloneLinksRequest.Builder cloneLinksRequestBuilder =
-            new RepositoryCloneLinksRequest.Builder();
-
-        cloneLinksRequestBuilder.repository(repo);
-
-        RepositoryCloneLinksRequest cloneLinksRequest =
-            cloneLinksRequestBuilder.build();
-
-        Set<NamedLink> cloneLinks = this.repoService.getCloneLinks(
-            cloneLinksRequest
-        );
-
-        for (NamedLink link : cloneLinks) {
-            env.put(
-                "STASH_REPO_CLONE_" + link.getName().toUpperCase(),
-                link.getHref()
-            );
-        }
-
-        env.put(
-            "STASH_BASE_URL",
-            this.properties.getBaseUrl().toString()
-        );
-
-        env.put("STASH_PROJECT_NAME", repo.getProject().getName());
-        env.put("STASH_PROJECT_KEY", repo.getProject().getKey());
 
         // Using the same env variables as
         // https://github.com/tomasbjerre/pull-request-notifier-for-bitbucket
@@ -172,48 +136,13 @@ public class ExternalMergeCheckHook
 
         String summaryMsg = "Merge request failed";
 
-        pb.directory(new File(repoPath));
-        pb.redirectErrorStream(true);
         try {
-            Process process = pb.start();
-            InputStreamReader input = new InputStreamReader(
-                process.getInputStream(), "UTF-8");
-            OutputStream output = process.getOutputStream();
-
-            output.write((
-                          pr.getToRef().getLatestCommit() + " " +
-                          pr.getFromRef().getLatestCommit() + " " +
-                          pr.getToRef().getId() + "\n"
-                          ).getBytes("UTF-8"));
-            output.close();
-
-            String hookResponse = "";
-            boolean trimmed = false;
-            int data;
-            int count = 0;
-            while ((data = input.read()) >= 0) {
-                if (count >= 65000) {
-                    if (!trimmed) {
-                        hookResponse += "\n";
-                        hookResponse += "Hook response exceeds 65K length limit.\n";
-                        hookResponse += "Further output will be trimmed.\n";
-                        trimmed = true;
-                    }
-                    continue;
-                }
-
-                String charToWrite = Character.toString((char)data);
-
-                count += charToWrite.getBytes("utf-8").length;
-
-                hookResponse += charToWrite;
-            }
-
-            boolean Accepted = process.waitFor() == 0;
-            if (!Accepted) {
+            int Result = runExternalHooks(pb, refChanges, hookResponse);
+            if (Result != 0) {
+                String rawDetailedMsg = errWriter.toString();
                 String prePrefix = "<pre style=\"overflow: auto; white-space: nowrap;\">";
                 String preSuffix = "</pre>";
-                String detailedMsg = prePrefix + hookResponse.replaceAll("(\r\n|\n)", "<br/>").replaceAll(" ", " ") + preSuffix;
+                String detailedMsg = prePrefix + rawDetailedMsg.replaceAll("(\r\n|\n)", "<br/>").replaceAll(" ", " ") + preSuffix;
                 context.getMergeRequest().veto(summaryMsg, detailedMsg);
             }
             return;
@@ -224,75 +153,39 @@ public class ExternalMergeCheckHook
             return;
         } catch (IOException e) {
             log.error("Error running {} in {}", exe, repoPath, e);
-            String detailedMsg = "I/O error";
+            String detailedMsg = "I/O Error";
             context.getMergeRequest().veto(summaryMsg, detailedMsg);
             return;
         }
     }
 
+    public ProcessBuilder createProcessBuilder(
+        Repository repo, String repoPath, List<String> exe, Settings settings
+    ) {
+        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
+            this.permissions, this.repoService, this.properties);
+        return impl.createProcessBuilder(repo, repoPath, exe, settings);
+    }
+
+    public int runExternalHooks(
+        ProcessBuilder pb,
+        Collection<RefChange> refChanges,
+        HookResponse hookResponse
+    ) throws InterruptedException, IOException {
+        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
+            this.permissions, this.repoService, this.properties);
+        return impl.runExternalHooks(pb, refChanges, hookResponse);
+    }
+
     @Override
     public void validate(
         Settings settings,
-        SettingsValidationErrors errors, Repository repository
+        SettingsValidationErrors errors,
+        Repository repository
     ) {
-        if (!settings.getBoolean("safe_path", false)) {
-            if (!permissions.hasGlobalPermission(
-                    authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
-                errors.addFieldError("exe",
-                    "You should be Stash Administrator to edit this field " +
-                    "without \"safe mode\" option.");
-                return;
-            }
-        }
-
-        if (settings.getString("exe", "").isEmpty()) {
-            errors.addFieldError("exe",
-                "Executable is blank, please specify something");
-            return;
-        }
-
-        File executable = this.getExecutable(
-            settings.getString("exe",""),
-            settings.getBoolean("safe_path", false));
-
-        boolean isExecutable = false;
-        if (executable != null) {
-            try {
-                isExecutable = executable.canExecute() && executable.isFile();
-            } catch (SecurityException e) {
-                log.error("Security exception on {}", executable.getPath(), e);
-                isExecutable = false;
-            }
-        } else {
-            errors.addFieldError("exe",
-                "Specified path for executable can not be resolved.");
-            return;
-        }
-
-        if (!isExecutable) {
-            errors.addFieldError("exe",
-                "Specified path is not executable file. Check executable flag.");
-            return;
-        }
-
-        log.info("Setting executable {}", executable.getPath());
-    }
-
-    public File getExecutable(String path, boolean safeDir) {
-        File executable = new File(path);
-        if (safeDir) {
-            path = FilenameUtils.normalize(path);
-            if (path == null) {
-                executable = null;
-            } else {
-                String safeBaseDir =
-                    this.properties.getHomeDir().getAbsolutePath() +
-                    "/external-hooks/";
-                executable = new File(safeBaseDir, path);
-            }
-        }
-
-        return executable;
+        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
+            this.permissions, this.repoService, this.properties);
+        impl.validate(settings, errors, repository);
     }
 
     public enum REPO_PROTOCOL {

@@ -55,12 +55,29 @@ public class ExternalPreReceiveHook
         HookResponse hookResponse
     ) {
         Repository repo = context.getRepository();
+        Settings settings = context.getSettings();
 
         // compat with < 3.2.0
         String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
-
-        Settings settings = context.getSettings();
         List<String> exe = new LinkedList<String>();
+
+        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings);
+
+        try {
+            int Result = runExternalHooks(pb, refChanges, hookResponse);
+            return Result == 0;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (IOException e) {
+            log.error("Error running {} in {}", exe, repoPath, e);
+            return false;
+        }
+    }
+
+    public ProcessBuilder createProcessBuilder(
+        Repository repo, String repoPath, List<String> exe, Settings settings
+    ) {
         exe.add(this.getExecutable(
             settings.getString("exe"),
             settings.getBoolean("safe_path", false)).getPath());
@@ -116,58 +133,59 @@ public class ExternalPreReceiveHook
 
         pb.directory(new File(repoPath));
         pb.redirectErrorStream(true);
-        try {
-            Process process = pb.start();
-            InputStreamReader input = new InputStreamReader(
-                process.getInputStream(), "UTF-8");
-            OutputStream output = process.getOutputStream();
 
-            for (RefChange refChange : refChanges) {
-                output.write(
-                    (
-                        refChange.getFromHash() + " " +
-                        refChange.getToHash() + " " +
-                        refChange.getRefId() + "\n"
-                    ).getBytes("UTF-8")
-                );
-            }
-            output.close();
+        return pb;
+    }
 
-            boolean trimmed = false;
-            if (hookResponse != null) {
-                int data;
-                int count = 0;
-                while ((data = input.read()) >= 0) {
-                    if (count >= 65000) {
-                        if (!trimmed) {
-                            hookResponse.err().
-                                print("\n");
-                            hookResponse.err().
-                                print("Hook response exceeds 65K length limit.\n");
-                            hookResponse.err().
-                                print("Further output will be trimmed.\n");
-                            trimmed = true;
-                        }
-                        continue;
+    public int runExternalHooks(
+        ProcessBuilder pb,
+        Collection<RefChange> refChanges,
+        HookResponse hookResponse
+    ) throws InterruptedException, IOException {
+        Process process = pb.start();
+        InputStreamReader input = new InputStreamReader(
+                                                        process.getInputStream(), "UTF-8");
+        OutputStream output = process.getOutputStream();
+
+        for (RefChange refChange : refChanges) {
+            output.write(
+                         (
+                          refChange.getFromHash() + " " +
+                          refChange.getToHash() + " " +
+                          refChange.getRefId() + "\n"
+                          ).getBytes("UTF-8")
+                         );
+        }
+        output.close();
+
+        boolean trimmed = false;
+        if (hookResponse != null) {
+            int data;
+            int count = 0;
+            while ((data = input.read()) >= 0) {
+                if (count >= 65000) {
+                    if (!trimmed) {
+                        hookResponse.err().
+                            print("\n");
+                        hookResponse.err().
+                            print("Hook response exceeds 65K length limit.\n");
+                        hookResponse.err().
+                            print("Further output will be trimmed.\n");
+                        trimmed = true;
                     }
-
-                    String charToWrite = Character.toString((char)data);
-
-                    count += charToWrite.getBytes("utf-8").length;
-
-                    hookResponse.err().print(charToWrite);
+                    continue;
                 }
 
+                String charToWrite = Character.toString((char)data);
+
+                count += charToWrite.getBytes("utf-8").length;
+
+                hookResponse.err().print(charToWrite);
             }
 
-            return process.waitFor() == 0;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-        } catch (IOException e) {
-            log.error("Error running {} in {}", exe, repoPath, e);
-            return false;
         }
+
+        return process.waitFor();
     }
 
     @Override
