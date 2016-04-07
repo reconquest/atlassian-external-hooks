@@ -113,6 +113,12 @@ public class ExternalPreReceiveHook
         env.put("STASH_PROJECT_NAME", repo.getProject().getName());
         env.put("STASH_PROJECT_KEY", repo.getProject().getKey());
 
+        String refChangesEnv = "";
+        for (RefChange refChange : refChanges) {
+            refChangesEnv += " " + refChange.getRefId();
+        }
+        env.put("STASH_REF_CHANGES", refChangesEnv);
+
         pb.directory(new File(repoPath));
         pb.redirectErrorStream(true);
         try {
