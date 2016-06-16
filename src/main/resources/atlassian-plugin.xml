@@ -38,4 +38,12 @@
       <directory location="/static/"/>
     </config-form>
   </repository-hook>
+  <repository-hook name="External Merge Check Hook" i18n-name-key="external-merge-check-hook.name" key="external-merge-check-hook" class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
+    <description key="external-merge-check-hook.description">The External Merge Check Hook Plugin</description>
+    <icon>icon-example.png</icon>
+    <config-form name="External Merge Check Hook Config" key="external-merge-check-hook-config">
+      <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
+      <directory location="/static/"/>
+    </config-form>
+  </repository-hook>
 </atlassian-plugin>

@@ -10,8 +10,19 @@
         <url>http://ngs.ru/</url>
     </organization>
     <name>External Hooks</name>
-    <description>This plugin provides Post and Pre receive hooks using any external executable</description>
+    <description>This plugin provides Merge Check, Post and Pre receive hooks using any external executable</description>
     <packaging>atlassian-plugin</packaging>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.atlassian.bitbucket.server</groupId>
+                <artifactId>bitbucket-parent</artifactId>
+                <version>${bitbucket.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>com.atlassian.bitbucket.server</groupId>
@@ -33,7 +44,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.12</version>
+            <version>${slf4j.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -48,14 +59,19 @@
             <version>2.6</version>
             <scope>provided</scope>
         </dependency>
+        <!--<dependency>-->
+        <!--    <groupId>com.google.guava</groupId>-->
+        <!--    <artifactId>guava</artifactId>-->
+        <!--    <scope>provided</scope>-->
+        <!--</dependency>-->
     </dependencies>
     <build>
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -77,8 +93,12 @@
         </plugins>
     </build>
     <properties>
-        <bitbucket.version>4.0.0-rc12</bitbucket.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <bitbucket.version>4.3.2</bitbucket.version>
         <bitbucket.data.version>${bitbucket.version}</bitbucket.data.version>
-        <amps.version>6.1.0</amps.version>
+        <atlassian-sal-api.version>3.0.5</atlassian-sal-api.version>
+        <slf4j.version>1.7.12</slf4j.version>
+        <amps.version>6.2.3</amps.version>
+        <plugin.testrunner.version>1.1.4</plugin.testrunner.version>
     </properties>
 </project>
