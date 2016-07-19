@@ -102,7 +102,9 @@ public class ExternalPreReceiveHook
 
         boolean isAdmin = permissions.hasRepositoryPermission(
             currentUser, repo, Permission.REPO_ADMIN);
+        boolean isWrite = permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_WRITE);
         env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
+        env.put("STASH_IS_WRITE", String.valueOf(isWrite));
         env.put("STASH_REPO_IS_FORK", String.valueOf(repo.isFork()));
 
         RepositoryCloneLinksRequest.Builder cloneLinksRequestBuilder =
