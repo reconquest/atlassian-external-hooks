@@ -102,7 +102,14 @@ public class ExternalPreReceiveHook
 
         boolean isAdmin = permissions.hasRepositoryPermission(
             currentUser, repo, Permission.REPO_ADMIN);
+        boolean isWrite = permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_WRITE);
+        boolean isDirectAdmin = permissions.hasDirectRepositoryUserPermission(repo, Permission.REPO_ADMIN);
+        boolean isDirectWrite = permissions.hasDirectRepositoryUserPermission(repo, Permission.REPO_WRITE);
         env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
+        env.put("STASH_IS_WRITE", String.valueOf(isWrite));
+        env.put("STASH_IS_DIRECT_ADMIN", String.valueOf(isDirectAdmin));
+        env.put("STASH_IS_DIRECT_WRITE", String.valueOf(isDirectWrite));
+        env.put("STASH_REPO_IS_FORK", String.valueOf(repo.isFork()));
 
         RepositoryCloneLinksRequest.Builder cloneLinksRequestBuilder =
             new RepositoryCloneLinksRequest.Builder();
@@ -197,7 +204,7 @@ public class ExternalPreReceiveHook
             if (!permissions.hasGlobalPermission(
                     authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
                 errors.addFieldError("exe",
-                    "You should be an Administrator to edit this field " +
+                    "You should be a Bitbucket System Administrator to edit this field " +
                     "without \"safe mode\" option.");
                 return;
             }
