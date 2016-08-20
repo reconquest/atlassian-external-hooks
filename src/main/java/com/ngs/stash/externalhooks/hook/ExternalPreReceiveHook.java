@@ -138,12 +138,6 @@ public class ExternalPreReceiveHook
         env.put("STASH_PROJECT_NAME", repo.getProject().getName());
         env.put("STASH_PROJECT_KEY", repo.getProject().getKey());
 
-        String refChangesEnv = "";
-        for (RefChange refChange : refChanges) {
-            refChangesEnv += " " + refChange.getRefId();
-        }
-        env.put("STASH_REF_CHANGES", refChangesEnv);
-
         pb.directory(new File(repoPath));
         pb.redirectErrorStream(true);
 
@@ -159,6 +153,12 @@ public class ExternalPreReceiveHook
         InputStreamReader input = new InputStreamReader(
                                                         process.getInputStream(), "UTF-8");
         OutputStream output = process.getOutputStream();
+
+        String refChangesEnv = "";
+            for (RefChange refChange : refChanges) {
+                refChangesEnv += " " + refChange.getRefId();
+            }
+        pb.environment().put("STASH_REF_CHANGES", refChangesEnv);
 
         for (RefChange refChange : refChanges) {
             output.write(
