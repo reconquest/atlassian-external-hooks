@@ -5,6 +5,7 @@
     <description>${project.description}</description>
     <version>${project.version}</version>
     <vendor name="${project.organization.name}" url="${project.organization.url}"/>
+    <param name="atlassian-data-center-compatible">true</param>
     <param name="plugin-icon">images/pluginIcon.png</param>
     <param name="plugin-logo">images/pluginLogo.png</param>
   </plugin-info>
@@ -34,6 +35,14 @@
     <description key="external-post-receive-hook.description">The External Async Post Receive Hook Plugin</description>
     <icon>icon-example.png</icon>
     <config-form name="External Async Post Receive Hook Config" key="external-post-receive-hook-config">
+      <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
+      <directory location="/static/"/>
+    </config-form>
+  </repository-hook>
+  <repository-hook name="External Merge Check Hook" i18n-name-key="external-merge-check-hook.name" key="external-merge-check-hook" class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
+    <description key="external-merge-check-hook.description">The External Merge Check Hook Plugin</description>
+    <icon>icon-example.png</icon>
+    <config-form name="External Merge Check Hook Config" key="external-merge-check-hook-config">
       <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
       <directory location="/static/"/>
     </config-form>
