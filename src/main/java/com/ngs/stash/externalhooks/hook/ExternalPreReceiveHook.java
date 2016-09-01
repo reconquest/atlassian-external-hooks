@@ -100,6 +100,8 @@ public class ExternalPreReceiveHook
         }
         env.put("STASH_REPO_NAME", repo.getName());
 
+        env.put("STASH_REPO_TYPE", String.valueOf(repo.getProject().getType()));
+
         boolean isAdmin = permissions.hasRepositoryPermission(
             currentUser, repo, Permission.REPO_ADMIN);
         boolean isWrite = permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_WRITE);
