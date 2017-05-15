@@ -21,7 +21,6 @@ public class ExternalRefChange implements RefChange {
     }
 
     @Nonnull
-    @Override
     public String getRefId() {
         return refId;
     }
