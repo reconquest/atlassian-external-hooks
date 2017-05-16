@@ -159,7 +159,7 @@ public class ExternalPreReceiveHook
                          (
                           refChange.getFromHash() + " " +
                           refChange.getToHash() + " " +
-                          refChange.getRefId() + "\n"
+                          refChange.getRef().getId() + "\n"
                           ).getBytes("UTF-8")
                          );
         }
