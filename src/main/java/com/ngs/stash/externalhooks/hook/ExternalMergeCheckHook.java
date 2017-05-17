@@ -77,7 +77,7 @@ public class ExternalMergeCheckHook
         ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings);
 
         List<RefChange> refChanges = new ArrayList<RefChange>();
-        refChanges.add(new ExternalRefChange(pr.getToRef().getId(),
+        refChanges.add(new ExternalRefChange(pr.getToRef(),
                                              pr.getToRef().getLatestCommit(),
                                              pr.getFromRef().getLatestCommit(),
                                              RefChangeType.UPDATE));

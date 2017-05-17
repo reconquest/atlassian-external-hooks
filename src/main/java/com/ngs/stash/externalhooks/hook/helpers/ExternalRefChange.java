@@ -8,21 +8,15 @@ import javax.annotation.Nonnull;
 
 public class ExternalRefChange implements RefChange {
     MinimalRef ref;
-    String refId;
     String fromHash;
     String toHash;
     RefChangeType type;
 
-    public ExternalRefChange(String refId, String fromHash, String toHash, RefChangeType type) {
-        this.refId = refId;
+    public ExternalRefChange(MinimalRef ref, String fromHash, String toHash, RefChangeType type) {
+        this.ref = ref;
         this.fromHash = fromHash;
         this.toHash = toHash;
         this.type = type;
-    }
-
-    @Nonnull
-    public String getRefId() {
-        return refId;
     }
 
     @Nonnull
