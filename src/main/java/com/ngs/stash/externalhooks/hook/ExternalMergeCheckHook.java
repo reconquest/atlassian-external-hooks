@@ -138,13 +138,8 @@ public class ExternalMergeCheckHook
 
         try {
             int Result = runExternalHooks(pb, refChanges, hookResponse);
-            if (Result != 0) {
-                String rawDetailedMsg = errWriter.toString();
-                String prePrefix = "<pre style=\"overflow: auto; white-space: nowrap;\">";
-                String preSuffix = "</pre>";
-                String detailedMsg = prePrefix + rawDetailedMsg.replaceAll("(\r\n|\n)", "<br/>").replaceAll(" ", " ") + preSuffix;
-                context.getMergeRequest().veto(summaryMsg, detailedMsg);
-            }
+            if (Result != 0)
+                context.getMergeRequest().veto(summaryMsg, errWriter.toString());
             return;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
