@@ -1,6 +1,5 @@
 package com.ngs.stash.externalhooks.hook;
 
-import com.atlassian.bitbucket.hook.*;
 import com.atlassian.bitbucket.hook.repository.*;
 import com.atlassian.bitbucket.repository.*;
 import com.atlassian.bitbucket.setting.*;
@@ -19,11 +18,10 @@ import java.util.Map;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Set;
-import java.nio.file.Files;
 
 
 public class ExternalPreReceiveHook
-    implements PreReceiveRepositoryHook, RepositorySettingsValidator
+    implements PreRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
 {
     private static final Logger log = LoggerFactory.getLogger(
         ExternalPreReceiveHook.class);
@@ -45,38 +43,34 @@ public class ExternalPreReceiveHook
         this.properties = properties;
     }
 
-    /**
-     * Call external executable as git hook.
-     */
-    @Override
-    public boolean onReceive(
-        RepositoryHookContext context,
-        Collection<RefChange> refChanges,
-        HookResponse hookResponse
-    ) {
-        Repository repo = context.getRepository();
+	@Override
+	public RepositoryHookResult preUpdate(PreRepositoryHookContext context, RepositoryHookRequest request) {
+        return preUpdateImpl(context, request);
+	}
+	
+	public RepositoryHookResult preUpdateImpl(RepositoryHookContext context, RepositoryHookRequest request) {
+        Repository repo = request.getRepository();
         Settings settings = context.getSettings();
 
         // compat with < 3.2.0
         String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
         List<String> exe = new LinkedList<String>();
 
-        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings);
-
+        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
+        
         try {
-            int Result = runExternalHooks(pb, refChanges, hookResponse);
-            return Result == 0;
+            return runExternalHooks(pb, request.getRefChanges(), "Push rejected");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return false;
+            return RepositoryHookResult.rejected("error", "an error occurred");
         } catch (IOException e) {
             log.error("Error running {} in {}", exe, repoPath, e);
-            return false;
+            return RepositoryHookResult.rejected("error", "an error occurred");
         }
-    }
+	}
 
     public ProcessBuilder createProcessBuilder(
-        Repository repo, String repoPath, List<String> exe, Settings settings
+        Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request
     ) {
         exe.add(this.getExecutable(
             settings.getString("exe"),
@@ -99,6 +93,10 @@ public class ExternalPreReceiveHook
             log.error("Can't get user email address. getEmailAddress() call returns null");
         }
         env.put("STASH_REPO_NAME", repo.getName());
+        
+        if (request.getScmHookDetails().isPresent()) {
+        	env.putAll(request.getScmHookDetails().get().getEnvironment());
+        }
 
         boolean isAdmin = permissions.hasRepositoryPermission(
             currentUser, repo, Permission.REPO_ADMIN);
@@ -144,10 +142,10 @@ public class ExternalPreReceiveHook
         return pb;
     }
 
-    public int runExternalHooks(
+    public RepositoryHookResult runExternalHooks(
         ProcessBuilder pb,
         Collection<RefChange> refChanges,
-        HookResponse hookResponse
+        String summaryMessage
     ) throws InterruptedException, IOException {
         Process process = pb.start();
         InputStreamReader input = new InputStreamReader(
@@ -166,33 +164,37 @@ public class ExternalPreReceiveHook
         output.close();
 
         boolean trimmed = false;
-        if (hookResponse != null) {
-            int data;
-            int count = 0;
-            while ((data = input.read()) >= 0) {
-                if (count >= 65000) {
-                    if (!trimmed) {
-                        hookResponse.err().
-                            print("\n");
-                        hookResponse.err().
-                            print("Hook response exceeds 65K length limit.\n");
-                        hookResponse.err().
-                            print("Further output will be trimmed.\n");
-                        trimmed = true;
-                    }
-                    continue;
+        int data;
+        int count = 0;
+        StringBuilder builder = new StringBuilder();
+        while ((data = input.read()) >= 0) {
+            if (count >= 65000) {
+                if (!trimmed) {
+                	builder.
+                        append("\n");
+                	builder.
+                        append("Hook response exceeds 65K length limit.\n");
+                	builder.
+                		append("Further output will be trimmed.\n");
+                    trimmed = true;
                 }
-
-                String charToWrite = Character.toString((char)data);
-
-                count += charToWrite.getBytes("utf-8").length;
-
-                hookResponse.err().print(charToWrite);
+                continue;
             }
 
-        }
+            String charToWrite = Character.toString((char)data);
 
-        return process.waitFor();
+            count += charToWrite.getBytes("utf-8").length;
+
+            builder.append(charToWrite);
+        }
+        
+        int result = process.waitFor();
+        
+        if (result == 0) {
+        	return RepositoryHookResult.accepted();
+        } else {
+        	return RepositoryHookResult.rejected(summaryMessage, builder.toString());
+        }
     }
 
     @Override

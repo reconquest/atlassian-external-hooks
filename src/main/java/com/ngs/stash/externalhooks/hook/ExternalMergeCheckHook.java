@@ -1,10 +1,8 @@
 package com.ngs.stash.externalhooks.hook;
 
-import com.atlassian.bitbucket.hook.*;
 import com.atlassian.bitbucket.hook.repository.*;
 import com.atlassian.bitbucket.repository.*;
 import com.atlassian.bitbucket.setting.*;
-import com.atlassian.bitbucket.user.*;
 import com.atlassian.bitbucket.auth.*;
 import com.atlassian.bitbucket.permission.*;
 import com.atlassian.bitbucket.server.*;
@@ -13,13 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
-import org.apache.commons.io.FilenameUtils;
 import java.io.*;
 import java.util.Map;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Set;
-import java.nio.file.Files;
 
 import java.util.ArrayList;
 import com.atlassian.bitbucket.pull.*;
@@ -37,7 +33,7 @@ import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTO
 
 
 public class ExternalMergeCheckHook
-    implements RepositoryMergeRequestCheck, RepositorySettingsValidator
+    implements RepositoryMergeCheck, RepositorySettingsValidator
 {
     private static final Logger log = LoggerFactory.getLogger(
         ExternalMergeCheckHook.class);
@@ -59,14 +55,13 @@ public class ExternalMergeCheckHook
         this.properties = properties;
     }
 
-    /**
-     * Call external executable as git hook.
-     */
-    @Override
-    public void check(
-        RepositoryMergeRequestCheckContext context
-    ) {
-        PullRequest pr = context.getMergeRequest().getPullRequest();
+
+
+	@Override
+	public RepositoryHookResult preUpdate(PreRepositoryHookContext context, PullRequestMergeHookRequest request) {
+		// TODO Auto-generated method stub
+
+        PullRequest pr = request.getPullRequest();
         Repository repo = pr.getToRef().getRepository();
         Settings settings = context.getSettings();
 
@@ -74,18 +69,13 @@ public class ExternalMergeCheckHook
         String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
         List<String> exe = new LinkedList<String>();
 
-        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings);
+        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
 
         List<RefChange> refChanges = new ArrayList<RefChange>();
         refChanges.add(new ExternalRefChange(pr.getToRef().getId(),
                                              pr.getToRef().getLatestCommit(),
                                              pr.getFromRef().getLatestCommit(),
                                              RefChangeType.UPDATE));
-
-        Writer outWriter = new StringWriter();
-        Writer errWriter = new StringWriter();
-        HookResponse hookResponse = new ExternalHookResponse(new PrintWriter(outWriter),
-                                                             new PrintWriter(errWriter));
 
         Map<String, String> env = pb.environment();
 
@@ -137,44 +127,34 @@ public class ExternalMergeCheckHook
         String summaryMsg = "Merge request failed";
 
         try {
-            int Result = runExternalHooks(pb, refChanges, hookResponse);
-            if (Result != 0) {
-                String rawDetailedMsg = errWriter.toString();
-                String prePrefix = "<pre style=\"overflow: auto; white-space: nowrap;\">";
-                String preSuffix = "</pre>";
-                String detailedMsg = prePrefix + rawDetailedMsg.replaceAll("(\r\n|\n)", "<br/>").replaceAll(" ", " ") + preSuffix;
-                context.getMergeRequest().veto(summaryMsg, detailedMsg);
-            }
-            return;
+            return runExternalHooks(pb, refChanges, summaryMsg);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             String detailedMsg = "Interrupted";
-            context.getMergeRequest().veto(summaryMsg, detailedMsg);
-            return;
+            return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         } catch (IOException e) {
             log.error("Error running {} in {}", exe, repoPath, e);
             String detailedMsg = "I/O Error";
-            context.getMergeRequest().veto(summaryMsg, detailedMsg);
-            return;
+            return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         }
-    }
+	}
 
     public ProcessBuilder createProcessBuilder(
-        Repository repo, String repoPath, List<String> exe, Settings settings
+        Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
             this.permissions, this.repoService, this.properties);
-        return impl.createProcessBuilder(repo, repoPath, exe, settings);
+        return impl.createProcessBuilder(repo, repoPath, exe, settings, request);
     }
 
-    public int runExternalHooks(
+    public RepositoryHookResult runExternalHooks(
         ProcessBuilder pb,
         Collection<RefChange> refChanges,
-        HookResponse hookResponse
+        String summaryMessage
     ) throws InterruptedException, IOException {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
             this.permissions, this.repoService, this.properties);
-        return impl.runExternalHooks(pb, refChanges, hookResponse);
+        return impl.runExternalHooks(pb, refChanges, summaryMessage);
     }
 
     @Override
