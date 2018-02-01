@@ -86,13 +86,22 @@ public class ExternalPreReceiveHook
     public ProcessBuilder createProcessBuilder(
         Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request
     ) {
-        exe.add(this.getExecutable(
-            settings.getString("exe"),
-            settings.getBoolean("safe_path", false)).getPath());
+        exe.add(
+            this.getExecutable(
+                settings.getString("exe"),
+                settings.getBoolean("safe_path", false)
+            ).getPath()
+        );
 
-        if (settings.getString("params") != null) {
-            for (String arg : settings.getString("params").split("\r\n")) {
-                exe.add(arg);
+        String params = settings.getString("params");
+        if (params != null) {
+            params = params.trim();
+            if (params.length() != 0) {
+                for (String arg : settings.getString("params").split("\r\n")) {
+                    if (arg.length() != 0) {
+                        exe.add(arg);
+                    }
+                }
             }
         }
 
