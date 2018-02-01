@@ -8,8 +8,10 @@ import com.atlassian.bitbucket.auth.*;
 import com.atlassian.bitbucket.permission.*;
 import com.atlassian.bitbucket.server.*;
 import com.atlassian.bitbucket.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.logging.Logger;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.INFO;
 
 import java.util.Collection;
 import org.apache.commons.io.FilenameUtils;
@@ -23,8 +25,9 @@ import java.util.Set;
 public class ExternalPreReceiveHook
     implements PreRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
 {
-    private static final Logger log = LoggerFactory.getLogger(
-        ExternalPreReceiveHook.class);
+    private static Logger log = Logger.getLogger(
+        ExternalPreReceiveHook.class.getSimpleName()
+    );
 
     private AuthenticationContext authCtx;
     private PermissionService permissions;
@@ -37,6 +40,7 @@ public class ExternalPreReceiveHook
         RepositoryService repoService,
         ApplicationPropertiesService properties
     ) {
+        log.setLevel(INFO);
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
@@ -45,6 +49,8 @@ public class ExternalPreReceiveHook
 
     @Override
     public RepositoryHookResult preUpdate(PreRepositoryHookContext context, RepositoryHookRequest request) {
+        log.log(SEVERE, "XXXXXX pre update called SEVERE");
+        log.log(INFO, "XXXXXX pre update called INFO");
         return preUpdateImpl(context, request);
     }
 
@@ -64,7 +70,11 @@ public class ExternalPreReceiveHook
             Thread.currentThread().interrupt();
             return RepositoryHookResult.rejected("error", "an error occurred");
         } catch (IOException e) {
-            log.error("Error running {} in {}", exe, repoPath, e);
+            log.log(
+                SEVERE,
+                "Error running {0} in {1}: {2}",
+                new Object[]{exe, repoPath, e}
+            );
             return RepositoryHookResult.rejected("error", "an error occurred");
         }
     }
@@ -90,7 +100,7 @@ public class ExternalPreReceiveHook
         if (currentUser.getEmailAddress() != null) {
             env.put("STASH_USER_EMAIL", currentUser.getEmailAddress());
         } else {
-            log.error("Can't get user email address. getEmailAddress() call returns null");
+            log.log(SEVERE, "Can't get user email address. getEmailAddress() call returns null");
         }
         env.put("STASH_REPO_NAME", repo.getName());
 
@@ -196,8 +206,8 @@ public class ExternalPreReceiveHook
         if (result == 0) {
             return RepositoryHookResult.accepted();
         } else {
-            log.info(summaryMessage);
-            log.info(builder.toString());
+            log.log(INFO, summaryMessage);
+            log.log(INFO, builder.toString());
             return RepositoryHookResult.rejected(summaryMessage, builder.toString());
         }
     }
@@ -232,7 +242,11 @@ public class ExternalPreReceiveHook
             try {
                 isExecutable = executable.canExecute() && executable.isFile();
             } catch (SecurityException e) {
-                log.error("Security exception on {}", executable.getPath(), e);
+                log.log(
+                    SEVERE,
+                    "Security exception on " + executable.getPath(),
+                    e
+                );
                 isExecutable = false;
             }
         } else {
@@ -247,7 +261,7 @@ public class ExternalPreReceiveHook
             return;
         }
 
-        log.info("Setting executable {}", executable.getPath());
+        log.log(INFO, "Setting executable " + executable.getPath());
     }
 
     public File getExecutable(String path, boolean safeDir) {

@@ -7,8 +7,10 @@ import com.atlassian.bitbucket.auth.*;
 import com.atlassian.bitbucket.permission.*;
 import com.atlassian.bitbucket.server.*;
 import com.atlassian.bitbucket.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.INFO;
+import java.util.logging.Logger;
 
 import java.util.Collection;
 import java.io.*;
@@ -35,8 +37,9 @@ import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTO
 public class ExternalMergeCheckHook
     implements RepositoryMergeCheck, RepositorySettingsValidator
 {
-    private static final Logger log = LoggerFactory.getLogger(
-        ExternalMergeCheckHook.class);
+    private static Logger log = Logger.getLogger(
+        ExternalMergeCheckHook.class.getSimpleName()
+    );
 
     private AuthenticationContext authCtx;
     private PermissionService permissions;
@@ -133,7 +136,7 @@ public class ExternalMergeCheckHook
             String detailedMsg = "Interrupted";
             return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         } catch (IOException e) {
-            log.error("Error running {} in {}", exe, repoPath, e);
+            log.log(SEVERE, "Error running "+exe+" in "+repoPath, e);
             String detailedMsg = "I/O Error";
             return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         }

@@ -6,15 +6,18 @@ import com.atlassian.bitbucket.setting.*;
 import com.atlassian.bitbucket.auth.*;
 import com.atlassian.bitbucket.permission.*;
 import com.atlassian.bitbucket.server.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.INFO;
+import java.util.logging.Logger;
 
 
 public class ExternalAsyncPostReceiveHook
     implements PostRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
 {
-    private static final Logger log = LoggerFactory.getLogger(
-        ExternalAsyncPostReceiveHook.class);
+    private static Logger log = Logger.getLogger(
+        ExternalAsyncPostReceiveHook.class.getSimpleName()
+    );
 
     private AuthenticationContext authCtx;
     private PermissionService permissions;
