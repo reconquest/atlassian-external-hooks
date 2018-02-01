@@ -13,11 +13,18 @@ public class ExternalRefChange implements RefChange {
     String toHash;
     RefChangeType type;
 
-    public ExternalRefChange(String refId, String fromHash, String toHash, RefChangeType type) {
+    public ExternalRefChange(
+        String refId,
+        String fromHash,
+        String toHash,
+        RefChangeType type,
+        MinimalRef ref
+    ) {
         this.refId = refId;
         this.fromHash = fromHash;
         this.toHash = toHash;
         this.type = type;
+        this.ref = ref;
     }
 
     @Nonnull

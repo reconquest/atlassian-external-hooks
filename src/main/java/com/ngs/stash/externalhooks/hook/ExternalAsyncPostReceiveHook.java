@@ -40,7 +40,8 @@ public class ExternalAsyncPostReceiveHook
 	public void postUpdate(PostRepositoryHookContext context, RepositoryHookRequest request) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(
                 this.authCtx, this.permissions, this.repoService, this.properties);
-            impl.preUpdateImpl(context, request);
+
+        impl.preUpdateImpl(context, request);
 	}
 
     @Override
@@ -51,6 +52,7 @@ public class ExternalAsyncPostReceiveHook
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
             this.permissions, this.repoService, this.properties);
+
         impl.validate(settings, errors, repository);
     }
 }

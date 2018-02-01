@@ -58,12 +58,8 @@ public class ExternalMergeCheckHook
         this.properties = properties;
     }
 
-
-
-	@Override
-	public RepositoryHookResult preUpdate(PreRepositoryHookContext context, PullRequestMergeHookRequest request) {
-		// TODO Auto-generated method stub
-
+    @Override
+    public RepositoryHookResult preUpdate(PreRepositoryHookContext context, PullRequestMergeHookRequest request) {
         PullRequest pr = request.getPullRequest();
         Repository repo = pr.getToRef().getRepository();
         Settings settings = context.getSettings();
@@ -75,10 +71,15 @@ public class ExternalMergeCheckHook
         ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
 
         List<RefChange> refChanges = new ArrayList<RefChange>();
-        refChanges.add(new ExternalRefChange(pr.getToRef().getId(),
-                                             pr.getToRef().getLatestCommit(),
-                                             pr.getFromRef().getLatestCommit(),
-                                             RefChangeType.UPDATE));
+        refChanges.add(
+            new ExternalRefChange(
+                pr.getToRef().getId(),
+                pr.getToRef().getLatestCommit(),
+                pr.getFromRef().getLatestCommit(),
+                RefChangeType.UPDATE,
+                pr.getToRef()
+            )
+        );
 
         Map<String, String> env = pb.environment();
 
@@ -140,7 +141,7 @@ public class ExternalMergeCheckHook
             String detailedMsg = "I/O Error";
             return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         }
-	}
+    }
 
     public ProcessBuilder createProcessBuilder(
         Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request

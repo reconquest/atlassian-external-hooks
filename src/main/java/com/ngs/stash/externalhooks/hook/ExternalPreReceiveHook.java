@@ -49,8 +49,6 @@ public class ExternalPreReceiveHook
 
     @Override
     public RepositoryHookResult preUpdate(PreRepositoryHookContext context, RepositoryHookRequest request) {
-        log.log(SEVERE, "XXXXXX pre update called SEVERE");
-        log.log(INFO, "XXXXXX pre update called INFO");
         return preUpdateImpl(context, request);
     }
 
@@ -126,6 +124,7 @@ public class ExternalPreReceiveHook
         boolean isWrite = permissions.hasRepositoryPermission(currentUser, repo, Permission.REPO_WRITE);
         boolean isDirectAdmin = permissions.hasDirectRepositoryUserPermission(repo, Permission.REPO_ADMIN);
         boolean isDirectWrite = permissions.hasDirectRepositoryUserPermission(repo, Permission.REPO_WRITE);
+
         env.put("STASH_IS_ADMIN", String.valueOf(isAdmin));
         env.put("STASH_IS_WRITE", String.valueOf(isWrite));
         env.put("STASH_IS_DIRECT_ADMIN", String.valueOf(isDirectAdmin));
