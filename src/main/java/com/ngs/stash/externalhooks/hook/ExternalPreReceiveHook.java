@@ -65,7 +65,11 @@ public class ExternalPreReceiveHook
         ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
 
         try {
-            return runExternalHooks(pb, request.getRefChanges(), "Push rejected");
+            return runExternalHooks(
+                pb,
+                request.getRefChanges(),
+                "Push rejected by External Hook"
+            );
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return RepositoryHookResult.rejected("error", "an error occurred");
@@ -206,9 +210,13 @@ public class ExternalPreReceiveHook
         if (result == 0) {
             return RepositoryHookResult.accepted();
         } else {
-            log.log(INFO, summaryMessage);
-            log.log(INFO, builder.toString());
-            return RepositoryHookResult.rejected(summaryMessage, builder.toString());
+            String details = builder.toString();
+            if (details.length() == 0) {
+                details = "Specified executable provides no additional information,\n"+
+                    "contact your BitBitbucket Administrator for help.";
+            }
+
+            return RepositoryHookResult.rejected(summaryMessage, details);
         }
     }
 

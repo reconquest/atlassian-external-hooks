@@ -36,17 +36,6 @@
             <version>${bitbucket.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!--<dependency>-->
-        <!--    <groupId>javax.servlet</groupId>-->
-        <!--    <artifactId>javax.servlet-api</artifactId>-->
-        <!--    <scope>provided</scope>-->
-        <!--</dependency>-->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
-            <scope>provided</scope>
-        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -94,7 +83,6 @@
         <bitbucket.version>5.7.0</bitbucket.version>
         <bitbucket.data.version>${bitbucket.version}</bitbucket.data.version>
         <atlassian-sal-api.version>3.0.5</atlassian-sal-api.version>
-        <slf4j.version>1.7.12</slf4j.version>
         <amps.version>6.2.9</amps.version>
         <plugin.testrunner.version>1.1.4</plugin.testrunner.version>
     </properties>
