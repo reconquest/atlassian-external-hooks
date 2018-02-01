@@ -43,12 +43,12 @@ public class ExternalPreReceiveHook
         this.properties = properties;
     }
 
-	@Override
-	public RepositoryHookResult preUpdate(PreRepositoryHookContext context, RepositoryHookRequest request) {
+    @Override
+    public RepositoryHookResult preUpdate(PreRepositoryHookContext context, RepositoryHookRequest request) {
         return preUpdateImpl(context, request);
-	}
-	
-	public RepositoryHookResult preUpdateImpl(RepositoryHookContext context, RepositoryHookRequest request) {
+    }
+
+    public RepositoryHookResult preUpdateImpl(RepositoryHookContext context, RepositoryHookRequest request) {
         Repository repo = request.getRepository();
         Settings settings = context.getSettings();
 
@@ -57,7 +57,7 @@ public class ExternalPreReceiveHook
         List<String> exe = new LinkedList<String>();
 
         ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
-        
+
         try {
             return runExternalHooks(pb, request.getRefChanges(), "Push rejected");
         } catch (InterruptedException e) {
@@ -67,7 +67,7 @@ public class ExternalPreReceiveHook
             log.error("Error running {} in {}", exe, repoPath, e);
             return RepositoryHookResult.rejected("error", "an error occurred");
         }
-	}
+    }
 
     public ProcessBuilder createProcessBuilder(
         Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request
@@ -93,9 +93,9 @@ public class ExternalPreReceiveHook
             log.error("Can't get user email address. getEmailAddress() call returns null");
         }
         env.put("STASH_REPO_NAME", repo.getName());
-        
+
         if (request.getScmHookDetails().isPresent()) {
-        	env.putAll(request.getScmHookDetails().get().getEnvironment());
+            env.putAll(request.getScmHookDetails().get().getEnvironment());
         }
 
         boolean isAdmin = permissions.hasRepositoryPermission(
@@ -149,17 +149,20 @@ public class ExternalPreReceiveHook
     ) throws InterruptedException, IOException {
         Process process = pb.start();
         InputStreamReader input = new InputStreamReader(
-                                                        process.getInputStream(), "UTF-8");
+            process.getInputStream(),
+            "UTF-8"
+        );
+
         OutputStream output = process.getOutputStream();
 
         for (RefChange refChange : refChanges) {
             output.write(
-                         (
-                          refChange.getFromHash() + " " +
-                          refChange.getToHash() + " " +
-                          refChange.getRef().getId() + "\n"
-                          ).getBytes("UTF-8")
-                         );
+                (
+                    refChange.getFromHash() + " " +
+                    refChange.getToHash() + " " +
+                    refChange.getRef().getId() + "\n"
+                ).getBytes("UTF-8")
+             );
         }
         output.close();
 
@@ -170,12 +173,12 @@ public class ExternalPreReceiveHook
         while ((data = input.read()) >= 0) {
             if (count >= 65000) {
                 if (!trimmed) {
-                	builder.
+                    builder.
                         append("\n");
-                	builder.
+                    builder.
                         append("Hook response exceeds 65K length limit.\n");
-                	builder.
-                		append("Further output will be trimmed.\n");
+                    builder.
+                        append("Further output will be trimmed.\n");
                     trimmed = true;
                 }
                 continue;
@@ -187,13 +190,15 @@ public class ExternalPreReceiveHook
 
             builder.append(charToWrite);
         }
-        
+
         int result = process.waitFor();
-        
+
         if (result == 0) {
-        	return RepositoryHookResult.accepted();
+            return RepositoryHookResult.accepted();
         } else {
-        	return RepositoryHookResult.rejected(summaryMessage, builder.toString());
+            log.info(summaryMessage);
+            log.info(builder.toString());
+            return RepositoryHookResult.rejected(summaryMessage, builder.toString());
         }
     }
 
