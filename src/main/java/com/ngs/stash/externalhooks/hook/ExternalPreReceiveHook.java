@@ -23,6 +23,9 @@ import java.util.Set;
 
 import com.atlassian.upm.api.license.PluginLicenseManager;
 
+import com.atlassian.upm.api.license.entity.PluginLicense;
+import com.atlassian.upm.api.util.Option;
+
 public class ExternalPreReceiveHook
     implements PreRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
 {
@@ -58,6 +61,14 @@ public class ExternalPreReceiveHook
     }
 
     public RepositoryHookResult preUpdateImpl(RepositoryHookContext context, RepositoryHookRequest request) {
+        if (!this.isLicenseValid()) {
+            return RepositoryHookResult.rejected(
+                "License is not valid.",
+                "License for External Hooks Plugin is expired.\n"+
+                "Visit \"Manage add-ons\" page in your Bitbucket instance for more info."
+            );
+        }
+
         Repository repo = request.getRepository();
         Settings settings = context.getSettings();
 
@@ -75,14 +86,22 @@ public class ExternalPreReceiveHook
             );
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return RepositoryHookResult.rejected("error", "an error occurred");
+            return RepositoryHookResult.rejected(
+                "Internal Error",
+                "Internal Error occured during External Hooks execution.\n"+
+                "Check Bitbucket logs for more info."
+            );
         } catch (IOException e) {
             log.log(
                 SEVERE,
                 "Error running {0} in {1}: {2}",
                 new Object[]{exe, repoPath, e}
             );
-            return RepositoryHookResult.rejected("error", "an error occurred");
+            return RepositoryHookResult.rejected(
+                "Internal Error",
+                "Internal Error occured during External Hooks execution.\n"+
+                "Check Bitbucket logs for more info."
+            );
         }
     }
 
@@ -238,6 +257,12 @@ public class ExternalPreReceiveHook
         Settings settings,
         SettingsValidationErrors errors, Repository repository
     ) {
+        if (!this.isLicenseValid()) {
+            errors.addFieldError("exe",
+                "License for External Hooks is expired.");
+            return;
+        }
+
         if (!settings.getBoolean("safe_path", false)) {
             if (!permissions.hasGlobalPermission(
                     authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
@@ -300,5 +325,15 @@ public class ExternalPreReceiveHook
         }
 
         return executable;
+    }
+
+    public boolean isLicenseValid() {
+        Option<PluginLicense> licenseOption = pluginLicenseManager.getLicense();
+        if (!licenseOption.isDefined()) {
+            return true;
+        }
+
+        PluginLicense pluginLicense = licenseOption.get();
+        return pluginLicense.isValid();
     }
 }

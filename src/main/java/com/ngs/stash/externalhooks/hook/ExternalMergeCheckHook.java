@@ -33,6 +33,8 @@ import com.ngs.stash.externalhooks.hook.helpers.*;
 import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.http;
 import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.ssh;
 
+import com.atlassian.upm.api.license.entity.PluginLicense;
+import com.atlassian.upm.api.util.Option;
 
 import com.atlassian.upm.api.license.PluginLicenseManager;
 public class ExternalMergeCheckHook
@@ -134,6 +136,14 @@ public class ExternalMergeCheckHook
 
         String summaryMsg = "Merge request failed";
 
+        if (!this.isLicenseValid()) {
+            return RepositoryHookResult.rejected(
+                "License is not valid.",
+                "License for External Hooks Plugin is expired.\n"+
+                "Visit \"Manage add-ons\" page in your Bitbucket instance for more info."
+            );
+        }
+
         try {
             return runExternalHooks(pb, refChanges, summaryMsg);
         } catch (InterruptedException e) {
@@ -209,5 +219,15 @@ public class ExternalMergeCheckHook
     ) {
         return propertiesService.getBaseUrl() + "/projects/" + pullRequest.getToRef().getRepository().getProject().getKey()
             + "/repos/" + pullRequest.getToRef().getRepository().getSlug() + "/pull-requests/" + pullRequest.getId();
+    }
+
+    public boolean isLicenseValid() {
+        Option<PluginLicense> licenseOption = pluginLicenseManager.getLicense();
+        if (!licenseOption.isDefined()) {
+            return true;
+        }
+
+        PluginLicense pluginLicense = licenseOption.get();
+        return pluginLicense.isValid();
     }
 }

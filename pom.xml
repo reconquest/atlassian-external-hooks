@@ -6,8 +6,7 @@
     <artifactId>external-hooks</artifactId>
     <version>4.0-1</version>
     <organization>
-        <name>NGS</name>
-        <url>http://ngs.ru/</url>
+        <name>reconquest</name>
     </organization>
     <name>External Hooks</name>
     <description>This plugin provides Merge Check, Post and Pre receive hooks using any external executable</description>
@@ -46,14 +45,6 @@
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
             <version>2.6</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <!-- 2.5 by kovetskiy -->
-            <version>2.5</version>
             <scope>provided</scope>
         </dependency>
 
