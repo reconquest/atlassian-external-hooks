@@ -11,10 +11,13 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.INFO;
 import java.util.logging.Logger;
 
+import com.atlassian.upm.api.license.PluginLicenseManager;
 
 public class ExternalAsyncPostReceiveHook
     implements PostRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
 {
+    private final PluginLicenseManager pluginLicenseManager;
+
     private static Logger log = Logger.getLogger(
         ExternalAsyncPostReceiveHook.class.getSimpleName()
     );
@@ -28,18 +31,22 @@ public class ExternalAsyncPostReceiveHook
         AuthenticationContext authenticationContext,
         PermissionService permissions,
         RepositoryService repoService,
-        ApplicationPropertiesService properties
+        ApplicationPropertiesService properties,
+        PluginLicenseManager pluginLicenseManager
     ) {
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
         this.properties = properties;
+        this.pluginLicenseManager = pluginLicenseManager;
     }
 
 	@Override
 	public void postUpdate(PostRepositoryHookContext context, RepositoryHookRequest request) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(
-                this.authCtx, this.permissions, this.repoService, this.properties);
+                this.authCtx, this.permissions, this.repoService, this.properties,
+                this.pluginLicenseManager
+                );
 
         impl.preUpdateImpl(context, request);
 	}
@@ -51,7 +58,9 @@ public class ExternalAsyncPostReceiveHook
         Repository repository
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties);
+            this.permissions, this.repoService, this.properties,
+            this.pluginLicenseManager
+            );
 
         impl.validate(settings, errors, repository);
     }

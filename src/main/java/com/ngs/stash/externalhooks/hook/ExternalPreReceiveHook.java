@@ -21,10 +21,13 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.Set;
 
+import com.atlassian.upm.api.license.PluginLicenseManager;
 
 public class ExternalPreReceiveHook
     implements PreRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
 {
+    private final PluginLicenseManager pluginLicenseManager;
+
     private static Logger log = Logger.getLogger(
         ExternalPreReceiveHook.class.getSimpleName()
     );
@@ -38,13 +41,15 @@ public class ExternalPreReceiveHook
         AuthenticationContext authenticationContext,
         PermissionService permissions,
         RepositoryService repoService,
-        ApplicationPropertiesService properties
+        ApplicationPropertiesService properties,
+        PluginLicenseManager pluginLicenseManager
     ) {
         log.setLevel(INFO);
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
         this.properties = properties;
+        this.pluginLicenseManager = pluginLicenseManager;
     }
 
     @Override

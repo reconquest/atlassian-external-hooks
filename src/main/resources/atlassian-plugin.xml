@@ -8,6 +8,7 @@
     <param name="atlassian-data-center-compatible">true</param>
     <param name="plugin-icon">images/pluginIcon.png</param>
     <param name="plugin-logo">images/pluginLogo.png</param>
+    <param name="atlassian-licensing-enabled">true</param>
   </plugin-info>
   <!-- add our i18n resource -->
   <resource type="i18n" name="i18n" location="external-hooks"/>
@@ -47,4 +48,6 @@
       <directory location="/static/"/>
     </config-form>
   </repository-hook>
+
+  <component-import key="pluginLicenseManager" interface="com.atlassian.upm.api.license.PluginLicenseManager" />
 </atlassian-plugin>

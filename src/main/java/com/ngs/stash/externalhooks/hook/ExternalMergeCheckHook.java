@@ -34,9 +34,11 @@ import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTO
 import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.ssh;
 
 
+import com.atlassian.upm.api.license.PluginLicenseManager;
 public class ExternalMergeCheckHook
     implements RepositoryMergeCheck, RepositorySettingsValidator
 {
+    private final PluginLicenseManager pluginLicenseManager;
     private static Logger log = Logger.getLogger(
         ExternalMergeCheckHook.class.getSimpleName()
     );
@@ -50,12 +52,14 @@ public class ExternalMergeCheckHook
         AuthenticationContext authenticationContext,
         PermissionService permissions,
         RepositoryService repoService,
-        ApplicationPropertiesService properties
+        ApplicationPropertiesService properties,
+        PluginLicenseManager pluginLicenseManager
     ) {
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
         this.properties = properties;
+        this.pluginLicenseManager = pluginLicenseManager;
     }
 
     @Override
@@ -147,7 +151,7 @@ public class ExternalMergeCheckHook
         Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
         return impl.createProcessBuilder(repo, repoPath, exe, settings, request);
     }
 
@@ -157,7 +161,7 @@ public class ExternalMergeCheckHook
         String summaryMessage
     ) throws InterruptedException, IOException {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
         return impl.runExternalHooks(pb, refChanges, summaryMessage);
     }
 
@@ -168,7 +172,7 @@ public class ExternalMergeCheckHook
         Repository repository
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
         impl.validate(settings, errors, repository);
     }
 
