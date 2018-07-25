@@ -31,6 +31,10 @@
       <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
       <directory location="/static/"/>
     </config-form>
+    <scopes>
+        <scope>project</scope>
+        <scope>repository</scope>
+    </scopes>
   </repository-hook>
   <repository-hook name="External Async Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
     <description key="external-post-receive-hook.description">The External Async Post Receive Hook Plugin</description>
@@ -39,6 +43,10 @@
       <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
       <directory location="/static/"/>
     </config-form>
+    <scopes>
+        <scope>project</scope>
+        <scope>repository</scope>
+    </scopes>
   </repository-hook>
   <repository-hook name="External Merge Check Hook" i18n-name-key="external-merge-check-hook.name" key="external-merge-check-hook" class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
     <description key="external-merge-check-hook.description">The External Merge Check Hook Plugin</description>
@@ -47,6 +55,10 @@
       <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
       <directory location="/static/"/>
     </config-form>
+    <scopes>
+        <scope>project</scope>
+        <scope>repository</scope>
+    </scopes>
   </repository-hook>
 
   <component-import key="pluginLicenseManager" interface="com.atlassian.upm.api.license.PluginLicenseManager" />
