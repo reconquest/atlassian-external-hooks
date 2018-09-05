@@ -1,6 +1,12 @@
 package com.ngs.stash.externalhooks.hook;
 
+import com.atlassian.bitbucket.comment.AddCommentRequest;
+import com.atlassian.bitbucket.comment.CommentSearchRequest;
+import com.atlassian.bitbucket.comment.CommentService;
+import com.atlassian.bitbucket.comment.CommentThread;
+import com.atlassian.bitbucket.comment.CommentThreadDiffAnchorState;
 import com.atlassian.bitbucket.hook.repository.*;
+import com.atlassian.bitbucket.property.PropertyMap;
 import com.atlassian.bitbucket.repository.*;
 import com.atlassian.bitbucket.setting.*;
 import com.atlassian.bitbucket.auth.*;
@@ -10,6 +16,7 @@ import com.atlassian.bitbucket.util.*;
 
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.INFO;
+
 import java.util.logging.Logger;
 
 import java.util.Collection;
@@ -20,6 +27,7 @@ import java.util.LinkedList;
 import java.util.Set;
 
 import java.util.ArrayList;
+
 import com.atlassian.bitbucket.pull.*;
 import com.ngs.stash.externalhooks.hook.helpers.*;
 // import com.google.common.base.Predicate;
@@ -37,31 +45,68 @@ import com.atlassian.upm.api.license.entity.PluginLicense;
 import com.atlassian.upm.api.util.Option;
 
 import com.atlassian.upm.api.license.PluginLicenseManager;
+import org.apache.commons.lang.BooleanUtils;
+
+import javax.annotation.Nonnull;
+
 public class ExternalMergeCheckHook
     implements RepositoryMergeCheck, RepositorySettingsValidator
 {
-    private final PluginLicenseManager pluginLicenseManager;
     private static Logger log = Logger.getLogger(
         ExternalMergeCheckHook.class.getSimpleName()
     );
-
+    private final PluginLicenseManager pluginLicenseManager;
     private AuthenticationContext authCtx;
     private PermissionService permissions;
     private RepositoryService repoService;
     private ApplicationPropertiesService properties;
+    private PullRequestService pullRequestService;
+    private CommentService commentService;
 
     public ExternalMergeCheckHook(
         AuthenticationContext authenticationContext,
         PermissionService permissions,
         RepositoryService repoService,
         ApplicationPropertiesService properties,
-        PluginLicenseManager pluginLicenseManager
-    ) {
+        PluginLicenseManager pluginLicenseManager,
+        PullRequestService pullRequestService,
+        CommentService commentService
+    )
+    {
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
         this.properties = properties;
         this.pluginLicenseManager = pluginLicenseManager;
+        this.pullRequestService = pullRequestService;
+        this.commentService = commentService;
+    }
+
+    private static String cloneUrlFromRepository(
+        REPO_PROTOCOL protocol,
+        Repository repository,
+        RepositoryService repoService
+    )
+    {
+        RepositoryCloneLinksRequest request = new RepositoryCloneLinksRequest.Builder().protocol(protocol.name())
+            .repository(repository).build();
+        final Set<NamedLink> cloneLinks = repoService.getCloneLinks(request);
+        return cloneLinks.iterator().hasNext() ? cloneLinks.iterator().next().getHref() : "";
+    }
+
+    private static String getPullRequestUrl(
+        ApplicationPropertiesService propertiesService,
+        PullRequest pullRequest
+    )
+    {
+        return propertiesService.getBaseUrl() +
+            "/projects/" +
+            pullRequest.getToRef().getRepository().getProject().getKey()
+            +
+            "/repos/" +
+            pullRequest.getToRef().getRepository().getSlug() +
+            "/pull-requests/" +
+            pullRequest.getId();
     }
 
     @Override
@@ -99,8 +144,10 @@ public class ExternalMergeCheckHook
         env.put("PULL_REQUEST_FROM_REPO_PROJECT_ID", pr.getFromRef().getRepository().getProject().getId() + "");
         env.put("PULL_REQUEST_FROM_REPO_PROJECT_KEY", pr.getFromRef().getRepository().getProject().getKey());
         env.put("PULL_REQUEST_FROM_REPO_SLUG", pr.getFromRef().getRepository().getSlug() + "");
-        env.put("PULL_REQUEST_FROM_SSH_CLONE_URL", cloneUrlFromRepository(ssh, pr.getFromRef().getRepository(), repoService));
-        env.put("PULL_REQUEST_FROM_HTTP_CLONE_URL", cloneUrlFromRepository(http, pr.getFromRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_FROM_SSH_CLONE_URL",
+            cloneUrlFromRepository(ssh, pr.getFromRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_FROM_HTTP_CLONE_URL",
+            cloneUrlFromRepository(http, pr.getFromRef().getRepository(), repoService));
         // env.put("PULL_REQUEST_ACTION", prnfbPullRequestAction.getName());
         env.put("PULL_REQUEST_URL", getPullRequestUrl(properties, pr));
         env.put("PULL_REQUEST_ID", pr.getId() + "");
@@ -118,8 +165,10 @@ public class ExternalMergeCheckHook
         env.put("PULL_REQUEST_TO_REPO_PROJECT_ID", pr.getToRef().getRepository().getProject().getId() + "");
         env.put("PULL_REQUEST_TO_REPO_PROJECT_KEY", pr.getToRef().getRepository().getProject().getKey());
         env.put("PULL_REQUEST_TO_REPO_SLUG", pr.getToRef().getRepository().getSlug() + "");
-        env.put("PULL_REQUEST_TO_SSH_CLONE_URL", cloneUrlFromRepository(ssh, pr.getToRef().getRepository(), repoService));
-        env.put("PULL_REQUEST_TO_HTTP_CLONE_URL", cloneUrlFromRepository(http, pr.getToRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_TO_SSH_CLONE_URL",
+            cloneUrlFromRepository(ssh, pr.getToRef().getRepository(), repoService));
+        env.put("PULL_REQUEST_TO_HTTP_CLONE_URL",
+            cloneUrlFromRepository(http, pr.getToRef().getRepository(), repoService));
         // env.put("PULL_REQUEST_COMMENT_TEXT", getOrEmpty(variables, PULL_REQUEST_COMMENT_TEXT));
         // env.put("PULL_REQUEST_MERGE_COMMIT", getOrEmpty(variables, PULL_REQUEST_MERGE_COMMIT));
         // env.put("PULL_REQUEST_USER_DISPLAY_NAME", applicationUser.getDisplayName());
@@ -139,8 +188,8 @@ public class ExternalMergeCheckHook
         if (!this.isLicenseValid()) {
             return RepositoryHookResult.rejected(
                 "License is not valid.",
-                "License for External Hooks Plugin is expired.\n"+
-                "Visit \"Manage add-ons\" page in your Bitbucket instance for more info."
+                "License for External Hooks Plugin is expired.\n" +
+                    "Visit \"Manage add-ons\" page in your Bitbucket instance for more info."
             );
         }
 
@@ -151,15 +200,74 @@ public class ExternalMergeCheckHook
             String detailedMsg = "Interrupted";
             return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         } catch (IOException e) {
-            log.log(SEVERE, "Error running "+exe+" in "+repoPath, e);
+            log.log(SEVERE, "Error running " + exe + " in " + repoPath, e);
             String detailedMsg = "I/O Error";
             return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
         }
     }
 
+    @Override
+    public void onEnd(@Nonnull PreRepositoryHookContext context,
+                      @Nonnull PullRequestMergeHookRequest request,
+                      @Nonnull RepositoryHookResult result)
+    {
+        final PullRequest pr = request.getPullRequest();
+        final Settings settings = context.getSettings();
+
+        final Page<PullRequestActivity> comments = this.pullRequestService.getActivities(
+            context.getRepository().getId(),
+            pr.getId(),
+            new PageRequestImpl(0, 10)
+        );
+
+        final String refPrefix = String.format("`Version %s`\n\n", String.valueOf(pr.getVersion()));
+
+        if (comments.stream().anyMatch(commentThread -> {
+            if (!commentThread.getAction().equals(PullRequestAction.COMMENTED)) {
+                return false;
+            }
+
+            return ((PullRequestCommentActivity) commentThread).getComment().getText().startsWith(refPrefix);
+        })) {
+            // Reference has already been checked. Skip any further actions
+            return;
+        }
+
+        final StringBuffer comment = new StringBuffer(refPrefix);
+
+        if (result.isRejected()) {
+
+            result.getVetoes().forEach(repositoryHookVeto -> comment.append(String.format("%s (%s)",
+                repositoryHookVeto.getSummaryMessage(),
+                repositoryHookVeto.getDetailedMessage())
+            ));
+
+            this.commentService.addComment(
+                new AddCommentRequest.Builder(pr, comment.toString()).build()
+            );
+
+            if (BooleanUtils.isTrue(settings.getBoolean("decline_pull_request_on_rejection"))) {
+                this.pullRequestService.decline(
+                    new PullRequestDeclineRequest.Builder(
+                        pr,
+                        pr.getVersion()
+                    ).build()
+                );
+            }
+        } else {
+            this.commentService.addComment(
+                new AddCommentRequest.Builder(
+                    pr,
+                    comment.append("External Hooks: Checks succesful").toString()
+                ).build()
+            );
+        }
+    }
+
     public ProcessBuilder createProcessBuilder(
         Repository repo, String repoPath, List<String> exe, Settings settings, RepositoryHookRequest request
-    ) {
+    )
+    {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
             this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
         return impl.createProcessBuilder(repo, repoPath, exe, settings, request);
@@ -169,25 +277,11 @@ public class ExternalMergeCheckHook
         ProcessBuilder pb,
         Collection<RefChange> refChanges,
         String summaryMessage
-    ) throws InterruptedException, IOException {
+    ) throws InterruptedException, IOException
+    {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
             this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
         return impl.runExternalHooks(pb, refChanges, summaryMessage);
-    }
-
-    @Override
-    public void validate(
-        Settings settings,
-        SettingsValidationErrors errors,
-        Repository repository
-    ) {
-        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
-        impl.validate(settings, errors, repository);
-    }
-
-    public enum REPO_PROTOCOL {
-        ssh, http
     }
 
     // private static final Predicate<PullRequestParticipant> isApproved = new Predicate<PullRequestParticipant>() {
@@ -202,23 +296,16 @@ public class ExternalMergeCheckHook
     //     return on(',').join(sorted);
     // }
 
-    private static String cloneUrlFromRepository(
-        REPO_PROTOCOL protocol,
-        Repository repository,
-        RepositoryService repoService
-    ) {
-      RepositoryCloneLinksRequest request = new RepositoryCloneLinksRequest.Builder().protocol(protocol.name())
-          .repository(repository).build();
-      final Set<NamedLink> cloneLinks = repoService.getCloneLinks(request);
-      return cloneLinks.iterator().hasNext() ? cloneLinks.iterator().next().getHref() : "";
-    }
-
-    private static String getPullRequestUrl(
-        ApplicationPropertiesService propertiesService,
-        PullRequest pullRequest
-    ) {
-        return propertiesService.getBaseUrl() + "/projects/" + pullRequest.getToRef().getRepository().getProject().getKey()
-            + "/repos/" + pullRequest.getToRef().getRepository().getSlug() + "/pull-requests/" + pullRequest.getId();
+    @Override
+    public void validate(
+        Settings settings,
+        SettingsValidationErrors errors,
+        Repository repository
+    )
+    {
+        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
+        impl.validate(settings, errors, repository);
     }
 
     public boolean isLicenseValid() {
@@ -229,5 +316,9 @@ public class ExternalMergeCheckHook
 
         PluginLicense pluginLicense = licenseOption.get();
         return pluginLicense.isValid();
+    }
+
+    public enum REPO_PROTOCOL {
+        ssh, http
     }
 }

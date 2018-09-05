@@ -52,7 +52,7 @@
     <description key="external-merge-check-hook.description">The External Merge Check Hook Plugin</description>
     <icon>icon-example.png</icon>
     <config-form name="External Merge Check Hook Config" key="external-merge-check-hook-config">
-      <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
+      <view>com.ngs.stash.externalhooks.hook.externalmergecheckhook.view</view>
       <directory location="/static/"/>
     </config-form>
     <scopes>
@@ -62,4 +62,7 @@
   </repository-hook>
 
   <component-import key="pluginLicenseManager" interface="com.atlassian.upm.api.license.PluginLicenseManager" />
+  <component-import key="pullRequestService" interface="com.atlassian.bitbucket.pull.PullRequestService" />
+  <component-import key="commentService" interface="com.atlassian.bitbucket.comment.CommentService" />
+  <component-import key="commitService" interface="com.atlassian.bitbucket.commit.CommitService" />
 </atlassian-plugin>
