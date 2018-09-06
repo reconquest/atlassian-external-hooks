@@ -61,6 +61,12 @@
     </scopes>
   </repository-hook>
 
+  <!-- Active objects -->
+  <ao key="ao-module" namespace="external-hooks" i18n-name-key="external-hooks.ao.name">
+    <description key="external-hooks.ao.description"/>
+    <entity>com.ngs.stash.externalhooks.hook.data.PullRequestCheck</entity>
+  </ao>
+
   <component-import key="pluginLicenseManager" interface="com.atlassian.upm.api.license.PluginLicenseManager" />
   <component-import key="pullRequestService" interface="com.atlassian.bitbucket.pull.PullRequestService" />
   <component-import key="commentService" interface="com.atlassian.bitbucket.comment.CommentService" />
