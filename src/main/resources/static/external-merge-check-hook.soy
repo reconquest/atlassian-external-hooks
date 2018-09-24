@@ -41,13 +41,24 @@
     </div>
 
     {call aui.form.checkboxField}
-            {param legendContent: 'Decline Pull Requests' /}
-            {param fields: [
-                [
-                    'id': 'decline_pull_request_on_rejection',
-                    'labelText': 'Decline pull requests when the merge is rejected',
-                    'isChecked': $config ? $config['decline_pull_request_on_rejection'] : false
-                ]
-            ]/}
-        {/call}
+        {param legendContent: 'Add comments' /}
+        {param fields: [
+            [
+                'id': 'add_comments',
+                'labelText': 'Add comments to the pull request, when it is rejected',
+                'isChecked': $config ? $config['add_comments'] : false
+            ]
+        ]/}
+    {/call}
+
+    {call aui.form.checkboxField}
+        {param legendContent: 'Decline Pull Requests' /}
+        {param fields: [
+            [
+                'id': 'decline_pull_request_on_rejection',
+                'labelText': 'Decline pull requests when the merge is rejected',
+                'isChecked': $config ? $config['decline_pull_request_on_rejection'] : false
+            ]
+        ]/}
+    {/call}
 {/template}

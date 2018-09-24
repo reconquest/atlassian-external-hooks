@@ -49,6 +49,7 @@ import com.atlassian.upm.api.license.PluginLicenseManager;
 import net.java.ao.DBParam;
 import net.java.ao.Query;
 import org.apache.commons.lang.BooleanUtils;
+import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -241,6 +242,16 @@ public class ExternalMergeCheckHook
                 check.setLastExceptionDetail(result.getVetoes().get(0).getDetailedMessage());
             }
             check.save();
+            if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
+                result.getVetoes().removeAll(result.getVetoes());
+                result.getVetoes()
+                    .add(
+                        new SimpleRepositoryHookVeto(
+                            "Merge check failed",
+                            "See Pull-Request comments for more info"
+                        )
+                    );
+            }
             return result;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -286,14 +297,27 @@ public class ExternalMergeCheckHook
 
         if (result.isRejected()) {
 
-            result.getVetoes().forEach(repositoryHookVeto -> comment.append(String.format("%s (%s)",
-                repositoryHookVeto.getSummaryMessage(),
-                repositoryHookVeto.getDetailedMessage())
-            ));
+            if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
 
-            this.commentService.addComment(
-                new AddCommentRequest.Builder(pr, comment.toString()).build()
-            );
+                result.getVetoes().forEach(repositoryHookVeto -> {
+                        if (StringUtils.isEmpty(repositoryHookVeto.getDetailedMessage())) {
+                            comment.append(repositoryHookVeto.getSummaryMessage());
+                        } else {
+                            comment.append(
+                                String.format(
+                                    "%s\n%s",
+                                    repositoryHookVeto.getSummaryMessage(),
+                                    repositoryHookVeto.getDetailedMessage()
+                                )
+                            );
+                        }
+                    }
+                );
+
+                this.commentService.addComment(
+                    new AddCommentRequest.Builder(pr, comment.toString()).build()
+                );
+            }
 
             if (BooleanUtils.isTrue(settings.getBoolean("decline_pull_request_on_rejection"))) {
                 log.log(FINER, "Declining Pull Request as configured");
@@ -305,12 +329,14 @@ public class ExternalMergeCheckHook
                 );
             }
         } else {
-            this.commentService.addComment(
-                new AddCommentRequest.Builder(
-                    pr,
-                    comment.append("External Hooks: Checks succesful").toString()
-                ).build()
-            );
+            if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
+                this.commentService.addComment(
+                    new AddCommentRequest.Builder(
+                        pr,
+                        comment.append("External Hooks: Checks succesful").toString()
+                    ).build()
+                );
+            }
         }
 
         lastCheck.get().setWasHandled(true);
