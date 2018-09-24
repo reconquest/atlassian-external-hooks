@@ -333,7 +333,7 @@ public class ExternalMergeCheckHook
                 this.commentService.addComment(
                     new AddCommentRequest.Builder(
                         pr,
-                        comment.append("External Hooks: Checks succesful").toString()
+                        comment.append("External Hooks: Checks successful").toString()
                     ).build()
                 );
             }
