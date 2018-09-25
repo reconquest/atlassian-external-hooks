@@ -243,14 +243,10 @@ public class ExternalMergeCheckHook
             }
             check.save();
             if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
-                result.getVetoes().removeAll(result.getVetoes());
-                result.getVetoes()
-                    .add(
-                        new SimpleRepositoryHookVeto(
-                            "Merge check failed",
-                            "See Pull-Request comments for more info"
-                        )
-                    );
+                return RepositoryHookResult.rejected(
+                    "Merge check failed",
+                    "See Pull-Request comments for more info"
+                );
             }
             return result;
         } catch (InterruptedException e) {
