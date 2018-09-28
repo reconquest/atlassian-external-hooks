@@ -70,6 +70,7 @@ public class ExternalMergeCheckHook
     private PullRequestService pullRequestService;
     private CommentService commentService;
     private ActiveObjects activeObjects;
+    private String comment;
 
     @Inject
     public ExternalMergeCheckHook(
@@ -91,6 +92,7 @@ public class ExternalMergeCheckHook
         this.pullRequestService = pullRequestService;
         this.commentService = commentService;
         this.activeObjects = activeObjects;
+        this.comment = "";
     }
 
     private static String cloneUrlFromRepository(
@@ -224,8 +226,6 @@ public class ExternalMergeCheckHook
         // env.put("PULL_REQUEST_REVIEWERS_APPROVED_COUNT", Integer.toString(newArrayList(filter(pr.getReviewers(), isApproved)).size()));
         // env.put("PULL_REQUEST_PARTICIPANTS_APPROVED_COUNT", Integer.toString(newArrayList(filter(pr.getParticipants(), isApproved)).size()));
 
-        String summaryMsg = "Merge request failed";
-
         if (!this.isLicenseValid()) {
             return RepositoryHookResult.rejected(
                 "License is not valid.",
@@ -234,37 +234,43 @@ public class ExternalMergeCheckHook
             );
         }
 
+        String detailMsg;
+        boolean wasAccepted = false;
+
         try {
-            final RepositoryHookResult result = runExternalHooks(pb, refChanges, summaryMsg);
-            check.setWasAccepted(result.isAccepted());
-            if (result.isRejected()) {
-                check.setLastExceptionSummary(result.getVetoes().get(0).getSummaryMessage());
-                check.setLastExceptionDetail(result.getVetoes().get(0).getDetailedMessage());
-            }
-            check.save();
-            if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
-                return RepositoryHookResult.rejected(
-                    "Merge check failed",
-                    "See Pull-Request comments for more info"
-                );
-            }
-            return result;
+            final RepositoryHookResult result = runExternalHooks(pb, refChanges, "tmp");
+            wasAccepted = result.isAccepted();
+            detailMsg = result.getVetoes().get(0).getDetailedMessage();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            String detailedMsg = "Interrupted";
-            check.setWasAccepted(false);
-            check.setLastExceptionDetail(detailedMsg);
-            check.setLastExceptionSummary(summaryMsg);
-            check.save();
-            return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
+            log.log(SEVERE, "Error running check script: Thread was interrupted.", e);
+            detailMsg = "Interrupted";
         } catch (IOException e) {
             log.log(SEVERE, "Error running " + exe + " in " + repoPath, e);
-            String detailedMsg = "I/O Error";
-            check.setWasAccepted(false);
-            check.setLastExceptionDetail(detailedMsg);
-            check.setLastExceptionSummary(summaryMsg);
-            check.save();
-            return RepositoryHookResult.rejected(summaryMsg, detailedMsg);
+            detailMsg = "I/O Error";
+        }
+
+        final String summaryMsg = wasAccepted ? "External hooks check was successful." : "External hooks check failed.";
+
+        check.setWasAccepted(wasAccepted);
+        check.setLastExceptionSummary(summaryMsg);
+        check.setLastExceptionDetail(detailMsg);
+        check.save();
+
+        this.comment = StringUtils.isEmpty(detailMsg) ? summaryMsg : String.format(
+            "%s\n%s",
+            summaryMsg,
+            detailMsg
+        );
+
+        if (!wasAccepted && BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
+            detailMsg = "See Pull-Request comments for more info";
+        }
+
+        if (wasAccepted) {
+            return RepositoryHookResult.accepted();
+        } else {
+            return RepositoryHookResult.rejected(summaryMsg, detailMsg);
         }
     }
 
@@ -284,55 +290,26 @@ public class ExternalMergeCheckHook
         }
 
         if (lastCheck.get().getVersion() == pr.getVersion() && lastCheck.get().getWasHandled()) {
+            // We already handled this result. Return.
             return;
         }
 
-        log.log(FINEST, "Adding new comment");
+        if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
+            log.log(FINEST, "Adding new comment");
 
-        final StringBuffer comment = new StringBuffer();
+            this.commentService.addComment(
+                new AddCommentRequest.Builder(pr, this.comment).build()
+            );
+        }
 
-        if (result.isRejected()) {
-
-            if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
-
-                result.getVetoes().forEach(repositoryHookVeto -> {
-                        if (StringUtils.isEmpty(repositoryHookVeto.getDetailedMessage())) {
-                            comment.append(repositoryHookVeto.getSummaryMessage());
-                        } else {
-                            comment.append(
-                                String.format(
-                                    "%s\n%s",
-                                    repositoryHookVeto.getSummaryMessage(),
-                                    repositoryHookVeto.getDetailedMessage()
-                                )
-                            );
-                        }
-                    }
-                );
-
-                this.commentService.addComment(
-                    new AddCommentRequest.Builder(pr, comment.toString()).build()
-                );
-            }
-
-            if (BooleanUtils.isTrue(settings.getBoolean("decline_pull_request_on_rejection"))) {
-                log.log(FINER, "Declining Pull Request as configured");
-                this.pullRequestService.decline(
-                    new PullRequestDeclineRequest.Builder(
-                        pr,
-                        pr.getVersion()
-                    ).build()
-                );
-            }
-        } else {
-            if (BooleanUtils.isTrue(settings.getBoolean("add_comments"))) {
-                this.commentService.addComment(
-                    new AddCommentRequest.Builder(
-                        pr,
-                        comment.append("External Hooks: Checks successful").toString()
-                    ).build()
-                );
-            }
+        if (result.isRejected() && BooleanUtils.isTrue(settings.getBoolean("decline_pull_request_on_rejection"))) {
+            log.log(FINER, "Declining Pull Request as configured");
+            this.pullRequestService.decline(
+                new PullRequestDeclineRequest.Builder(
+                    pr,
+                    pr.getVersion()
+                ).build()
+            );
         }
 
         lastCheck.get().setWasHandled(true);
