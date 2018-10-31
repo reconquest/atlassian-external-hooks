@@ -234,13 +234,15 @@ public class ExternalMergeCheckHook
             );
         }
 
-        String detailMsg;
+        String detailMsg = "";
         boolean wasAccepted = false;
 
         try {
             final RepositoryHookResult result = runExternalHooks(pb, refChanges, "tmp");
             wasAccepted = result.isAccepted();
-            detailMsg = result.getVetoes().get(0).getDetailedMessage();
+            if (result.isRejected()) {
+                detailMsg = result.getVetoes().get(0).getDetailedMessage();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.log(SEVERE, "Error running check script: Thread was interrupted.", e);
