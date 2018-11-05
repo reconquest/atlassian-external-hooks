@@ -155,7 +155,7 @@ public class ExternalMergeCheckHook
             }
         }
 
-        Repository repo = pr.getToRef().getRepository();
+        Repository repo = pr.getFromRef().getRepository();
         Settings settings = context.getSettings();
 
         // compat with < 3.2.0
