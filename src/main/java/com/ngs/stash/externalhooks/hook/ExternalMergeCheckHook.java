@@ -155,11 +155,11 @@ public class ExternalMergeCheckHook
             }
         }
 
-        Repository repo = pr.getFromRef().getRepository();
+        Repository repo = pr.getToRef().getRepository();
         Settings settings = context.getSettings();
 
         // compat with < 3.2.0
-        String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
+        String repoPath = this.properties.getRepositoryDir(pr.getFromRef().getRepository()).getAbsolutePath();
         List<String> exe = new LinkedList<String>();
 
         ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
