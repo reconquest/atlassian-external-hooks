@@ -128,16 +128,29 @@ public class ExternalMergeCheckHook
 
         final Optional<PullRequestCheck> lastResult = this.getCheck(pr);
         PullRequestCheck check;
+        Settings settings = context.getSettings();
 
-        if (lastResult.isPresent() && lastResult.get().getVersion() == pr.getVersion()) {
+        if (lastResult.isPresent() && lastResult.get().getVersion() == pr.getVersion()
+            && BooleanUtils.isTrue(settings.getBoolean("cache_pr_results"))) {
             log.log(FINER, "Pull Request was already handled. Returning the last result.");
             if (lastResult.get().getWasAccepted()) {
                 return RepositoryHookResult.accepted();
             } else {
-                return RepositoryHookResult.rejected(
-                    lastResult.get().getLastExceptionSummary(),
-                    lastResult.get().getLastExceptionDetail()
-                );
+                if(BooleanUtils.isTrue(settings.getBoolean("detailed_tooltip"))) {
+                    return RepositoryHookResult.rejected(
+                        String.format("%s\n%s",
+                            lastResult.get().getLastExceptionSummary(),
+                            lastResult.get().getLastExceptionDetail()
+                        ),
+                        lastResult.get().getLastExceptionDetail()
+                    );
+                }
+                else {
+                    return RepositoryHookResult.rejected(
+                        lastResult.get().getLastExceptionSummary(),
+                        lastResult.get().getLastExceptionDetail()
+                    );
+                }
             }
         } else {
             if (lastResult.isPresent()) {
@@ -156,7 +169,6 @@ public class ExternalMergeCheckHook
         }
 
         Repository repo = pr.getToRef().getRepository();
-        Settings settings = context.getSettings();
 
         // compat with < 3.2.0
         String repoPath = this.properties.getRepositoryDir(pr.getFromRef().getRepository()).getAbsolutePath();
@@ -272,7 +284,12 @@ public class ExternalMergeCheckHook
         if (wasAccepted) {
             return RepositoryHookResult.accepted();
         } else {
-            return RepositoryHookResult.rejected(summaryMsg, detailMsg);
+            if(BooleanUtils.isTrue(settings.getBoolean("detailed_tooltip"))) {
+                return RepositoryHookResult.rejected(String.format("%s\n%s", summaryMsg, detailMsg), detailMsg);
+            }
+            else {
+                return RepositoryHookResult.rejected(summaryMsg, detailMsg);
+            }
         }
     }
 

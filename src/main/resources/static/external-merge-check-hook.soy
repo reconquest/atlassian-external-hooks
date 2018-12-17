@@ -61,4 +61,27 @@
             ]
         ]/}
     {/call}
+	
+	{call aui.form.checkboxField}
+        {param legendContent: 'Cache Check Results' /}
+        {param fields: [
+            [
+                'id': 'cache_pr_results',
+                'labelText': 'Cache results of pull request check',
+                'descriptionText': 'If unchecked the executable will be run every time the pull request page is opened.',
+                'isChecked': $config ? $config['cache_pr_results'] : true
+            ]
+        ]/}
+    {/call}
+	
+	{call aui.form.checkboxField}
+        {param legendContent: 'Include Details In Tooltip' /}
+        {param fields: [
+            [
+                'id': 'detailed_tooltip',
+                'labelText': 'Include detailed results of the pull request check in the merge button tooltip',
+                'isChecked': $config ? $config['detailed_tooltip'] : false
+            ]
+        ]/}
+    {/call}	
 {/template}
