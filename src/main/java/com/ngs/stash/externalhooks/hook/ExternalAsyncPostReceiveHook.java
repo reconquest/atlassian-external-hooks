@@ -1,5 +1,6 @@
 package com.ngs.stash.externalhooks.hook;
 
+import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.*;
 import com.atlassian.bitbucket.repository.*;
 import com.atlassian.bitbucket.setting.*;
@@ -25,6 +26,7 @@ public class ExternalAsyncPostReceiveHook
     private AuthenticationContext authCtx;
     private PermissionService permissions;
     private RepositoryService repoService;
+    private ClusterService clusterService;
     private ApplicationPropertiesService properties;
 
     public ExternalAsyncPostReceiveHook(
@@ -32,12 +34,14 @@ public class ExternalAsyncPostReceiveHook
         PermissionService permissions,
         RepositoryService repoService,
         ApplicationPropertiesService properties,
-        PluginLicenseManager pluginLicenseManager
+        PluginLicenseManager pluginLicenseManager,
+        ClusterService clusterService
     ) {
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
         this.properties = properties;
+        this.clusterService = clusterService;
         this.pluginLicenseManager = pluginLicenseManager;
     }
 
@@ -45,7 +49,7 @@ public class ExternalAsyncPostReceiveHook
 	public void postUpdate(PostRepositoryHookContext context, RepositoryHookRequest request) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(
                 this.authCtx, this.permissions, this.repoService, this.properties,
-                this.pluginLicenseManager
+                this.pluginLicenseManager, this.clusterService
                 );
 
         impl.preUpdateImpl(context, request);
@@ -59,7 +63,7 @@ public class ExternalAsyncPostReceiveHook
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
             this.permissions, this.repoService, this.properties,
-            this.pluginLicenseManager
+            this.pluginLicenseManager, this.clusterService
             );
 
         impl.validate(settings, errors, repository);

@@ -1,6 +1,7 @@
 package com.ngs.stash.externalhooks.hook;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
+import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.comment.AddCommentRequest;
 import com.atlassian.bitbucket.comment.CommentService;
 import com.atlassian.bitbucket.hook.repository.*;
@@ -69,6 +70,7 @@ public class ExternalMergeCheckHook
     private ApplicationPropertiesService properties;
     private PullRequestService pullRequestService;
     private CommentService commentService;
+    private ClusterService clusterService;
     private ActiveObjects activeObjects;
     private String comment;
 
@@ -81,6 +83,7 @@ public class ExternalMergeCheckHook
         PluginLicenseManager pluginLicenseManager,
         PullRequestService pullRequestService,
         CommentService commentService,
+        ClusterService clusterService,
         @ComponentImport ActiveObjects activeObjects
     )
     {
@@ -92,6 +95,7 @@ public class ExternalMergeCheckHook
         this.pullRequestService = pullRequestService;
         this.commentService = commentService;
         this.activeObjects = activeObjects;
+        this.clusterService = clusterService;
         this.comment = "";
     }
 
@@ -347,7 +351,7 @@ public class ExternalMergeCheckHook
     )
     {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
         return impl.createProcessBuilder(repo, repoPath, exe, settings, request);
     }
 
@@ -358,7 +362,7 @@ public class ExternalMergeCheckHook
     ) throws InterruptedException, IOException
     {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
         return impl.runExternalHooks(pb, refChanges, summaryMessage);
     }
 
@@ -382,7 +386,7 @@ public class ExternalMergeCheckHook
     )
     {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
         impl.validate(settings, errors, repository);
     }
 

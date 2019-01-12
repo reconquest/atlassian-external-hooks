@@ -1,5 +1,6 @@
 package com.ngs.stash.externalhooks.hook;
 
+import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.*;
 import com.atlassian.bitbucket.repository.*;
 import com.atlassian.bitbucket.setting.*;
@@ -38,6 +39,7 @@ public class ExternalPreReceiveHook
     private AuthenticationContext authCtx;
     private PermissionService permissions;
     private RepositoryService repoService;
+    private ClusterService clusterService;
     private ApplicationPropertiesService properties;
 
     public ExternalPreReceiveHook(
@@ -45,7 +47,8 @@ public class ExternalPreReceiveHook
         PermissionService permissions,
         RepositoryService repoService,
         ApplicationPropertiesService properties,
-        PluginLicenseManager pluginLicenseManager
+        PluginLicenseManager pluginLicenseManager,
+        ClusterService clusterService
     ) {
         log.setLevel(INFO);
         this.authCtx = authenticationContext;
@@ -53,6 +56,7 @@ public class ExternalPreReceiveHook
         this.repoService = repoService;
         this.properties = properties;
         this.pluginLicenseManager = pluginLicenseManager;
+        this.clusterService = clusterService;
     }
 
     @Override
@@ -263,6 +267,12 @@ public class ExternalPreReceiveHook
             return;
         }
 
+        if (this.clusterService.isAvailable() && !settings.getBoolean("safe_path", false)) {
+            errors.addFieldError("exe",
+                    "Bitbucket is running in DataCenter mode. You must use \"safe mode\" option.");
+            return;
+        }
+
         if (!settings.getBoolean("safe_path", false)) {
             if (!permissions.hasGlobalPermission(
                     authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
@@ -318,13 +328,21 @@ public class ExternalPreReceiveHook
                 executable = null;
             } else {
                 String safeBaseDir =
-                    this.properties.getHomeDir().getAbsolutePath() +
+                    getHomeDir().getAbsolutePath() +
                     "/external-hooks/";
                 executable = new File(safeBaseDir, path);
             }
         }
 
         return executable;
+    }
+
+    private File getHomeDir() {
+        if (this.clusterService.isAvailable()) {
+            return this.properties.getSharedHomeDir();
+        } else{
+            return this.properties.getHomeDir();
+        }
     }
 
     public boolean isLicenseValid() {
