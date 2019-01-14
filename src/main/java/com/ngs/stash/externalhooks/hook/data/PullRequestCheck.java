@@ -84,4 +84,13 @@ public interface PullRequestCheck extends Entity {
     @StringLength(StringLength.UNLIMITED)
     void setLastExceptionDetail(String lastExceptionSummary);
 
+
+    /**
+     * Get timestamp of executable file used to run check
+     * @return timestamp
+     */
+    @NotNull
+    long getExecutableVersion();
+
+    void setExecutableVersion(long executableVersion);
 }

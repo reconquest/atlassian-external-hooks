@@ -132,10 +132,28 @@ public class ExternalMergeCheckHook
 
         final Optional<PullRequestCheck> lastResult = this.getCheck(pr);
         PullRequestCheck check;
+
         Settings settings = context.getSettings();
 
-        if (lastResult.isPresent() && lastResult.get().getVersion() == pr.getVersion()
-            && BooleanUtils.isTrue(settings.getBoolean("cache_pr_results"))) {
+        File executable = this.getExecutable(
+            settings.getString("exe",""),
+            settings.getBoolean("safe_path", false));
+
+        long executableLastModified = executable.lastModified();
+
+        if (
+            lastResult.isPresent() &&
+            lastResult.get().getVersion() == pr.getVersion() &&
+            BooleanUtils.isTrue(settings.getBoolean("cache_pr_results")) && (
+                lastResult.get().getExecutableVersion() == 0 ||
+                lastResult.get().getExecutableVersion() == executableLastModified
+            )
+        ) {
+            if (lastResult.get().getExecutableVersion() == 0) {
+                lastResult.get().setExecutableVersion(executableLastModified);
+                lastResult.get().save();
+            }
+
             log.log(FINER, "Pull Request was already handled. Returning the last result.");
             if (lastResult.get().getWasAccepted()) {
                 return RepositoryHookResult.accepted();
@@ -161,13 +179,15 @@ public class ExternalMergeCheckHook
                 check = lastResult.get();
                 check.setVersion(pr.getVersion());
                 check.setWasHandled(false);
+                check.setExecutableVersion(executableLastModified);
             } else {
                 check = this.activeObjects.create(
                     PullRequestCheck.class,
                     new DBParam("PROJECT_ID", pr.getToRef().getRepository().getProject().getId()),
                     new DBParam("REPOSITORY_ID", pr.getToRef().getRepository().getId()),
                     new DBParam("PULL_REQUEST_ID", pr.getId()),
-                    new DBParam("VERSION", pr.getVersion())
+                    new DBParam("VERSION", pr.getVersion()),
+                    new DBParam("EXECUTABLE_VERSION", executableLastModified)
                 );
             }
         }
@@ -361,6 +381,14 @@ public class ExternalMergeCheckHook
         }
 
         return Optional.empty();
+    }
+
+    public File getExecutable(
+        String path, boolean safeDir
+    ) {
+        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
+        return impl.getExecutable(path, safeDir);
     }
 
     public ProcessBuilder createProcessBuilder(
