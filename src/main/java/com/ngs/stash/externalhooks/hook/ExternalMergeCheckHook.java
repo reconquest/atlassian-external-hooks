@@ -387,7 +387,7 @@ public class ExternalMergeCheckHook
         String path, boolean safeDir
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
         return impl.getExecutable(path, safeDir);
     }
 
