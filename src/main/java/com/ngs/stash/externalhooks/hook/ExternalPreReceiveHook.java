@@ -267,7 +267,7 @@ public class ExternalPreReceiveHook
             return;
         }
 
-        if (this.clusterService.isAvailable() && !settings.getBoolean("safe_path", false)) {
+        if (this.clusterService.isClustered() && !settings.getBoolean("safe_path", false)) {
             errors.addFieldError("exe",
                     "Bitbucket is running in DataCenter mode. You must use \"safe mode\" option.");
             return;
