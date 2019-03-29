@@ -25,6 +25,7 @@
   <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
   <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
   <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />
+
   <repository-hook name="External Pre Receive Hook" i18n-name-key="external-pre-receive-hook.name" key="external-pre-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
     <description key="external-pre-receive-hook.description">The External Pre Receive Hook Plugin</description>
     <icon>icon-example.png</icon>
@@ -37,6 +38,7 @@
         <scope>repository</scope>
     </scopes>
   </repository-hook>
+
   <repository-hook name="External Async Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
     <description key="external-post-receive-hook.description">The External Async Post Receive Hook Plugin</description>
     <icon>icon-example.png</icon>
@@ -72,4 +74,5 @@
   <component-import key="pullRequestService" interface="com.atlassian.bitbucket.pull.PullRequestService" />
   <component-import key="commentService" interface="com.atlassian.bitbucket.comment.CommentService" />
   <component-import key="commitService" interface="com.atlassian.bitbucket.commit.CommitService" />
+  <component-import key="cacheFactory" interface="com.atlassian.cache.CacheFactory"/>
 </atlassian-plugin>

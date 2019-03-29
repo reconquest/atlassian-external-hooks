@@ -1,71 +1,63 @@
 package com.ngs.stash.externalhooks.hook;
 
+import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
-import com.atlassian.bitbucket.hook.repository.*;
-import com.atlassian.bitbucket.repository.*;
-import com.atlassian.bitbucket.setting.*;
-import com.atlassian.bitbucket.auth.*;
-import com.atlassian.bitbucket.permission.*;
-import com.atlassian.bitbucket.server.*;
-
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.INFO;
-import java.util.logging.Logger;
-
+import com.atlassian.bitbucket.event.hook.RepositoryHookDeletedEvent;
+import com.atlassian.bitbucket.event.hook.RepositoryHookDisabledEvent;
+import com.atlassian.bitbucket.hook.repository.PostRepositoryHook;
+import com.atlassian.bitbucket.hook.repository.PostRepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
+import com.atlassian.bitbucket.hook.script.HookScriptService;
+import com.atlassian.bitbucket.hook.script.HookScriptType;
+import com.atlassian.bitbucket.permission.PermissionService;
+import com.atlassian.bitbucket.scope.Scope;
+import com.atlassian.bitbucket.server.StorageService;
+import com.atlassian.bitbucket.setting.Settings;
+import com.atlassian.bitbucket.setting.SettingsValidationErrors;
+import com.atlassian.bitbucket.setting.SettingsValidator;
+import com.atlassian.bitbucket.user.SecurityService;
+import com.atlassian.event.api.EventListener;
+import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
 
+import javax.annotation.Nonnull;
+
 public class ExternalAsyncPostReceiveHook
-    implements PostRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
-{
-    private final PluginLicenseManager pluginLicenseManager;
+        implements PostRepositoryHook<RepositoryHookRequest>, SettingsValidator {
 
-    private static Logger log = Logger.getLogger(
-        ExternalAsyncPostReceiveHook.class.getSimpleName()
-    );
-
-    private AuthenticationContext authCtx;
-    private PermissionService permissions;
-    private RepositoryService repoService;
-    private ClusterService clusterService;
-    private ApplicationPropertiesService properties;
+    private ExternalHookScript externalHookScript;
 
     public ExternalAsyncPostReceiveHook(
-        AuthenticationContext authenticationContext,
-        PermissionService permissions,
-        RepositoryService repoService,
-        ApplicationPropertiesService properties,
-        PluginLicenseManager pluginLicenseManager,
-        ClusterService clusterService
+            AuthenticationContext authenticationContext,
+            PermissionService permissions,
+            PluginLicenseManager pluginLicenseManager,
+            ClusterService clusterService,
+            StorageService storageProperties,
+            HookScriptService hookScriptService,
+            PluginSettingsFactory pluginSettingsFactory,
+            SecurityService securityService
     ) {
-        this.authCtx = authenticationContext;
-        this.permissions = permissions;
-        this.repoService = repoService;
-        this.properties = properties;
-        this.clusterService = clusterService;
-        this.pluginLicenseManager = pluginLicenseManager;
+        externalHookScript = new ExternalHookScript(authenticationContext, permissions, pluginLicenseManager, clusterService, storageProperties,
+                hookScriptService, pluginSettingsFactory,  securityService,"external-post-receive-hook", HookScriptType.POST, StandardRepositoryHookTrigger.REPO_PUSH);
     }
 
-	@Override
-	public void postUpdate(PostRepositoryHookContext context, RepositoryHookRequest request) {
-        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(
-                this.authCtx, this.permissions, this.repoService, this.properties,
-                this.pluginLicenseManager, this.clusterService
-                );
-
-        impl.preUpdateImpl(context, request);
-	}
+    @Override
+    public void validate(@Nonnull Settings settings, @Nonnull SettingsValidationErrors errors, @Nonnull Scope scope) {
+        this.externalHookScript.validate(settings, errors, scope);
+    }
 
     @Override
-    public void validate(
-        Settings settings,
-        SettingsValidationErrors errors,
-        Repository repository
-    ) {
-        ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties,
-            this.pluginLicenseManager, this.clusterService
-            );
+    public void postUpdate(@Nonnull PostRepositoryHookContext postRepositoryHookContext, @Nonnull RepositoryHookRequest repositoryHookRequest) {
+    }
 
-        impl.validate(settings, errors, repository);
+    @EventListener
+    public void onRepositoryHookSettingsChangedEvent(RepositoryHookDisabledEvent event) {
+        this.externalHookScript.deleteHookScript(event.getRepositoryHookKey());
+    }
+
+    @EventListener
+    public void onRepositoryHookSettingsChangedEvent(RepositoryHookDeletedEvent event) {
+        this.externalHookScript.deleteHookScript(event.getRepositoryHookKey());
     }
 }
