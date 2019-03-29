@@ -1,34 +1,51 @@
 package com.ngs.stash.externalhooks.hook;
 
+import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
-import com.atlassian.bitbucket.hook.repository.*;
-import com.atlassian.bitbucket.repository.*;
-import com.atlassian.bitbucket.setting.*;
-import com.atlassian.bitbucket.user.*;
-import com.atlassian.bitbucket.auth.*;
-import com.atlassian.bitbucket.permission.*;
-import com.atlassian.bitbucket.server.*;
-import com.atlassian.bitbucket.util.*;
-
-import java.util.logging.Logger;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.INFO;
-
-import java.util.Collection;
-import org.apache.commons.io.FilenameUtils;
-import java.io.*;
-import java.util.Map;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Set;
-
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHook;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
+import com.atlassian.bitbucket.permission.Permission;
+import com.atlassian.bitbucket.permission.PermissionService;
+import com.atlassian.bitbucket.repository.RefChange;
+import com.atlassian.bitbucket.repository.Repository;
+import com.atlassian.bitbucket.repository.RepositoryCloneLinksRequest;
+import com.atlassian.bitbucket.repository.RepositoryService;
+import com.atlassian.bitbucket.scope.Scope;
+import com.atlassian.bitbucket.server.ApplicationPropertiesService;
+import com.atlassian.bitbucket.server.StorageService;
+import com.atlassian.bitbucket.setting.Settings;
+import com.atlassian.bitbucket.setting.SettingsValidationErrors;
+import com.atlassian.bitbucket.setting.SettingsValidator;
+import com.atlassian.bitbucket.user.ApplicationUser;
+import com.atlassian.bitbucket.util.NamedLink;
+import com.atlassian.cache.CacheFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-
 import com.atlassian.upm.api.license.entity.PluginLicense;
 import com.atlassian.upm.api.util.Option;
+import com.ngs.stash.externalhooks.hook.helpers.RepositoryPathLocator;
+import org.apache.commons.io.FilenameUtils;
+
+import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.file.Path;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class ExternalPreReceiveHook
-    implements PreRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator
+    implements PreRepositoryHook<RepositoryHookRequest>, SettingsValidator
 {
     private final PluginLicenseManager pluginLicenseManager;
 
@@ -41,6 +58,8 @@ public class ExternalPreReceiveHook
     private RepositoryService repoService;
     private ClusterService clusterService;
     private ApplicationPropertiesService properties;
+    private StorageService storageProperties;
+    private RepositoryPathLocator pathLocator;
 
     public ExternalPreReceiveHook(
         AuthenticationContext authenticationContext,
@@ -48,15 +67,40 @@ public class ExternalPreReceiveHook
         RepositoryService repoService,
         ApplicationPropertiesService properties,
         PluginLicenseManager pluginLicenseManager,
-        ClusterService clusterService
+        ClusterService clusterService,
+        StorageService storageProperties,
+        CacheFactory cacheFactory
     ) {
         log.setLevel(INFO);
         this.authCtx = authenticationContext;
         this.permissions = permissions;
         this.repoService = repoService;
         this.properties = properties;
+        this.storageProperties = storageProperties;
         this.pluginLicenseManager = pluginLicenseManager;
         this.clusterService = clusterService;
+        this.pathLocator = new RepositoryPathLocator(cacheFactory);
+    }
+
+    ExternalPreReceiveHook(
+        AuthenticationContext authenticationContext,
+        PermissionService permissions,
+        RepositoryService repoService,
+        ApplicationPropertiesService properties,
+        PluginLicenseManager pluginLicenseManager,
+        ClusterService clusterService,
+        StorageService storageProperties,
+        RepositoryPathLocator pathLocator
+    ) {
+        log.setLevel(INFO);
+        this.authCtx = authenticationContext;
+        this.permissions = permissions;
+        this.repoService = repoService;
+        this.properties = properties;
+        this.storageProperties = storageProperties;
+        this.pluginLicenseManager = pluginLicenseManager;
+        this.clusterService = clusterService;
+        this.pathLocator = pathLocator;
     }
 
     @Override
@@ -76,11 +120,17 @@ public class ExternalPreReceiveHook
         Repository repo = request.getRepository();
         Settings settings = context.getSettings();
 
+        Path repoPath = this.pathLocator.getRepositoryDir(repo, storageProperties);
+        if (repoPath == null) {
+            RepositoryHookResult.rejected("Error while running the Hook",
+                    "External Hooks Plugin was not able to run hook in the the repo. " +
+                            "Check Bitbucket logs for more info.");
+        }
+
         // compat with < 3.2.0
-        String repoPath = this.properties.getRepositoryDir(repo).getAbsolutePath();
         List<String> exe = new LinkedList<String>();
 
-        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
+        ProcessBuilder pb = createProcessBuilder(repo, repoPath.toAbsolutePath().toString(), exe, settings, request);
 
         try {
             return runExternalHooks(
@@ -142,10 +192,6 @@ public class ExternalPreReceiveHook
             log.log(SEVERE, "Can't get user email address. getEmailAddress() call returns null");
         }
         env.put("STASH_REPO_NAME", repo.getName());
-
-        if (request.getScmHookDetails().isPresent()) {
-            env.putAll(request.getScmHookDetails().get().getEnvironment());
-        }
 
         boolean isAdmin = permissions.hasRepositoryPermission(
             currentUser, repo, Permission.REPO_ADMIN);
@@ -257,10 +303,7 @@ public class ExternalPreReceiveHook
     }
 
     @Override
-    public void validate(
-        Settings settings,
-        SettingsValidationErrors errors, Repository repository
-    ) {
+    public void validate(@Nonnull Settings settings, @Nonnull SettingsValidationErrors errors, @Nonnull Scope scope) {
         if (!this.isLicenseValid()) {
             errors.addFieldError("exe",
                 "License for External Hooks is expired.");
@@ -339,9 +382,9 @@ public class ExternalPreReceiveHook
 
     private File getHomeDir() {
         if (this.clusterService.isAvailable()) {
-            return this.properties.getSharedHomeDir();
+            return this.storageProperties.getSharedHomeDir().toFile();
         } else{
-            return this.properties.getHomeDir();
+            return this.storageProperties.getHomeDir().toFile();
         }
     }
 

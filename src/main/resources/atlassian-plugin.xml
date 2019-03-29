@@ -72,4 +72,5 @@
   <component-import key="pullRequestService" interface="com.atlassian.bitbucket.pull.PullRequestService" />
   <component-import key="commentService" interface="com.atlassian.bitbucket.comment.CommentService" />
   <component-import key="commitService" interface="com.atlassian.bitbucket.commit.CommitService" />
+  <component-import key="cacheFactory" interface="com.atlassian.cache.CacheFactory"/>
 </atlassian-plugin>

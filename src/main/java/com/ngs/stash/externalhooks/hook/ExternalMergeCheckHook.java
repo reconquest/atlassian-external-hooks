@@ -1,52 +1,39 @@
 package com.ngs.stash.externalhooks.hook;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
+import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.comment.AddCommentRequest;
 import com.atlassian.bitbucket.comment.CommentService;
-import com.atlassian.bitbucket.hook.repository.*;
-import com.atlassian.bitbucket.repository.*;
-import com.atlassian.bitbucket.setting.*;
-import com.atlassian.bitbucket.auth.*;
-import com.atlassian.bitbucket.permission.*;
-import com.atlassian.bitbucket.server.*;
-import com.atlassian.bitbucket.util.*;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.FINEST;
-
-import java.util.Optional;
-import java.util.logging.Logger;
-
-import java.util.Collection;
-import java.io.*;
-import java.util.Map;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Set;
-
-import java.util.ArrayList;
-
-import com.atlassian.bitbucket.pull.*;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.PullRequestMergeHookRequest;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
+import com.atlassian.bitbucket.hook.repository.RepositoryMergeCheck;
+import com.atlassian.bitbucket.permission.PermissionService;
+import com.atlassian.bitbucket.pull.PullRequest;
+import com.atlassian.bitbucket.pull.PullRequestDeclineRequest;
+import com.atlassian.bitbucket.pull.PullRequestService;
+import com.atlassian.bitbucket.repository.RefChange;
+import com.atlassian.bitbucket.repository.RefChangeType;
+import com.atlassian.bitbucket.repository.Repository;
+import com.atlassian.bitbucket.repository.RepositoryCloneLinksRequest;
+import com.atlassian.bitbucket.repository.RepositoryService;
+import com.atlassian.bitbucket.scope.Scope;
+import com.atlassian.bitbucket.server.ApplicationPropertiesService;
+import com.atlassian.bitbucket.server.StorageService;
+import com.atlassian.bitbucket.setting.Settings;
+import com.atlassian.bitbucket.setting.SettingsValidationErrors;
+import com.atlassian.bitbucket.setting.SettingsValidator;
+import com.atlassian.bitbucket.util.NamedLink;
+import com.atlassian.cache.CacheFactory;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
-import com.ngs.stash.externalhooks.hook.data.PullRequestCheck;
-import com.ngs.stash.externalhooks.hook.helpers.*;
-// import com.google.common.base.Predicate;
-// import static com.google.common.base.Charsets.UTF_8;
-// import static com.google.common.base.Joiner.on;
-// import static com.google.common.base.Throwables.propagate;
-// import static com.google.common.collect.Iterables.filter;
-// import static com.google.common.collect.Iterables.transform;
-// import static com.google.common.collect.Lists.newArrayList;
-// import static com.google.common.collect.Ordering.usingToString;
-import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.http;
-import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.ssh;
-
+import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.atlassian.upm.api.license.entity.PluginLicense;
 import com.atlassian.upm.api.util.Option;
-
-import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.hook.data.PullRequestCheck;
+import com.ngs.stash.externalhooks.hook.helpers.ExternalRefChange;
+import com.ngs.stash.externalhooks.hook.helpers.RepositoryPathLocator;
 import net.java.ao.DBParam;
 import net.java.ao.Query;
 import org.apache.commons.lang.BooleanUtils;
@@ -55,10 +42,27 @@ import org.apache.commons.lang.StringUtils;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.http;
+import static com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook.REPO_PROTOCOL.ssh;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINEST;
+import static java.util.logging.Level.SEVERE;
 
 @Named("ExternalMergeCheckHook")
 public class ExternalMergeCheckHook
-    implements RepositoryMergeCheck, RepositorySettingsValidator
+    implements RepositoryMergeCheck, SettingsValidator
 {
     private static Logger log = Logger.getLogger(
         ExternalMergeCheckHook.class.getSimpleName()
@@ -68,11 +72,14 @@ public class ExternalMergeCheckHook
     private PermissionService permissions;
     private RepositoryService repoService;
     private ApplicationPropertiesService properties;
+    private StorageService storageProperties;
     private PullRequestService pullRequestService;
     private CommentService commentService;
     private ClusterService clusterService;
     private ActiveObjects activeObjects;
     private String comment;
+    private RepositoryPathLocator pathLocator;
+
 
     @Inject
     public ExternalMergeCheckHook(
@@ -84,6 +91,8 @@ public class ExternalMergeCheckHook
         PullRequestService pullRequestService,
         CommentService commentService,
         ClusterService clusterService,
+        StorageService storageProperties,
+        CacheFactory cacheFactory,
         @ComponentImport ActiveObjects activeObjects
     )
     {
@@ -96,7 +105,9 @@ public class ExternalMergeCheckHook
         this.commentService = commentService;
         this.activeObjects = activeObjects;
         this.clusterService = clusterService;
+        this.storageProperties = storageProperties;
         this.comment = "";
+        this.pathLocator = new RepositoryPathLocator(cacheFactory);
     }
 
     private static String cloneUrlFromRepository(
@@ -195,10 +206,16 @@ public class ExternalMergeCheckHook
         Repository repo = pr.getToRef().getRepository();
 
         // compat with < 3.2.0
-        String repoPath = this.properties.getRepositoryDir(pr.getFromRef().getRepository()).getAbsolutePath();
+        Path repoPath = this.pathLocator.getRepositoryDir(pr.getFromRef().getRepository(), storageProperties);
+        if (repoPath == null) {
+            RepositoryHookResult.rejected("Error while running the Hook",
+                    "External Hooks Plugin was not able to run hook in the the repo. " +
+                            "Check Bitbucket logs for more info.");
+        }
+
         List<String> exe = new LinkedList<String>();
 
-        ProcessBuilder pb = createProcessBuilder(repo, repoPath, exe, settings, request);
+        ProcessBuilder pb = createProcessBuilder(repo, repoPath.toAbsolutePath().toString(), exe, settings, request);
 
         List<RefChange> refChanges = new ArrayList<RefChange>();
         refChanges.add(
@@ -387,7 +404,7 @@ public class ExternalMergeCheckHook
         String path, boolean safeDir
     ) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService, this.storageProperties, this.pathLocator);
         return impl.getExecutable(path, safeDir);
     }
 
@@ -396,7 +413,7 @@ public class ExternalMergeCheckHook
     )
     {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService, this.storageProperties, this.pathLocator);
         return impl.createProcessBuilder(repo, repoPath, exe, settings, request);
     }
 
@@ -407,7 +424,7 @@ public class ExternalMergeCheckHook
     ) throws InterruptedException, IOException
     {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService, this.storageProperties, this.pathLocator);
         return impl.runExternalHooks(pb, refChanges, summaryMessage);
     }
 
@@ -424,15 +441,10 @@ public class ExternalMergeCheckHook
     // }
 
     @Override
-    public void validate(
-        Settings settings,
-        SettingsValidationErrors errors,
-        Repository repository
-    )
-    {
+    public void validate(@Nonnull Settings settings, @Nonnull SettingsValidationErrors errors, @Nonnull Scope scope) {
         ExternalPreReceiveHook impl = new ExternalPreReceiveHook(this.authCtx,
-            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService);
-        impl.validate(settings, errors, repository);
+            this.permissions, this.repoService, this.properties, this.pluginLicenseManager, this.clusterService, this.storageProperties, this.pathLocator);
+        impl.validate(settings, errors, scope);
     }
 
     public boolean isLicenseValid() {
