@@ -53,11 +53,11 @@ public class ExternalAsyncPostReceiveHook
 
     @EventListener
     public void onRepositoryHookSettingsChangedEvent(RepositoryHookDisabledEvent event) {
-        this.externalHookScript.deleteHookScriptByKey(event.getRepositoryHookKey());
+        this.externalHookScript.deleteHookScriptByKey(event.getRepositoryHookKey(), event.getScope());
     }
 
     @EventListener
     public void onRepositoryHookSettingsChangedEvent(RepositoryHookDeletedEvent event) {
-        this.externalHookScript.deleteHookScriptByKey(event.getRepositoryHookKey());
+        this.externalHookScript.deleteHookScriptByKey(event.getRepositoryHookKey(), event.getScope());
     }
 }

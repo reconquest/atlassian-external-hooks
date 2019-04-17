@@ -8,7 +8,6 @@ import com.atlassian.bitbucket.hook.script.HookScriptCreateRequest;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.hook.script.HookScriptSetConfigurationRequest;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
-import com.atlassian.bitbucket.hook.script.HookScriptUpdateRequest;
 import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.scope.Scope;
@@ -119,7 +118,7 @@ public class ExternalHookScript {
                 settings.getString("exe", ""),
                 settings.getBoolean("safe_path", false));
 
-        if ((executable == null) || (!executable.exists())) {
+        if ((executable == null) || (!executable.isFile())) {
             errors.addFieldError("exe",
                     "Executable does not exist");
             return;
@@ -127,7 +126,7 @@ public class ExternalHookScript {
 
         boolean isExecutable;
         try {
-            isExecutable = executable.canExecute() && executable.isFile();
+            isExecutable = executable.canExecute();
         } catch (SecurityException e) {
             log.error("Security exception on " + executable.getPath(), e);
             isExecutable = false;
@@ -161,14 +160,15 @@ public class ExternalHookScript {
 
         HookScript hookScript = null;
 
-        Object id = pluginSettings.get(this.hookId);
+        String hookId = getHookId(scope);
+        Object id = pluginSettings.get(hookId);
         if (id != null) {
             Optional<HookScript> maybeHookScript = hookScriptService.findById(Long.valueOf(id.toString()));
             if (maybeHookScript.isPresent()) {
                 hookScript = maybeHookScript.get();
             } else {
                 log.warn("Settings had id {} stored, but hook was already gone", id);
-                pluginSettings.remove(this.hookId);
+                pluginSettings.remove(hookId);
             }
         }
 
@@ -182,7 +182,7 @@ public class ExternalHookScript {
 
         hookScript = securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to set hooks").call(
                 () -> hookScriptService.create(hookScriptCreateRequest));
-        pluginSettings.put(this.hookId, String.valueOf(hookScript.getId()));
+        pluginSettings.put(hookId, String.valueOf(hookScript.getId()));
 
         HookScriptSetConfigurationRequest.Builder configBuilder = new HookScriptSetConfigurationRequest.Builder(hookScript, scope);
         configBuilder.trigger(this.repositoryHookTrigger);
@@ -227,12 +227,13 @@ public class ExternalHookScript {
         return pluginLicense.isValid();
     }
 
-    public void deleteHookScriptByKey(String hookKey) {
+    public void deleteHookScriptByKey(String hookKey, Scope scope) {
         if (!this.hookId.equals(hookKey)) {
             return;
         }
 
-        Object id = pluginSettings.get(this.hookId);
+        String hookId = this.getHookId(scope);
+        Object id = pluginSettings.get(hookId);
         if (id != null) {
             Optional<HookScript> maybeHookScript = hookScriptService.findById(Long.valueOf(id.toString()));
             if (maybeHookScript.isPresent()) {
@@ -242,8 +243,17 @@ public class ExternalHookScript {
             } else {
                 log.warn("Attempting to deleted HookScript with id: {}, but it is already gone", id);
             }
-            pluginSettings.remove(this.hookId);
+            pluginSettings.remove(hookId);
         }
+    }
+
+    private String getHookId(Scope scope) {
+        StringBuilder builder = new StringBuilder(this.hookId);
+        builder.append(":").append(scope.getType().getId());
+        if (scope.getResourceId().isPresent()) {
+            builder.append(":").append(scope.getResourceId().get());
+        }
+        return builder.toString();
     }
 
     private void deleteHookScript(HookScript hookScript) {
