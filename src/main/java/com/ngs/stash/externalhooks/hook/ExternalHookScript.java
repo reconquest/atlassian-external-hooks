@@ -172,28 +172,24 @@ public class ExternalHookScript {
             }
         }
 
-        if (hookScript == null) {
-            HookScriptCreateRequest.Builder test = new HookScriptCreateRequest.Builder(this.hookComponentId, PLUGIN_ID, this.hookScriptType)
-                    .content(script);
-            HookScriptCreateRequest hookScriptCreateRequest = test.build();
-
-            hookScript = securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to set hooks").call(
-                    () -> hookScriptService.create(hookScriptCreateRequest));
-            pluginSettings.put(this.hookId, String.valueOf(hookScript.getId()));
-
-            HookScriptSetConfigurationRequest.Builder configBuilder = new HookScriptSetConfigurationRequest.Builder(hookScript, scope);
-            configBuilder.trigger(this.repositoryHookTrigger);
-            HookScriptSetConfigurationRequest hookScriptSetConfigurationRequest = configBuilder.build();
-            hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
-
-            log.info("Successfully created HookScript with id: {}", hookScript.getId());
-        } else {
-            HookScriptUpdateRequest hookScriptUpdateRequest = new HookScriptUpdateRequest.Builder(hookScript).content(script).build();
-            HookScript updatedHookScript = securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to update hooks").call(
-                    () -> hookScriptService.update(hookScriptUpdateRequest));
-
-            log.info("Successfully updated HookScript. id: {}, version: {}", updatedHookScript.getId(), updatedHookScript.getVersion());
+        if (hookScript != null) {
+            this.deleteHookScript(hookScript);
         }
+
+        HookScriptCreateRequest.Builder test = new HookScriptCreateRequest.Builder(this.hookComponentId, PLUGIN_ID, this.hookScriptType)
+                .content(script);
+        HookScriptCreateRequest hookScriptCreateRequest = test.build();
+
+        hookScript = securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to set hooks").call(
+                () -> hookScriptService.create(hookScriptCreateRequest));
+        pluginSettings.put(this.hookId, String.valueOf(hookScript.getId()));
+
+        HookScriptSetConfigurationRequest.Builder configBuilder = new HookScriptSetConfigurationRequest.Builder(hookScript, scope);
+        configBuilder.trigger(this.repositoryHookTrigger);
+        HookScriptSetConfigurationRequest hookScriptSetConfigurationRequest = configBuilder.build();
+        hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
+
+        log.info("Successfully created HookScript with id: {}", hookScript.getId());
     }
 
     public File getExecutable(String path, boolean safeDir) {
@@ -231,7 +227,7 @@ public class ExternalHookScript {
         return pluginLicense.isValid();
     }
 
-    public void deleteHookScript(String hookKey) {
+    public void deleteHookScriptByKey(String hookKey) {
         if (!this.hookId.equals(hookKey)) {
             return;
         }
@@ -240,16 +236,21 @@ public class ExternalHookScript {
         if (id != null) {
             Optional<HookScript> maybeHookScript = hookScriptService.findById(Long.valueOf(id.toString()));
             if (maybeHookScript.isPresent()) {
-                securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to update hooks").call(
-                        () -> {
-                            hookScriptService.delete(maybeHookScript.get());
-                            return null;
-                        });
+                HookScript hookScript = maybeHookScript.get();
+                deleteHookScript(hookScript);
                 log.info("Successfully deleted HookScript with id: {}", id);
             } else {
                 log.warn("Attempting to deleted HookScript with id: {}, but it is already gone", id);
             }
             pluginSettings.remove(this.hookId);
         }
+    }
+
+    private void deleteHookScript(HookScript hookScript) {
+        securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to update hooks").call(
+                () -> {
+                    hookScriptService.delete(hookScript);
+                    return null;
+                });
     }
 }

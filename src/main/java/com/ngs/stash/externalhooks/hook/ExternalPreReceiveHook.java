@@ -50,12 +50,12 @@ public class ExternalPreReceiveHook
 
     @EventListener
     public void onRepositoryHookSettingsChangedEvent(RepositoryHookDisabledEvent event) {
-        this.externalHookScript.deleteHookScript(event.getRepositoryHookKey());
+        this.externalHookScript.deleteHookScriptByKey(event.getRepositoryHookKey());
     }
 
     @EventListener
     public void onRepositoryHookSettingsChangedEvent(RepositoryHookDeletedEvent event) {
-        this.externalHookScript.deleteHookScript(event.getRepositoryHookKey());
+        this.externalHookScript.deleteHookScriptByKey(event.getRepositoryHookKey());
     }
 
     @Nonnull
