@@ -113,17 +113,45 @@ public class ExternalHookScript {
                 settings.getString("exe", ""),
                 settings.getBoolean("safe_path", false));
 
-        if (!executable.exists()) {
+        if ((executable == null) || (!executable.exists())) {
             errors.addFieldError("exe",
                     "Executable does not exist");
             return;
         }
 
-        if (!executable.isFile()) {
+        boolean isExecutable;
+        try {
+            isExecutable = executable.canExecute() && executable.isFile();
+        } catch (SecurityException e) {
+            log.error("Security exception on " + executable.getPath(), e);
+            isExecutable = false;
+        }
+
+        if (!isExecutable) {
             errors.addFieldError("exe",
-                    "Executable is not a regular file");
+                    "Specified path is not executable file. Check executable flag.");
             return;
         }
+
+        StringBuilder scriptBuilder = new StringBuilder();
+        scriptBuilder.append("#!/bin/bash").append("\n\n");
+
+        scriptBuilder.append(executable);
+
+        String params = settings.getString("params");
+        if (params != null) {
+            params = params.trim();
+            if (params.length() != 0) {
+                for (String arg : settings.getString("params").split("\r\n")) {
+                    if (arg.length() != 0) {
+                        scriptBuilder.append(" ").append(arg);
+                    }
+                }
+            }
+        }
+
+        scriptBuilder.append("\n\n");
+        String script = scriptBuilder.toString();
 
         HookScript hookScript = null;
 
@@ -140,7 +168,7 @@ public class ExternalHookScript {
 
         if (hookScript == null) {
             HookScriptCreateRequest.Builder test = new HookScriptCreateRequest.Builder(this.hookComponentId, PLUGIN_ID, this.hookScriptType)
-                    .content(() -> new FileInputStream(executable));
+                    .content(script);
             HookScriptCreateRequest hookScriptCreateRequest = test.build();
 
             hookScript = securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to set hooks").call(
@@ -150,15 +178,15 @@ public class ExternalHookScript {
             HookScriptSetConfigurationRequest.Builder configBuilder = new HookScriptSetConfigurationRequest.Builder(hookScript, scope);
             configBuilder.trigger(this.repositoryHookTrigger);
             HookScriptSetConfigurationRequest hookScriptSetConfigurationRequest = configBuilder.build();
-            HookScriptConfig hookScriptConfig = hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
+            hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
 
             log.info("Successfully created HookScript with id: {}", hookScript.getId());
         } else {
-            HookScriptUpdateRequest hookScriptUpdateRequest = new HookScriptUpdateRequest.Builder(hookScript).content(() -> new FileInputStream(executable)).build();
-            securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to update hooks").call(
+            HookScriptUpdateRequest hookScriptUpdateRequest = new HookScriptUpdateRequest.Builder(hookScript).content(script).build();
+            HookScript updatedHookScript = securityService.withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to update hooks").call(
                     () -> hookScriptService.update(hookScriptUpdateRequest));
 
-            log.info("Successfully updated HookScript. id: {}, version: {}", hookScript.getId(), hookScript.getVersion());
+            log.info("Successfully updated HookScript. id: {}, version: {}", updatedHookScript.getId(), updatedHookScript.getVersion());
         }
     }
 
