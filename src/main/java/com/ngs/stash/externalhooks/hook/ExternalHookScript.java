@@ -4,7 +4,6 @@ import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.script.HookScript;
-import com.atlassian.bitbucket.hook.script.HookScriptConfig;
 import com.atlassian.bitbucket.hook.script.HookScriptCreateRequest;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.hook.script.HookScriptSetConfigurationRequest;
@@ -22,14 +21,15 @@ import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.atlassian.upm.api.license.entity.PluginLicense;
 import com.atlassian.upm.api.util.Option;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
 import org.apache.commons.io.FilenameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ExternalHookScript {
 
@@ -40,6 +40,8 @@ public class ExternalHookScript {
     private static Logger log = LoggerFactory.getLogger(
             ExternalHookScript.class.getSimpleName()
     );
+
+    public final Escaper SHELL_ESCAPE;
 
     private AuthenticationContext authCtx;
     private PermissionService permissions;
@@ -78,6 +80,10 @@ public class ExternalHookScript {
         this.hookScriptType = hookScriptType;
         this.repositoryHookTrigger = repositoryHookTrigger;
         this.securityService = securityService;
+
+        final Escapers.Builder builder = Escapers.builder();
+        builder.addEscape('\'', "'\"'\"'");
+        SHELL_ESCAPE = builder.build();
     }
 
     public void validate(@Nonnull Settings settings, @Nonnull SettingsValidationErrors errors, @Nonnull Scope scope) {
@@ -144,7 +150,7 @@ public class ExternalHookScript {
             if (params.length() != 0) {
                 for (String arg : settings.getString("params").split("\r\n")) {
                     if (arg.length() != 0) {
-                        scriptBuilder.append(" ").append(arg);
+                        scriptBuilder.append(" '").append(SHELL_ESCAPE.escape(arg)).append('\'');
                     }
                 }
             }
