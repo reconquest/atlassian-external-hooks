@@ -19,6 +19,7 @@
     <resource type="download" name="external-hooks.css" location="/css/external-hooks.css"/>
     <resource type="download" name="external-hooks.js" location="/js/external-hooks.js"/>
     <resource type="download" name="images/" location="/images"/>
+    <resource type="template" name="/hook-script.template.bash" location="/hook-script.template.bash" />
     <context>external-hooks</context>
   </web-resource>
 

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo $(basename $0)
+
+args=("${@}")
+
+echo "arguments passed: ${#args[@]}"
+for (( i=0; i<${#args[@]}; i++ )); do
+    echo "argument #${i}: ${args[$i]}"
+done
+
+date >> /tmp/pre-receive-ok-date
+env > /tmp/pre-receive-ok-env
+
+exit 0

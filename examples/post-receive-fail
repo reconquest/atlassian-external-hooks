@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo $(basename $0)
+
+args=("${@}")
+
+echo "arguments passed: ${#args[@]}"
+for (( i=0; i<${#args[@]}; i++ )); do
+    echo "argument #${i}: ${args[$i]}"
+done
+
+date >> /tmp/post-receive-fail-date
+env > /tmp/post-receive-fail-env
+
+echo "exiting with exitcode 2"
+exit 2

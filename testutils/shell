@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+
+URI="http://admin:admin@localhost:7990/bitbucket"
+
+if [[ ! -f /tmp/manrepo ]]; then
+    git clone "$URI"/scm/man/repo.git /tmp/manrepo
+fi
+
+cd /tmp/manrepo
+
+echo ":: spawning shell $SHELL in man/repo" >&2
+exec $SHELL -i

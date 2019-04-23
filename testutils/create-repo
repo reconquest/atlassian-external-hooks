@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -euo pipefail
+
+URI="http://admin:admin@localhost:7990/bitbucket"
+
+stacket --uri "$URI" projects create man
+stacket --uri "$URI" repositories create man repo

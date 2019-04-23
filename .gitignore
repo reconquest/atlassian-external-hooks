@@ -2,3 +2,8 @@ target/
 /*.log
 *.iml
 .idea
+/.settings
+/.project
+/.classpath
+/bin
+/workbench.xmi
