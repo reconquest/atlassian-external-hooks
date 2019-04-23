@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -euo pipefail
+
+URI="http://admin:admin@localhost:7990/bitbucket"
+
+bitbucket-external-hook -b "$URI" -p man -r repo set \
+    com.ngs.stash.externalhooks.external-hooks:external-merge-check-hook \
+    -e examples/merge-check-fail -s 123
+
+bitbucket-external-hook -b "$URI" -p man -r repo enable \
+    com.ngs.stash.externalhooks.external-hooks:external-merge-check-hook

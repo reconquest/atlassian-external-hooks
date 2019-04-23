@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>4.8-1</version>
+    <version>5.8-1</version>
     <organization>
         <name>reconquest</name>
     </organization>
@@ -87,6 +87,12 @@
             <version>${atlassian.spring.scanner.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>com.atlassian.scheduler</groupId>
+            <artifactId>atlassian-scheduler-api</artifactId>
+            <version>3.0.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -145,7 +151,7 @@
         <bitbucket.version>6.2.0</bitbucket.version>
         <bitbucket.data.version>${bitbucket.version}</bitbucket.data.version>
         <atlassian-sal-api.version>3.0.5</atlassian-sal-api.version>
-        <amps.version>6.2.9</amps.version>
+        <amps.version>8.0.1</amps.version>
         <plugin.testrunner.version>1.1.4</plugin.testrunner.version>
         <ao.version>1.2.2</ao.version>
         <atlassian.spring.scanner.version>1.2.13</atlassian.spring.scanner.version>
@@ -188,5 +194,4 @@
             </pluginRepositories>
        </profile>
     </profiles>
-
 </project>
