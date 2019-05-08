@@ -108,6 +108,13 @@ public class ExternalPreReceiveHook
   @Override
   public RepositoryHookResult preUpdate(
       @Nonnull PreRepositoryHookContext context, @Nonnull RepositoryHookRequest request) {
+    if (!this.externalHookScript.isLicenseValid()) {
+      return RepositoryHookResult.rejected(
+          "License is not valid.",
+          "License for External Hooks Plugin is expired.\n"
+              + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
+    }
+
     return RepositoryHookResult.accepted();
   }
 }

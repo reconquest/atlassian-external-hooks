@@ -65,6 +65,13 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
   @Override
   public RepositoryHookResult preUpdate(
       PreRepositoryHookContext context, PullRequestMergeHookRequest request) {
+    if (!this.externalHookScript.isLicenseValid()) {
+      return RepositoryHookResult.rejected(
+          "License is not valid.",
+          "License for External Hooks Plugin is expired.\n"
+              + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
+    }
+
     return RepositoryHookResult.accepted();
   }
 
