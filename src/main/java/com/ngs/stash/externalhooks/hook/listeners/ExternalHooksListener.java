@@ -1,5 +1,13 @@
 package com.ngs.stash.externalhooks.hook.listeners;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.atlassian.bitbucket.hook.repository.EnableRepositoryHookRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSearchRequest;
@@ -31,12 +39,6 @@ import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-import javax.inject.Named;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** A listener for install/uninstall events */
 @Named("ExternalHooksListener")
