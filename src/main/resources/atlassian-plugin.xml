@@ -62,12 +62,6 @@
     </scopes>
   </repository-hook>
 
-  <!-- Active objects -->
-  <ao key="ao-module" namespace="external-hooks" i18n-name-key="external-hooks.ao.name">
-    <description key="external-hooks.ao.description"/>
-    <entity>com.ngs.stash.externalhooks.hook.data.PullRequestCheck</entity>
-  </ao>
-
   <!-- import from the product container -->
   <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
   <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />
