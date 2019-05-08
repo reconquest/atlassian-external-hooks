@@ -134,6 +134,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <includeExclude>-com.atlassian.plugin.spring.scanner.annotation.*</includeExclude>
                     <scannedDependencies>
                         <dependency>
                             <groupId>com.atlassian.plugin</groupId>
