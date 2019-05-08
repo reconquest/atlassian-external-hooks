@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# STASH_ variables are deprectaed and will be removed in further releases
+# STASH_ variables are deprecated and will be removed in further releases
 export STASH_USER_NAME="$BB_USER_DISPLAY_NAME"
 export STASH_USER_NAME="$BB_USER_DISPLAY_NAME"
 export STASH_USER_EMAIL="$BB_USER_EMAIL"
