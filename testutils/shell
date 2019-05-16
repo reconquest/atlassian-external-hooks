@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-URI="http://admin:admin@localhost:7990/bitbucket"
+URI="${URI:-http://admin:admin@localhost:7990/bitbucket}"
 
 if [[ ! -d /tmp/manrepo ]]; then
     git clone "$URI"/scm/man/repo.git /tmp/manrepo
