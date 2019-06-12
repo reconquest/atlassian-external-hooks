@@ -1,6 +1,8 @@
 package com.ngs.stash.externalhooks.hook;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 
@@ -15,6 +17,7 @@ import com.atlassian.bitbucket.hook.repository.PullRequestMergeHookRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSettings;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.repository.RepositoryMergeCheck;
 import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
@@ -46,6 +49,9 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
       SecurityService securityService)
       throws IOException {
 
+    List<RepositoryHookTrigger> triggers = new ArrayList<RepositoryHookTrigger>();
+    triggers.add(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
+
     this.repositoryHookService = repositoryHookService;
     this.externalHookScript =
         new ExternalHookScript(
@@ -59,7 +65,7 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
             securityService,
             "external-merge-check-hook",
             HookScriptType.PRE,
-            StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
+            triggers);
   }
 
   @Override

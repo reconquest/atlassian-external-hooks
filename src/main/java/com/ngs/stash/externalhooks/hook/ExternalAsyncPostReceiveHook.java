@@ -1,6 +1,8 @@
 package com.ngs.stash.externalhooks.hook;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 
@@ -15,6 +17,7 @@ import com.atlassian.bitbucket.hook.repository.PostRepositoryHookContext;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSettings;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
@@ -47,6 +50,15 @@ public class ExternalAsyncPostReceiveHook
       SecurityService securityService)
       throws IOException {
     this.repositoryHookService = repositoryHookService;
+
+    List<RepositoryHookTrigger> triggers = new ArrayList<RepositoryHookTrigger>();
+    triggers.add(StandardRepositoryHookTrigger.REPO_PUSH);
+    triggers.add(StandardRepositoryHookTrigger.TAG_DELETE);
+    triggers.add(StandardRepositoryHookTrigger.TAG_CREATE);
+    triggers.add(StandardRepositoryHookTrigger.BRANCH_DELETE);
+    triggers.add(StandardRepositoryHookTrigger.BRANCH_CREATE);
+    triggers.add(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
+
     this.externalHookScript =
         new ExternalHookScript(
             authenticationContext,
@@ -59,7 +71,7 @@ public class ExternalAsyncPostReceiveHook
             securityService,
             "external-post-receive-hook",
             HookScriptType.POST,
-            StandardRepositoryHookTrigger.REPO_PUSH);
+            triggers);
   }
 
   @Override

@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
@@ -52,7 +53,7 @@ public class ExternalHookScript {
   private String hookComponentId;
   public String hookId;
   private HookScriptType hookScriptType;
-  private RepositoryHookTrigger repositoryHookTrigger;
+  private List<RepositoryHookTrigger> repositoryHookTriggers;
   private SecurityService securityService;
   private String hookScriptTemplate;
 
@@ -67,7 +68,7 @@ public class ExternalHookScript {
       SecurityService securityService,
       String hookComponentId,
       HookScriptType hookScriptType,
-      RepositoryHookTrigger repositoryHookTrigger)
+      List<RepositoryHookTrigger> repositoryHookTriggers)
       throws IOException {
     this.authCtx = authenticationContext;
     this.permissions = permissions;
@@ -79,7 +80,7 @@ public class ExternalHookScript {
     this.hookComponentId = hookComponentId;
     this.hookId = PLUGIN_KEY + ":" + hookComponentId;
     this.hookScriptType = hookScriptType;
-    this.repositoryHookTrigger = repositoryHookTrigger;
+    this.repositoryHookTriggers = repositoryHookTriggers;
     this.securityService = securityService;
 
     final Escapers.Builder builder = Escapers.builder();
@@ -215,7 +216,7 @@ public class ExternalHookScript {
 
     HookScriptSetConfigurationRequest.Builder configBuilder =
         new HookScriptSetConfigurationRequest.Builder(hookScript, scope);
-    configBuilder.trigger(this.repositoryHookTrigger);
+    configBuilder.triggers(this.repositoryHookTriggers);
     HookScriptSetConfigurationRequest hookScriptSetConfigurationRequest = configBuilder.build();
     hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
 
