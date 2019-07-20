@@ -53,6 +53,7 @@ public class ExternalPreReceiveHook
       throws IOException {
     List<RepositoryHookTrigger> triggers = new ArrayList<RepositoryHookTrigger>();
     triggers.add(StandardRepositoryHookTrigger.REPO_PUSH);
+    triggers.add(StandardRepositoryHookTrigger.FILE_EDIT);
     triggers.add(StandardRepositoryHookTrigger.TAG_DELETE);
     triggers.add(StandardRepositoryHookTrigger.TAG_CREATE);
     triggers.add(StandardRepositoryHookTrigger.BRANCH_DELETE);
