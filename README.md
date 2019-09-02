@@ -3,7 +3,7 @@ A Bitbucket Server app that enables you to add repo hooks in non-Java languages.
 
 If you're looking for the ready-to-use app, it is available on the [Atlassian Marketplace](https://marketplace.atlassian.com/1211631).
 
-[Docs](https://github.com/reconquest/atlassian-external-hooks/wiki/Home)
+[Docs](https://external-hooks.reconquest.io/)
 
 ## Table of Contents 
 * [Getting Started](#getting-started)
