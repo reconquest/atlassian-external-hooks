@@ -111,6 +111,11 @@ public class ExternalHookScript {
 
   public void validate(
       @Nonnull Settings settings, @Nonnull SettingsValidationErrors errors, @Nonnull Scope scope) {
+    if (!this.isLicenseDefined()) {
+      errors.addFieldError("exe", "External Hooks Add-on is Unlicensed.");
+      return;
+    }
+
     if (!this.isLicenseValid()) {
       errors.addFieldError("exe", "License for External Hooks is expired.");
       return;
@@ -249,11 +254,16 @@ public class ExternalHookScript {
   public boolean isLicenseValid() {
     Option<PluginLicense> licenseOption = pluginLicenseManager.getLicense();
     if (!licenseOption.isDefined()) {
-      return true;
+      return false;
     }
 
     PluginLicense pluginLicense = licenseOption.get();
     return pluginLicense.isValid();
+  }
+
+  public boolean isLicenseDefined() {
+    Option<PluginLicense> licenseOption = pluginLicenseManager.getLicense();
+    return licenseOption.isDefined();
   }
 
   public void deleteHookScriptByKey(String hookKey, Scope scope) {

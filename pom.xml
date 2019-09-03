@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>6.3.2-1</version>
+    <version>6.6.0-1</version>
     <organization>
         <name>reconquest</name>
     </organization>
@@ -149,7 +149,7 @@
     </build>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <bitbucket.version>6.2.0</bitbucket.version>
+        <bitbucket.version>6.4.0</bitbucket.version>
         <bitbucket.data.version>${bitbucket.version}</bitbucket.data.version>
         <atlassian-sal-api.version>3.0.5</atlassian-sal-api.version>
         <amps.version>8.0.1</amps.version>
