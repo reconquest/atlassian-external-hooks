@@ -185,7 +185,14 @@ public class ExternalHookScript {
       }
     }
 
+    Boolean async = settings.getBoolean("async", false);
+    if (async) {
+      // close all file descriptors and run job in background
+      scriptBuilder.append(" >/dev/null 2>&1 <&- &");
+    }
+
     scriptBuilder.append("\n\n");
+
     String script = scriptBuilder.toString();
 
     HookScript hookScript = null;

@@ -1,0 +1,54 @@
+{namespace com.ngs.stash.externalhooks.hook.externalpostreceivehook}
+
+/**
+ * @param? config
+ * @param? errors
+ */
+{template .view}
+    {call aui.form.textField}
+        {param id: 'exe' /}
+        {param value: $config ? $config['exe'] : '' /}
+        {param labelContent: 'Executable:' /}
+        {param descriptionText: 'Path to executable to run.' /}
+        {param errorTexts: $errors ? $errors['exe'] : null /}
+    {/call}
+
+    {call aui.form.checkboxField}
+        {param legendContent: 'Safe mode' /}
+        {param fields: [
+            [
+                'id': 'safe_path',
+                'labelText': 'Look for hooks only in safe dir',
+                'descriptionText': 'Hooks will be searched only in <stash-home-dir>/external-hooks/. For DataCenter mode in <stash-home-dir>/shared/external-hooks/.',
+                'isChecked': $config ? $config['safe_path'] : false
+            ]
+        ]/}
+    {/call}
+
+    {call aui.form.textareaField}
+        {param id: 'params' /}
+        {param value: $config ? $config['params'] : null /}
+        {param labelContent: 'Positional parameters:'  /}
+        {param rows: 10 /}
+        {param descriptionText: 'A list of positional parameters that will be passed to an executable (one per line).' /}
+        {param errorTexts: $errors ? $errors['params'] : null /}
+    {/call}
+
+    {call aui.form.checkboxField}
+        {param legendContent: 'Asynchronous' /}
+        {param fields: [
+            [
+                'id': 'async',
+                'labelText': 'Start executable asynchronously',
+                'descriptionText': 'The hook will not delay push process and user will not receive output from the hook.',
+                'isChecked': $config ? $config['async'] : false
+            ]
+        ]/}
+    {/call}
+
+    <div class="field-group">
+        <div class="description">
+        Learn more about this fields at the <a href="https://external-hooks.reconquest.io/docs/how_to_configure_external_hooks/" target="_blank">official documentation</a>.
+        </div>
+    </div>
+{/template}

@@ -24,7 +24,7 @@
   </web-resource>
 
   <repository-hook name="External Pre Receive Hook" i18n-name-key="external-pre-receive-hook.name" key="external-pre-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
-    <description key="external-pre-receive-hook.description">The External Pre Receive Hook Plugin</description>
+    <description key="external-pre-receive-hook.description">The External Pre Receive Hook Add-on</description>
     <icon>icon-example.png</icon>
     <config-form name="External Pre Receive Hook Config" key="external-pre-receive-hook-config">
       <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
@@ -36,11 +36,11 @@
     </scopes>
   </repository-hook>
 
-  <repository-hook name="External Async Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
-    <description key="external-post-receive-hook.description">The External Async Post Receive Hook Plugin</description>
+  <repository-hook name="External Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
+    <description key="external-post-receive-hook.description">The External Post Receive Hook Add-on</description>
     <icon>icon-example.png</icon>
-    <config-form name="External Async Post Receive Hook Config" key="external-post-receive-hook-config">
-      <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
+    <config-form name="External Post Receive Hook Config" key="external-post-receive-hook-config">
+      <view>com.ngs.stash.externalhooks.hook.externalpostreceivehook.view</view>
       <directory location="/static/"/>
     </config-form>
     <scopes>
@@ -50,7 +50,7 @@
   </repository-hook>
 
   <repository-hook name="External Merge Check Hook" i18n-name-key="external-merge-check-hook.name" key="external-merge-check-hook" class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
-    <description key="external-merge-check-hook.description">The External Merge Check Hook Plugin</description>
+    <description key="external-merge-check-hook.description">The External Merge Check Hook Add-on</description>
     <icon>icon-example.png</icon>
     <config-form name="External Merge Check Hook Config" key="external-merge-check-hook-config">
       <view>com.ngs.stash.externalhooks.hook.externalmergecheckhook.view</view>
