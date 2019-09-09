@@ -12,7 +12,7 @@ If you're looking for the ready-to-use app, it is available on the [Atlassian Ma
 * [License](#license)
 
 ## Getting Started
-If you'd like to use this app with your Bitbucket Server or Data Center installation, you'll need to install this [app](https://marketplace.atlassian.com/1211631) and then [configure](https://github.com/reconquest/atlassian-external-hooks/wiki/Configuration) it.
+If you'd like to use this app with your Bitbucket Server or Data Center installation, you'll need to install this [app](https://marketplace.atlassian.com/1211631) and then [configure](https://external-hooks.reconquest.io/docs/how_to_configure_external_hooks/) it.
 
 For further customizations of this app, you can fork it.
 
