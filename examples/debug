@@ -1,0 +1,6 @@
+#!/bin/bash
+
+date >> /tmp/hook-debug
+while read from_ref to_ref ref_name; do
+        echo "from_ref: $from_ref to_ref: $to_ref ref_name: $ref_name"
+done >> /tmp/hook-debug

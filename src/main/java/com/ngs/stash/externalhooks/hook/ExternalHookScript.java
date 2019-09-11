@@ -168,9 +168,22 @@ public class ExternalHookScript {
     File executable =
         this.getExecutable(settings.getString("exe", ""), settings.getBoolean("safe_path", false));
 
+    Boolean async = settings.getBoolean("async", false);
+
     StringBuilder scriptBuilder = new StringBuilder();
     scriptBuilder.append(this.hookScriptTemplate).append("\n\n");
 
+    if (async) {
+      // dumping stdin to a temporary file
+      scriptBuilder.append("stdin=\"$(mktemp)\"\n");
+      scriptBuilder.append("cat >\"$stdin\"\n");
+      // subshell start
+      scriptBuilder.append("(\n");
+      // deleting stdin after finishing the job
+      scriptBuilder.append("    trap \"rm \\\"$stdin\\\"\" EXIT\n");
+      // just an indentation for script and params
+      scriptBuilder.append("    ");
+    }
     scriptBuilder.append("'").append(SHELL_ESCAPE.escape(executable.toString())).append("'");
 
     String params = settings.getString("params");
@@ -185,13 +198,14 @@ public class ExternalHookScript {
       }
     }
 
-    Boolean async = settings.getBoolean("async", false);
     if (async) {
-      // close all file descriptors and run job in background
-      scriptBuilder.append(" >/dev/null 2>&1 <&- &");
+      scriptBuilder.append(" <\"$stdin\"\n");
+
+      // subshell end: closing all fds and starting subshell in background
+      scriptBuilder.append(") >/dev/null 2>&1 <&- &\n");
     }
 
-    scriptBuilder.append("\n\n");
+    scriptBuilder.append("\n");
 
     String script = scriptBuilder.toString();
 
