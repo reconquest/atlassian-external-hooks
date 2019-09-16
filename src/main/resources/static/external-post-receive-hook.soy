@@ -19,11 +19,23 @@
             [
                 'id': 'safe_path',
                 'labelText': 'Look for hooks only in safe dir',
-                'descriptionText': 'Hooks will be searched only in <stash-home-dir>/external-hooks/. For DataCenter mode in <stash-home-dir>/shared/external-hooks/.',
                 'isChecked': $config ? $config['safe_path'] : false
             ]
         ]/}
     {/call}
+
+    <div class="field-group">
+        <div class="description">
+        <p>
+        If Safe Mode is set, executable path should be specified relative to:<br/>
+        <ul>
+        <li>Bitbucket Server: &lt;bitbucket-home-dir&gt;/external-hooks/
+        <li>Bitbucket DataCenter: &lt;bitbucket-home-dir&gt;/shared/external-hooks/
+        </ul>
+        </p>
+        <p>Non-Safe Mode available only to Bitbucket Administrator.</p>
+        </div>
+    </div>
 
     {call aui.form.textareaField}
         {param id: 'params' /}
