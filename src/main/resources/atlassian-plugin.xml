@@ -7,8 +7,8 @@
     <vendor name="${project.organization.name}" url="${project.organization.url}"/>
     <param name="atlassian-data-center-status">compatible</param>
     <param name="atlassian-data-center-compatible">true</param>
-    <param name="plugin-icon">images/pluginIcon.png</param>
-    <param name="plugin-logo">images/pluginLogo.png</param>
+    <param name="plugin-icon">images/logo.16x16.png</param>
+    <param name="plugin-logo">images/logo.144x144.png</param>
     <param name="atlassian-licensing-enabled">true</param>
   </plugin-info>
   <!-- add our i18n resource -->
@@ -25,7 +25,7 @@
 
   <repository-hook name="External Pre Receive Hook" i18n-name-key="external-pre-receive-hook.name" key="external-pre-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
     <description key="external-pre-receive-hook.description">The External Pre Receive Hook Add-on</description>
-    <icon>icon-example.png</icon>
+    <icon>images/logo.144x144.png</icon>
     <config-form name="External Pre Receive Hook Config" key="external-pre-receive-hook-config">
       <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
       <directory location="/static/"/>
@@ -38,7 +38,7 @@
 
   <repository-hook name="External Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
     <description key="external-post-receive-hook.description">The External Post Receive Hook Add-on</description>
-    <icon>icon-example.png</icon>
+    <icon>images/logo.144x144.png</icon>
     <config-form name="External Post Receive Hook Config" key="external-post-receive-hook-config">
       <view>com.ngs.stash.externalhooks.hook.externalpostreceivehook.view</view>
       <directory location="/static/"/>
@@ -51,7 +51,7 @@
 
   <repository-hook name="External Merge Check Hook" i18n-name-key="external-merge-check-hook.name" key="external-merge-check-hook" class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
     <description key="external-merge-check-hook.description">The External Merge Check Hook Add-on</description>
-    <icon>icon-example.png</icon>
+    <icon>images/logo.144x144.png</icon>
     <config-form name="External Merge Check Hook Config" key="external-merge-check-hook-config">
       <view>com.ngs.stash.externalhooks.hook.externalmergecheckhook.view</view>
       <directory location="/static/"/>
