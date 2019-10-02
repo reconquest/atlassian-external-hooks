@@ -58,7 +58,6 @@ public class ExternalPreReceiveHook
     triggers.add(StandardRepositoryHookTrigger.TAG_CREATE);
     triggers.add(StandardRepositoryHookTrigger.BRANCH_DELETE);
     triggers.add(StandardRepositoryHookTrigger.BRANCH_CREATE);
-    triggers.add(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
 
     this.repositoryHookService = repositoryHookService;
     this.externalHookScript =
