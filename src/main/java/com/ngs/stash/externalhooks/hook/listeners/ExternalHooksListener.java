@@ -5,13 +5,12 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.atlassian.bitbucket.hook.repository.EnableRepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.GetRepositoryHookSettingsRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSearchRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookSettings;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookType;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.permission.Permission;
@@ -40,7 +39,9 @@ import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 
-/** A listener for install/uninstall events */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Named("ExternalHooksListener")
 public class ExternalHooksListener implements JobRunner {
   private static Logger log = LoggerFactory.getLogger(ExternalHooksListener.class.getSimpleName());
@@ -240,6 +241,16 @@ public class ExternalHooksListener implements JobRunner {
 
       EnableRepositoryHookRequest.Builder enableHookBuilder =
           new EnableRepositoryHookRequest.Builder(scope, hook.getDetails().getKey());
+
+      GetRepositoryHookSettingsRequest.Builder getSettingsBuilder =
+          new GetRepositoryHookSettingsRequest.Builder(scope, hook.getDetails().getKey());
+
+      RepositoryHookSettings settings =
+          this.repoHookService.getSettings(getSettingsBuilder.build());
+
+      if (settings != null) {
+        enableHookBuilder.settings(settings.getSettings());
+      }
 
       try {
         log.warn("external-hooks: creating HookScript for {}", hook.getDetails().getKey());

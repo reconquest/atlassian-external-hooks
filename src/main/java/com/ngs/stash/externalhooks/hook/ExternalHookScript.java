@@ -10,10 +10,6 @@ import java.util.Optional;
 
 import javax.annotation.Nonnull;
 
-import org.apache.commons.io.FilenameUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
@@ -38,6 +34,10 @@ import com.atlassian.upm.api.util.Option;
 import com.google.common.base.Charsets;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
+
+import org.apache.commons.io.FilenameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExternalHookScript {
   public static final String PLUGIN_KEY = "com.ngs.stash.externalhooks.external-hooks";
