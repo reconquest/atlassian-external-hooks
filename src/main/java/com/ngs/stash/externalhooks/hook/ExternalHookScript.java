@@ -24,6 +24,7 @@ import com.atlassian.bitbucket.scope.Scope;
 import com.atlassian.bitbucket.server.StorageService;
 import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsValidationErrors;
+import com.atlassian.bitbucket.user.ApplicationUser;
 import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.plugin.util.ClassLoaderUtils;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
@@ -128,7 +129,7 @@ public class ExternalHookScript {
     }
 
     if (!settings.getBoolean("safe_path", false)) {
-      if (!permissions.hasGlobalPermission(authCtx.getCurrentUser(), Permission.SYS_ADMIN)) {
+      if (!permissions.hasGlobalPermission(Permission.SYS_ADMIN)) {
         errors.addFieldError(
             "exe",
             "You should be a Bitbucket System Administrator to edit this field "
