@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -euo pipefail
+
+URI="${URI:-http://admin:admin@localhost:7990/bitbucket}"
+
+stacket --uri "$URI" projects create pwrwo || true
+stacket --uri "$URI" repositories create pwrwo rwo || true
+
+bitbucket-external-hook -b "$URI" -p pwrwo set \
+    com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook \
+    -e examples/pre-receive-fail -s param1
+
+bitbucket-external-hook -b "$URI" -p pwrwo enable \
+    com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook
+
+./create-repo
+./create-prereceive-hook
