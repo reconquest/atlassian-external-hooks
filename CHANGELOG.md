@@ -1,3 +1,47 @@
+# 7.3.0
+
+Fix BB upgrade problem (BB 6.5.1 -> 6.6.0).
+
+https://github.com/reconquest/atlassian-external-hooks/issues/100
+
+# 7.2.0
+
+Revert change made in 6.3.0: do not invoke pre- & post-receive hook on pull
+request merge check.
+
+This feature is already covered by Merge Check Hook.
+
+# 7.1.0
+
+Added 'async' option for post-receive hook configuration.
+
+By default post-receive hooks are not running in async mode, which means that
+`git push` process will wait until post-receive hook completes.
+
+Pre-receive hook with enabled 'async' option will run in background, making
+possible to start time-consuming tasks such as CI.
+
+Note, that it's not possible to return any output back to the user invoking
+`git push` from 'async' post-receive hook.
+
+# 6.3.2
+
+Pre- & post-receive hooks are extended to be triggered of the following events
+made from BB UI:
+
+* file edit.
+
+# 6.3.0
+
+Pre- & post-receive hooks are extended to be triggered of the following events
+made from BB UI:
+
+* tag create,
+* tag delete,
+* branch create,
+* branch delete,
+* pull request merge.
+
 # 6.2.0
 
 Following environment variables are now marked as deprecated and their
@@ -19,7 +63,7 @@ limitations in Bitbucket Server starting from 6.2.0.
 
 * `STASH_PROJECT_NAME`
 * `STASH_IS_DIRECT_WRITE`
-* `STASH_IS_DIRECT_ADMIN` 
+* `STASH_IS_DIRECT_ADMIN`
 
 Merge Check will no longer add comments to Pull Requests or automatically
 reject them and no such configuration is possible.
