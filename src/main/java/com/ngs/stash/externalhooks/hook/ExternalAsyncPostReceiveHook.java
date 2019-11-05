@@ -60,19 +60,18 @@ public class ExternalAsyncPostReceiveHook
     triggers.add(StandardRepositoryHookTrigger.BRANCH_CREATE);
     triggers.add(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
 
-    this.externalHookScript =
-        new ExternalHookScript(
-            authenticationContext,
-            permissions,
-            pluginLicenseManager,
-            clusterService,
-            storageProperties,
-            hookScriptService,
-            pluginSettingsFactory,
-            securityService,
-            "external-post-receive-hook",
-            HookScriptType.POST,
-            triggers);
+    this.externalHookScript = new ExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService,
+        "external-post-receive-hook",
+        HookScriptType.POST,
+        triggers);
   }
 
   @Override
@@ -96,10 +95,9 @@ public class ExternalAsyncPostReceiveHook
       return;
     }
 
-    GetRepositoryHookSettingsRequest request =
-        (new GetRepositoryHookSettingsRequest.Builder(
-                event.getScope(), event.getRepositoryHookKey()))
-            .build();
+    GetRepositoryHookSettingsRequest request = (new GetRepositoryHookSettingsRequest.Builder(
+            event.getScope(), event.getRepositoryHookKey()))
+        .build();
 
     RepositoryHookSettings hookSettings = this.repositoryHookService.getSettings(request);
 
