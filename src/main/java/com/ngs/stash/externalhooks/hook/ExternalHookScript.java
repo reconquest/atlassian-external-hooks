@@ -130,8 +130,7 @@ public class ExternalHookScript {
     if (!settings.getBoolean("safe_path", false)) {
       if (!permissions.hasGlobalPermission(Permission.SYS_ADMIN)) {
         errors.addFieldError(
-            "exe",
-            "You should be a Bitbucket System Administrator to edit this field "
+            "exe", "You should be a Bitbucket System Administrator to edit this field "
                 + "without \"safe mode\" option.");
         return;
       }
@@ -228,16 +227,15 @@ public class ExternalHookScript {
       this.deleteHookScript(hookScript);
     }
 
-    HookScriptCreateRequest.Builder test =
-        new HookScriptCreateRequest.Builder(this.hookComponentId, PLUGIN_KEY, this.hookScriptType)
-            .content(script);
+    HookScriptCreateRequest.Builder test = new HookScriptCreateRequest.Builder(
+            this.hookComponentId, PLUGIN_KEY, this.hookScriptType)
+        .content(script);
     HookScriptCreateRequest hookScriptCreateRequest = test.build();
 
-    hookScript =
-        securityService
-            .withPermission(
-                Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to set hooks")
-            .call(() -> hookScriptService.create(hookScriptCreateRequest));
+    hookScript = securityService
+        .withPermission(
+            Permission.SYS_ADMIN, "External Hook Plugin: Allow repo admins to set hooks")
+        .call(() -> hookScriptService.create(hookScriptCreateRequest));
     pluginSettings.put(hookId, String.valueOf(hookScript.getId()));
 
     HookScriptSetConfigurationRequest.Builder configBuilder =
@@ -321,10 +319,9 @@ public class ExternalHookScript {
     securityService
         .withPermission(
             Permission.SYS_ADMIN, "External Hooks Plugin: Allow repo admins to update hooks")
-        .call(
-            () -> {
-              hookScriptService.delete(hookScript);
-              return null;
-            });
+        .call(() -> {
+          hookScriptService.delete(hookScript);
+          return null;
+        });
   }
 }

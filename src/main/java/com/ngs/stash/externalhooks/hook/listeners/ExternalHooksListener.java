@@ -86,18 +86,15 @@ public class ExternalHooksListener implements JobRunner {
 
     this.schedulerService.registerJobRunner(runner, this);
 
-    this.schedulerService.scheduleJob(
-        this.jobId,
-        JobConfig.forJobRunnerKey(runner)
-            .withSchedule(Schedule.forInterval(this.jobInterval, null)));
+    this.schedulerService.scheduleJob(this.jobId, JobConfig.forJobRunnerKey(runner)
+        .withSchedule(Schedule.forInterval(this.jobInterval, null)));
   }
 
   @PreDestroy
   public void destroy() {
-    int deleted =
-        this.securityService
-            .withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Uninstall repo hooks")
-            .call(() -> this.hookScriptService.deleteByPluginKey(ExternalHookScript.PLUGIN_KEY));
+    int deleted = this.securityService
+        .withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Uninstall repo hooks")
+        .call(() -> this.hookScriptService.deleteByPluginKey(ExternalHookScript.PLUGIN_KEY));
 
     log.info("Successfully deleted {} HookScripts", deleted);
 
@@ -121,14 +118,12 @@ public class ExternalHooksListener implements JobRunner {
       return true;
     }
 
-    RepositoryHookSearchRequest.Builder searchBuilder =
-        new RepositoryHookSearchRequest.Builder(
-                new ProjectScope(projects.getValues().iterator().next()))
-            .type(RepositoryHookType.PRE_RECEIVE);
+    RepositoryHookSearchRequest.Builder searchBuilder = new RepositoryHookSearchRequest.Builder(
+            new ProjectScope(projects.getValues().iterator().next()))
+        .type(RepositoryHookType.PRE_RECEIVE);
 
-    Page<RepositoryHook> page =
-        repoHookService.search(
-            searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
+    Page<RepositoryHook> page = repoHookService.search(
+        searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
 
     boolean found = false;
     for (RepositoryHook hook : page.getValues()) {
@@ -221,9 +216,8 @@ public class ExternalHooksListener implements JobRunner {
     RepositoryHookSearchRequest.Builder searchBuilder =
         new RepositoryHookSearchRequest.Builder(scope);
 
-    Page<RepositoryHook> page =
-        repoHookService.search(
-            searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
+    Page<RepositoryHook> page = repoHookService.search(
+        searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
 
     Integer created = 0;
     for (RepositoryHook hook : page.getValues()) {
@@ -236,6 +230,15 @@ public class ExternalHooksListener implements JobRunner {
       }
 
       if (!hook.isConfigured()) {
+        continue;
+      }
+
+      if (hook.getScope().getType() != scope.getType()) {
+        log.warn(
+            "external-hooks: hook {} is enabled & configured (inherited: {} {})",
+            hook.getDetails().getKey(),
+            hook.getScope().getType(),
+            hook.getScope().getResourceId().orElse(-1));
         continue;
       }
 

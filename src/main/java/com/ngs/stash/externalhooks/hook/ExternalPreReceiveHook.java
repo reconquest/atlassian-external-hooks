@@ -60,19 +60,18 @@ public class ExternalPreReceiveHook
     triggers.add(StandardRepositoryHookTrigger.BRANCH_CREATE);
 
     this.repositoryHookService = repositoryHookService;
-    this.externalHookScript =
-        new ExternalHookScript(
-            authenticationContext,
-            permissions,
-            pluginLicenseManager,
-            clusterService,
-            storageProperties,
-            hookScriptService,
-            pluginSettingsFactory,
-            securityService,
-            "external-pre-receive-hook",
-            HookScriptType.PRE,
-            triggers);
+    this.externalHookScript = new ExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService,
+        "external-pre-receive-hook",
+        HookScriptType.PRE,
+        triggers);
   }
 
   @Override
@@ -96,10 +95,9 @@ public class ExternalPreReceiveHook
       return;
     }
 
-    GetRepositoryHookSettingsRequest request =
-        (new GetRepositoryHookSettingsRequest.Builder(
-                event.getScope(), event.getRepositoryHookKey()))
-            .build();
+    GetRepositoryHookSettingsRequest request = (new GetRepositoryHookSettingsRequest.Builder(
+            event.getScope(), event.getRepositoryHookKey()))
+        .build();
 
     RepositoryHookSettings hookSettings = this.repositoryHookService.getSettings(request);
 
@@ -121,15 +119,13 @@ public class ExternalPreReceiveHook
       @Nonnull PreRepositoryHookContext context, @Nonnull RepositoryHookRequest request) {
     if (!this.externalHookScript.isLicenseDefined()) {
       return RepositoryHookResult.rejected(
-          "Unlicensed Add-on.",
-          "License for External Hooks Add-on is missing.\n"
+          "Unlicensed Add-on.", "License for External Hooks Add-on is missing.\n"
               + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
     }
 
     if (!this.externalHookScript.isLicenseValid()) {
       return RepositoryHookResult.rejected(
-          "License is not valid.",
-          "License for External Hooks Add-on is expired.\n"
+          "License is not valid.", "License for External Hooks Add-on is expired.\n"
               + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
     }
 
