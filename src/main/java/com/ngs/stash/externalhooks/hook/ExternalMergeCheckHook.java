@@ -36,6 +36,7 @@ import com.atlassian.upm.api.license.PluginLicenseManager;
 public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsValidator {
   private ExternalHookScript externalHookScript;
   private RepositoryHookService repositoryHookService;
+  public static final String KEY_ID = "external-merge-check-hook";
 
   public ExternalMergeCheckHook(
       AuthenticationContext authenticationContext,
@@ -49,11 +50,33 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
       SecurityService securityService)
       throws IOException {
 
+    this.repositoryHookService = repositoryHookService;
+
+    this.externalHookScript = getExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService);
+  }
+
+  public static ExternalHookScript getExternalHookScript(
+      AuthenticationContext authenticationContext,
+      PermissionService permissions,
+      PluginLicenseManager pluginLicenseManager,
+      ClusterService clusterService,
+      StorageService storageProperties,
+      HookScriptService hookScriptService,
+      PluginSettingsFactory pluginSettingsFactory,
+      SecurityService securityService)
+      throws IOException {
     List<RepositoryHookTrigger> triggers = new ArrayList<RepositoryHookTrigger>();
     triggers.add(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
 
-    this.repositoryHookService = repositoryHookService;
-    this.externalHookScript = new ExternalHookScript(
+    return new ExternalHookScript(
         authenticationContext,
         permissions,
         pluginLicenseManager,
@@ -62,7 +85,7 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
         hookScriptService,
         pluginSettingsFactory,
         securityService,
-        "external-merge-check-hook",
+        KEY_ID,
         HookScriptType.PRE,
         triggers);
   }

@@ -1,11 +1,14 @@
 package com.ngs.stash.externalhooks.hook.listeners;
 
+import java.io.IOException;
+
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import com.atlassian.bitbucket.hook.repository.EnableRepositoryHookRequest;
+import com.atlassian.bitbucket.auth.AuthenticationContext;
+import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.GetRepositoryHookSettingsRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSearchRequest;
@@ -14,6 +17,7 @@ import com.atlassian.bitbucket.hook.repository.RepositoryHookSettings;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookType;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.permission.Permission;
+import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.Project;
 import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.repository.Repository;
@@ -21,6 +25,8 @@ import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
+import com.atlassian.bitbucket.server.StorageService;
+import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
@@ -37,7 +43,11 @@ import com.atlassian.scheduler.config.JobConfig;
 import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
+import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
+import com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook;
+import com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,32 +60,89 @@ public class ExternalHooksListener implements JobRunner {
 
   private final int jobInterval = 2000;
   private final JobId jobId = JobId.of("external-hooks-enable-job");
-  private final String hookKeyPrefix = "com.ngs.stash.externalhooks.external-hooks:";
 
-  private HookScriptService hookScriptService;
-  private SecurityService securityService;
-  private RepositoryHookService repoHookService;
-  private ProjectService projectService;
-  private SchedulerService schedulerService;
-  private RepositoryService repositoryService;
+  @ComponentImport private RepositoryService repositoryService;
+  @ComponentImport private SchedulerService schedulerService;
+  @ComponentImport private HookScriptService hookScriptService;
+  @ComponentImport private RepositoryHookService repoHookService;
+  @ComponentImport private ProjectService projectService;
+  @ComponentImport private PluginSettingsFactory pluginSettingsFactory;
+  @ComponentImport private SecurityService securityService;
+  @ComponentImport private AuthenticationContext authenticationContext;
+
+  @ComponentImport("permissions")
+  private PermissionService permissions;
+
+  @ComponentImport private PluginLicenseManager pluginLicenseManager;
+
+  @ComponentImport private ClusterService clusterService;
+  @ComponentImport private StorageService storageProperties;
+
   private PluginSettings pluginSettings;
+
+  private ExternalHookScript hookPreReceive;
+  private ExternalHookScript hookPostReceive;
+  private ExternalHookScript hookMergeCheck;
 
   @Inject
   public ExternalHooksListener(
-      @ComponentImport RepositoryService repositoryService,
-      @ComponentImport SchedulerService schedulerService,
-      @ComponentImport HookScriptService hookScriptService,
-      @ComponentImport RepositoryHookService repoHookService,
-      @ComponentImport ProjectService projectService,
-      @ComponentImport PluginSettingsFactory pluginSettingsFactory,
-      @ComponentImport SecurityService securityService) {
+      RepositoryService repositoryService,
+      SchedulerService schedulerService,
+      HookScriptService hookScriptService,
+      RepositoryHookService repoHookService,
+      ProjectService projectService,
+      PluginSettingsFactory pluginSettingsFactory,
+      SecurityService securityService,
+      AuthenticationContext authenticationContext,
+      PermissionService permissions,
+      PluginLicenseManager pluginLicenseManager,
+      ClusterService clusterService,
+      StorageService storageProperties)
+      throws IOException {
+    this.repositoryService = repositoryService;
     this.schedulerService = schedulerService;
     this.hookScriptService = hookScriptService;
     this.repoHookService = repoHookService;
     this.projectService = projectService;
+    this.pluginSettingsFactory = pluginSettingsFactory;
     this.securityService = securityService;
+    this.authenticationContext = authenticationContext;
+    this.permissions = permissions;
+    this.pluginLicenseManager = pluginLicenseManager;
+    this.clusterService = clusterService;
+    this.storageProperties = storageProperties;
+
     this.pluginSettings = pluginSettingsFactory.createGlobalSettings();
-    this.repositoryService = repositoryService;
+
+    this.hookPreReceive = ExternalPreReceiveHook.getExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService);
+
+    this.hookPostReceive = ExternalAsyncPostReceiveHook.getExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService);
+
+    this.hookMergeCheck = ExternalMergeCheckHook.getExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService);
   }
 
   @PostConstruct
@@ -127,7 +194,7 @@ public class ExternalHooksListener implements JobRunner {
 
     boolean found = false;
     for (RepositoryHook hook : page.getValues()) {
-      if (hook.getDetails().getKey().startsWith(this.hookKeyPrefix)) {
+      if (hook.getDetails().getKey().startsWith(ExternalHookScript.PLUGIN_KEY)) {
         found = true;
         break;
       }
@@ -221,7 +288,8 @@ public class ExternalHooksListener implements JobRunner {
 
     Integer created = 0;
     for (RepositoryHook hook : page.getValues()) {
-      if (!hook.getDetails().getKey().startsWith(this.hookKeyPrefix)) {
+      String hookKey = hook.getDetails().getKey();
+      if (!hookKey.startsWith(ExternalHookScript.PLUGIN_KEY)) {
         continue;
       }
 
@@ -235,32 +303,43 @@ public class ExternalHooksListener implements JobRunner {
 
       if (hook.getScope().getType() != scope.getType()) {
         log.warn(
-            "external-hooks: hook {} is enabled & configured (inherited: {} {})",
-            hook.getDetails().getKey(),
+            "Hook {} is enabled & configured (inherited: {} {})",
+            hookKey,
             hook.getScope().getType(),
             hook.getScope().getResourceId().orElse(-1));
         continue;
       }
 
-      EnableRepositoryHookRequest.Builder enableHookBuilder =
-          new EnableRepositoryHookRequest.Builder(scope, hook.getDetails().getKey());
-
       GetRepositoryHookSettingsRequest.Builder getSettingsBuilder =
-          new GetRepositoryHookSettingsRequest.Builder(scope, hook.getDetails().getKey());
+          new GetRepositoryHookSettingsRequest.Builder(scope, hookKey);
 
-      RepositoryHookSettings settings =
+      RepositoryHookSettings hookSettings =
           this.repoHookService.getSettings(getSettingsBuilder.build());
 
-      if (settings != null) {
-        enableHookBuilder.settings(settings.getSettings());
+      if (hookSettings == null) {
+        log.warn("Hook {} has no settings, can't be enabled", hookKey);
+        return;
       }
 
+      Settings settings = hookSettings.getSettings();
+
       try {
-        log.warn("external-hooks: creating HookScript for {}", hook.getDetails().getKey());
-        this.repoHookService.enable(enableHookBuilder.build());
+        if (hookKey.equals(hookPreReceive.getHookKey())) {
+          log.warn("Creating PRE_RECEIVE HookScript for {}", hookKey);
+          this.hookPreReceive.install(settings, scope);
+        } else if (hookKey.equals(hookPostReceive.getHookKey())) {
+          log.warn("Creating POST_RECEIVE HookScript for {}", hookKey);
+          this.hookPostReceive.install(settings, scope);
+        } else if (hookKey.equals(hookMergeCheck.getHookKey())) {
+          log.warn("Creating MERGE_CHECK HookScript for {}", hookKey);
+          this.hookMergeCheck.install(settings, scope);
+        } else {
+          log.warn("Unexpected hook key: {}", hookKey);
+        }
+
         created++;
       } catch (Exception e) {
-        log.error("unable to enable hook: {}", e.toString());
+        log.error("Unable to install hook script {}: {}", hookKey, e.toString());
       }
     }
 
