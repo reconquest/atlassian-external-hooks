@@ -37,6 +37,7 @@ public class ExternalPreReceiveHook
     implements PreRepositoryHook<RepositoryHookRequest>, SettingsValidator {
 
   private ExternalHookScript externalHookScript;
+  public static final String KEY_ID = "external-pre-receive-hook";
 
   private RepositoryHookService repositoryHookService;
 
@@ -51,6 +52,28 @@ public class ExternalPreReceiveHook
       RepositoryHookService repositoryHookService,
       SecurityService securityService)
       throws IOException {
+    this.repositoryHookService = repositoryHookService;
+    this.externalHookScript = getExternalHookScript(
+        authenticationContext,
+        permissions,
+        pluginLicenseManager,
+        clusterService,
+        storageProperties,
+        hookScriptService,
+        pluginSettingsFactory,
+        securityService);
+  }
+
+  public static ExternalHookScript getExternalHookScript(
+      AuthenticationContext authenticationContext,
+      PermissionService permissions,
+      PluginLicenseManager pluginLicenseManager,
+      ClusterService clusterService,
+      StorageService storageProperties,
+      HookScriptService hookScriptService,
+      PluginSettingsFactory pluginSettingsFactory,
+      SecurityService securityService)
+      throws IOException {
     List<RepositoryHookTrigger> triggers = new ArrayList<RepositoryHookTrigger>();
     triggers.add(StandardRepositoryHookTrigger.REPO_PUSH);
     triggers.add(StandardRepositoryHookTrigger.FILE_EDIT);
@@ -58,9 +81,7 @@ public class ExternalPreReceiveHook
     triggers.add(StandardRepositoryHookTrigger.TAG_CREATE);
     triggers.add(StandardRepositoryHookTrigger.BRANCH_DELETE);
     triggers.add(StandardRepositoryHookTrigger.BRANCH_CREATE);
-
-    this.repositoryHookService = repositoryHookService;
-    this.externalHookScript = new ExternalHookScript(
+    return new ExternalHookScript(
         authenticationContext,
         permissions,
         pluginLicenseManager,
@@ -69,7 +90,7 @@ public class ExternalPreReceiveHook
         hookScriptService,
         pluginSettingsFactory,
         securityService,
-        "external-pre-receive-hook",
+        KEY_ID,
         HookScriptType.PRE,
         triggers);
   }

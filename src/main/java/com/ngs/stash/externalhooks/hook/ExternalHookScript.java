@@ -41,11 +41,12 @@ import org.slf4j.LoggerFactory;
 
 public class ExternalHookScript {
   public static final String PLUGIN_KEY = "com.ngs.stash.externalhooks.external-hooks";
+
   private final PluginLicenseManager pluginLicenseManager;
   private static Logger log = LoggerFactory.getLogger(ExternalHookScript.class.getSimpleName());
   public final Escaper SHELL_ESCAPE;
   private AuthenticationContext authCtx;
-  private PermissionService permissions;
+  private PermissionService permissionService;
   private ClusterService clusterService;
   private StorageService storageProperties;
   private HookScriptService hookScriptService;
@@ -59,7 +60,7 @@ public class ExternalHookScript {
 
   public ExternalHookScript(
       AuthenticationContext authenticationContext,
-      PermissionService permissions,
+      PermissionService permissionService,
       PluginLicenseManager pluginLicenseManager,
       ClusterService clusterService,
       StorageService storageProperties,
@@ -71,7 +72,7 @@ public class ExternalHookScript {
       List<RepositoryHookTrigger> repositoryHookTriggers)
       throws IOException {
     this.authCtx = authenticationContext;
-    this.permissions = permissions;
+    this.permissionService = permissionService;
     this.storageProperties = storageProperties;
     this.pluginLicenseManager = pluginLicenseManager;
     this.clusterService = clusterService;
@@ -88,6 +89,10 @@ public class ExternalHookScript {
     SHELL_ESCAPE = builder.build();
 
     this.hookScriptTemplate = this.getResource("hook-script.template.bash");
+  }
+
+  public String getHookKey() {
+    return this.hookId;
   }
 
   private String getResource(String name) throws IOException {
@@ -128,7 +133,7 @@ public class ExternalHookScript {
     }
 
     if (!settings.getBoolean("safe_path", false)) {
-      if (!permissions.hasGlobalPermission(Permission.SYS_ADMIN)) {
+      if (!permissionService.hasGlobalPermission(Permission.SYS_ADMIN)) {
         errors.addFieldError(
             "exe", "You should be a Bitbucket System Administrator to edit this field "
                 + "without \"safe mode\" option.");
@@ -244,7 +249,7 @@ public class ExternalHookScript {
     HookScriptSetConfigurationRequest hookScriptSetConfigurationRequest = configBuilder.build();
     hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
 
-    log.info("Successfully created HookScript with id: {}", hookScript.getId());
+    log.warn("Created HookScript with id: {}", hookScript.getId());
   }
 
   public File getExecutable(String path, boolean safeDir) {
