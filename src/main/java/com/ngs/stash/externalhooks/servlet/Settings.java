@@ -28,19 +28,19 @@ import org.slf4j.LoggerFactory;
 public class Settings extends HttpServlet {
   private static final Logger log = LoggerFactory.getLogger(Settings.class);
 
-  @ComponentImport private TemplateRenderer templateRenderer;
-  @ComponentImport private PluginSettingsFactory pluginSettingsFactory;
-  @ComponentImport private UserManager userManager;
-  @ComponentImport private LoginUriProvider loginUriProvider;
+  private TemplateRenderer templateRenderer;
+  private PluginSettingsFactory pluginSettingsFactory;
+  private UserManager userManager;
+  private LoginUriProvider loginUriProvider;
 
   private PluginSettings pluginSettings;
 
   @Inject
-  public void Settings(
-      UserManager userManager,
-      PluginSettingsFactory pluginSettingsFactory,
-      LoginUriProvider loginUriProvider,
-      TemplateRenderer templateRenderer) {
+  public Settings(
+      @ComponentImport UserManager userManager,
+      @ComponentImport PluginSettingsFactory pluginSettingsFactory,
+      @ComponentImport LoginUriProvider loginUriProvider,
+      @ComponentImport TemplateRenderer templateRenderer) {
     this.userManager = userManager;
     this.templateRenderer = templateRenderer;
     this.loginUriProvider = loginUriProvider;

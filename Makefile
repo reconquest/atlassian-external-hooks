@@ -1,6 +1,6 @@
 run@%:
-	@mkdir -p target-$*
-	@ln -sTf target-$* target
+	@mkdir -p targets/$*
+	@ln -sTf targets/$* target
 	@atlas-run -Dbitbucket.version=$*
 
 package:

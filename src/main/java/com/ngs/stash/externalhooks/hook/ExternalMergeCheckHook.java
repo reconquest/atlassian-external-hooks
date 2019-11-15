@@ -49,7 +49,6 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
       RepositoryHookService repositoryHookService,
       SecurityService securityService)
       throws IOException {
-
     this.repositoryHookService = repositoryHookService;
 
     this.externalHookScript = getExternalHookScript(
@@ -93,13 +92,13 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
   @Override
   public RepositoryHookResult preUpdate(
       PreRepositoryHookContext context, PullRequestMergeHookRequest request) {
-    if (!this.externalHookScript.isLicenseDefined()) {
+    if (!this.externalHookScript.license.isDefined()) {
       return RepositoryHookResult.rejected(
           "Unlicensed Add-on.", "License for External Hooks Add-on is missing.\n"
               + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
     }
 
-    if (!this.externalHookScript.isLicenseValid()) {
+    if (!this.externalHookScript.license.isValid()) {
       return RepositoryHookResult.rejected(
           "License is not valid.", "License for External Hooks Add-on is expired.\n"
               + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");

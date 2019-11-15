@@ -52,7 +52,7 @@ public class ExternalHooksFactory {
       PluginSettingsFactory pluginSettingsFactory,
       SecurityService securityService,
       AuthenticationContext authenticationContext,
-      PermissionService permissions,
+      PermissionService permissionService,
       PluginLicenseManager pluginLicenseManager,
       ClusterService clusterService,
       StorageService storageService)
@@ -61,7 +61,7 @@ public class ExternalHooksFactory {
 
     this.hookPreReceive = ExternalPreReceiveHook.getExternalHookScript(
         authenticationContext,
-        permissions,
+        permissionService,
         pluginLicenseManager,
         clusterService,
         storageService,
@@ -71,7 +71,7 @@ public class ExternalHooksFactory {
 
     this.hookPostReceive = ExternalAsyncPostReceiveHook.getExternalHookScript(
         authenticationContext,
-        permissions,
+        permissionService,
         pluginLicenseManager,
         clusterService,
         storageService,
@@ -81,7 +81,7 @@ public class ExternalHooksFactory {
 
     this.hookMergeCheck = ExternalMergeCheckHook.getExternalHookScript(
         authenticationContext,
-        permissions,
+        permissionService,
         pluginLicenseManager,
         clusterService,
         storageService,
