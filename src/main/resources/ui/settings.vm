@@ -1,10 +1,102 @@
-<html>
+#set(
+    $gitHookConfiguration = {
+        "branch": {
+            "legend": "Branch",
+            "triggers": {
+                "create": {
+                    "label": "Create"
+                },
+                "delete": {
+                    "label": "Delete"
+                }
+            }
+        },
+        "tag": {
+            "legend": "Tag",
+            "triggers": {
+                "create": {
+                    "label": "Create"
+                },
+                "delete": {
+                    "label": "Delete"
+                }
+            }
+        },
+        "file": {
+            "legend": "File",
+            "triggers": {
+                "edit": {
+                    "label": "Edit"
+                }
+            }
+        },
+        "pr": {
+            "legend": "Pull Request",
+            "triggers": {
+                "merge": {
+                    "label": "Merge"
+                }
+            }
+        },
+        "repo": {
+            "legend": "Repository",
+            "triggers": {
+                "push": {
+                    "label": "Push"
+                }
+            }
+        }
+    }
+)
+
+#set(
+    $triggerConfigurations = {
+        "pre_receive": {
+            "title": "Pre-receive Triggers",
+            "groups": $gitHookConfiguration
+        },
+
+        "post_receive": {
+            "title": "Post-receive Triggers",
+            "groups": $gitHookConfiguration
+        }
+    }
+)
 <!DOCTYPE html>
 <html>
     <head>
             <meta name="decorator" content="atl.admin">
     </head>
     <body>
-        <p>123</p>
+        <h2>External Hooks Add-on Settings</h2>
+
+        <form class="aui">
+            #foreach($configuration in $triggerConfigurations.entrySet())
+                <h3>$configuration.value.title</h3>
+
+                #foreach($group in $configuration.value.groups.entrySet())
+                <fieldset class="group">
+                    <legend><span>$group.value.legend</span></legend>
+                    #foreach($trigger in $group.value.triggers.entrySet())
+                        #set(
+                            $inputID =
+                                $configuration.key + "_" +
+                                $group.key + "_" +
+                                $trigger.key
+                        )
+                        <div class="checkbox">
+                            <input
+                                class="checkbox"
+                                type="checkbox"
+                                name="triggers[$configuration.key][$group.key][$trigger.key]"
+                                id="$inputID"
+                                />
+                            <label for="$inputID">$trigger.value.label</label>
+                        </div>
+                    #end
+                </fieldset>
+                #end
+            #end
+        </form>
     </body>
 </html>
