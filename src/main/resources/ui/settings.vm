@@ -37,7 +37,7 @@
             "legend": "Pull Request",
             "description": "Note, that this event is triggered every time user visits pull request details page.",
             "triggers": {
-                "merge": {
+                "merge_check": {
                     "label": "Merge Check"
                 }
             }
@@ -79,7 +79,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-            <meta name="decorator" content="atl.admin">
+        <meta name="decorator" content="atl.admin">
     </head>
     <body>
         <h2>External Hooks Add-on Settings</h2>
@@ -93,10 +93,13 @@
                     <legend><span>$group.value.legend</span></legend>
                     #foreach($trigger in $group.value.triggers.entrySet())
                         #set(
-                            $inputID = "rq_hooks_" +
+                            $settingID =
                                 $configuration.key + "_" +
                                 $group.key + "_" +
                                 $trigger.key
+                        )
+                        #set(
+                            $inputID = "rq_hooks_" + $settingID
                         )
                         <div class="checkbox">
                             <input
@@ -104,6 +107,7 @@
                                 type="checkbox"
                                 name="triggers[$configuration.key][$group.key][$trigger.key]"
                                 id="$inputID"
+                                #if($triggers.get($settingID))checked#end
                                 />
                             <label for="$inputID">$trigger.value.label</label>
                         </div>
