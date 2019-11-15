@@ -62,6 +62,18 @@
     </scopes>
   </repository-hook>
 
+  <web-item key="global-settings-external-hooks-settings" name="External Hooks Add-On Settings" section="atl.admin/admin-settings-section" weight="-999">
+    <description>Link to External Hooks Add-on Settings Page.</description>
+    <label key="external-hooks.settings.label">External Hooks Add-on Settings</label>
+    <tooltip>Configure confluence settings for External Hooks Add-on</tooltip>
+    <link linkId="external-hooks-settings-link">/plugins/servlet/external-hooks/settings</link>
+  </web-item>
+
+  <servlet name="External Hooks Settings" i18n-name-key="external-hooks-admin.name" key="external-hooks-settings" class="com.ngs.stash.externalhooks.servlet.Settings">
+    <description key="external-hooks-settings.description">External Hooks Add-On Settings</description>
+    <url-pattern>/external-hooks/settings</url-pattern>
+  </servlet>
+
   <!-- import from the product container -->
   <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
   <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />
