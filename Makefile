@@ -1,2 +1,7 @@
-compile:
-	atlas-compile -q -T $(shell nproc)
+run@%:
+	@mkdir -p target-$*
+	@ln -sTf target-$* target
+	@atlas-run -Dbitbucket.version=$*
+
+package:
+	@atlas-mvn package -q -T $(shell nproc)
