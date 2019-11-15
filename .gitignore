@@ -1,4 +1,5 @@
-target/
+/target
+/targets/
 /*.log
 *.iml
 .idea
@@ -7,3 +8,4 @@ target/
 /.classpath
 /bin
 /workbench.xmi
+/jdt:

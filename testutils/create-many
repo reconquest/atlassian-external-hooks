@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -euo pipefail
+
+URI="${URI:-http://admin:admin@localhost:7990/bitbucket}"
+
+for x in $(seq 1 ${1}); do
+    project=$(lojban $RANDOM)
+    repo=$(lojban $RANDOM)
+    stacket --uri "$URI" projects create $project
+    stacket --uri "$URI" repositories create $project $repo
+
+    bitbucket-external-hook -b "$URI" -p $project -r $repo set \
+        com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook \
+        -e examples/pre-receive-fail -s $project/$repo
+
+    bitbucket-external-hook -b "$URI" -p $project -r $repo enable \
+        com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook
+done

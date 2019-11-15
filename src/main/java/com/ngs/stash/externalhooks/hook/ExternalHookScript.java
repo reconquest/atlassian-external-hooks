@@ -29,11 +29,10 @@ import com.atlassian.plugin.util.ClassLoaderUtils;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-import com.atlassian.upm.api.license.entity.PluginLicense;
-import com.atlassian.upm.api.util.Option;
 import com.google.common.base.Charsets;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
+import com.ngs.stash.externalhooks.license.LicenseValidator;
 
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
@@ -42,13 +41,12 @@ import org.slf4j.LoggerFactory;
 public class ExternalHookScript {
   public static final String PLUGIN_KEY = "com.ngs.stash.externalhooks.external-hooks";
 
-  private final PluginLicenseManager pluginLicenseManager;
   private static Logger log = LoggerFactory.getLogger(ExternalHookScript.class.getSimpleName());
   public final Escaper SHELL_ESCAPE;
   private AuthenticationContext authCtx;
   private PermissionService permissionService;
   private ClusterService clusterService;
-  private StorageService storageProperties;
+  private StorageService storageService;
   private HookScriptService hookScriptService;
   private PluginSettings pluginSettings;
   private String hookComponentId;
@@ -58,12 +56,14 @@ public class ExternalHookScript {
   private SecurityService securityService;
   private String hookScriptTemplate;
 
+  public LicenseValidator license;
+
   public ExternalHookScript(
       AuthenticationContext authenticationContext,
       PermissionService permissionService,
       PluginLicenseManager pluginLicenseManager,
       ClusterService clusterService,
-      StorageService storageProperties,
+      StorageService storageService,
       HookScriptService hookScriptService,
       PluginSettingsFactory pluginSettingsFactory,
       SecurityService securityService,
@@ -73,8 +73,7 @@ public class ExternalHookScript {
       throws IOException {
     this.authCtx = authenticationContext;
     this.permissionService = permissionService;
-    this.storageProperties = storageProperties;
-    this.pluginLicenseManager = pluginLicenseManager;
+    this.storageService = storageService;
     this.clusterService = clusterService;
     this.hookScriptService = hookScriptService;
     this.pluginSettings = pluginSettingsFactory.createGlobalSettings();
@@ -89,6 +88,9 @@ public class ExternalHookScript {
     SHELL_ESCAPE = builder.build();
 
     this.hookScriptTemplate = this.getResource("hook-script.template.bash");
+
+    this.license =
+        new LicenseValidator(PLUGIN_KEY, pluginLicenseManager, storageService, clusterService);
   }
 
   public String getHookKey() {
@@ -116,12 +118,12 @@ public class ExternalHookScript {
 
   public void validate(
       @Nonnull Settings settings, @Nonnull SettingsValidationErrors errors, @Nonnull Scope scope) {
-    if (!this.isLicenseDefined()) {
+    if (!this.license.isDefined()) {
       errors.addFieldError("exe", "External Hooks Add-on is Unlicensed.");
       return;
     }
 
-    if (!this.isLicenseValid()) {
+    if (!this.license.isValid()) {
       errors.addFieldError("exe", "License for External Hooks is expired.");
       return;
     }
@@ -269,25 +271,10 @@ public class ExternalHookScript {
 
   private File getHomeDir() {
     if (this.clusterService.isAvailable()) {
-      return this.storageProperties.getSharedHomeDir().toFile();
+      return this.storageService.getSharedHomeDir().toFile();
     } else {
-      return this.storageProperties.getHomeDir().toFile();
+      return this.storageService.getHomeDir().toFile();
     }
-  }
-
-  public boolean isLicenseValid() {
-    Option<PluginLicense> licenseOption = pluginLicenseManager.getLicense();
-    if (!licenseOption.isDefined()) {
-      return false;
-    }
-
-    PluginLicense pluginLicense = licenseOption.get();
-    return pluginLicense.isValid();
-  }
-
-  public boolean isLicenseDefined() {
-    Option<PluginLicense> licenseOption = pluginLicenseManager.getLicense();
-    return licenseOption.isDefined();
   }
 
   public void deleteHookScriptByKey(String hookKey, Scope scope) {

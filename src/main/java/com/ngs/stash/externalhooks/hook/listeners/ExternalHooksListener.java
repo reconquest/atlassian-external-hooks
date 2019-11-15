@@ -77,7 +77,7 @@ public class ExternalHooksListener implements JobRunner {
       @ComponentImport PluginSettingsFactory pluginSettingsFactory,
       @ComponentImport SecurityService securityService,
       @ComponentImport AuthenticationContext authenticationContext,
-      @ComponentImport("permissions") PermissionService permissions,
+      @ComponentImport("permissions") PermissionService permissionService,
       @ComponentImport PluginLicenseManager pluginLicenseManager,
       @ComponentImport ClusterService clusterService,
       @ComponentImport StorageService storageService)
@@ -97,7 +97,7 @@ public class ExternalHooksListener implements JobRunner {
         pluginSettingsFactory,
         securityService,
         authenticationContext,
-        permissions,
+        permissionService,
         pluginLicenseManager,
         clusterService,
         storageService);
