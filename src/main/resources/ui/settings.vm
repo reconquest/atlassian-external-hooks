@@ -1,1 +1,10 @@
-123
+<html>
+<!DOCTYPE html>
+<html>
+    <head>
+            <meta name="decorator" content="atl.admin">
+    </head>
+    <body>
+        <p>123</p>
+    </body>
+</html>
