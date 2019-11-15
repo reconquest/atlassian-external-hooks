@@ -80,6 +80,7 @@
 <html>
     <head>
         <meta name="decorator" content="atl.admin">
+        $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
     </head>
     <body>
         <h2>External Hooks Add-on Settings</h2>
