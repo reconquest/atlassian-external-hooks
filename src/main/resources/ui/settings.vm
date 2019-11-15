@@ -2,6 +2,7 @@
     $gitHookConfiguration = {
         "branch": {
             "legend": "Branch",
+            "description": "These events are triggered when user creates/deletes branch via Bitbucket web-interface.",
             "triggers": {
                 "create": {
                     "label": "Create"
@@ -13,6 +14,7 @@
         },
         "tag": {
             "legend": "Tag",
+            "description": "These events are triggered when user creates/deletes tag via Bitbucket web-interface.",
             "triggers": {
                 "create": {
                     "label": "Create"
@@ -24,6 +26,7 @@
         },
         "file": {
             "legend": "File",
+            "description": "This event is triggered when user edits a file via Bitbucket web-interface.",
             "triggers": {
                 "edit": {
                     "label": "Edit"
@@ -32,17 +35,28 @@
         },
         "pr": {
             "legend": "Pull Request",
+            "description": "Note, that this event is triggered every time user visits pull request details page.",
             "triggers": {
                 "merge": {
-                    "label": "Merge"
+                    "label": "Merge Check"
                 }
             }
         },
         "repo": {
             "legend": "Repository",
+            "description": "This event is triggered when changes are pushed to a repository via git push command.",
             "triggers": {
                 "push": {
                     "label": "Push"
+                }
+            }
+        },
+        "internal": {
+            "legend": "Internal",
+            "description": "Invoked when merge(MergeCommandParameters) is called. Note that this is a low-level SCM operation and should not generally be intercepted.",
+            "triggers": {
+                "push": {
+                    "label": "Merge Event"
                 }
             }
         }
@@ -93,6 +107,9 @@
                                 />
                             <label for="$inputID">$trigger.value.label</label>
                         </div>
+                    #end
+                    #if($group.value.description)
+                    <div class="description">$group.value.description</div>
                     #end
                 </fieldset>
                 #end
