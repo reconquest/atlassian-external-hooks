@@ -93,7 +93,7 @@
                     <legend><span>$group.value.legend</span></legend>
                     #foreach($trigger in $group.value.triggers.entrySet())
                         #set(
-                            $inputID =
+                            $inputID = "rq_hooks_" +
                                 $configuration.key + "_" +
                                 $group.key + "_" +
                                 $trigger.key
@@ -114,6 +114,8 @@
                 </fieldset>
                 #end
             #end
+
+            <button class="aui-button aui-button-primary" id="rq_hooks_settings_save">Save</button>
         </form>
     </body>
 </html>
