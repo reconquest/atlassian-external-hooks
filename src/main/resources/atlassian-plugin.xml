@@ -14,11 +14,15 @@
   <!-- add our i18n resource -->
   <resource type="i18n" name="i18n" location="external-hooks"/>
   <!-- add our web resources -->
-  <web-resource key="external-hooks-resources" name="external-hooks Web Resources">
+  <web-resource key="web-resources" name="External Hooks Web Resources">
     <dependency>com.atlassian.auiplugin:ajs</dependency>
     <resource type="download" name="external-hooks.css" location="/css/external-hooks.css"/>
     <resource type="download" name="external-hooks.js" location="/js/external-hooks.js"/>
     <resource type="download" name="images/" location="/images"/>
+    <context>web</context>
+  </web-resource>
+
+  <web-resource key="external-hooks-resources" name="external-hooks Web Resources">
     <resource type="template" name="/hook-script.template.bash" location="/hook-script.template.bash" />
     <context>external-hooks</context>
   </web-resource>
