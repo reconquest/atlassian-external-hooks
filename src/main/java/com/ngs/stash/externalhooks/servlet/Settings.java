@@ -18,6 +18,7 @@ import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.sal.api.user.UserKey;
 import com.atlassian.sal.api.user.UserManager;
 import com.atlassian.templaterenderer.TemplateRenderer;
+import com.ngs.stash.externalhooks.ExternalHooksSettings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,28 +77,7 @@ public class Settings extends HttpServlet {
       context.put("success", "true");
     }
 
-    com.ngs.stash.externalhooks.rest.Settings settings =
-        new com.ngs.stash.externalhooks.rest.Settings();
-
-    // Map<String, Boolean> triggers = new HashMap<String, Boolean>();
-
-    // triggers.put("pre_receive_branch_create", true);
-    // triggers.put("pre_receive_branch_delete", true);
-    // triggers.put("pre_receive_tag_create", true);
-    // triggers.put("pre_receive_tag_delete", true);
-    // triggers.put("pre_receive_file_edit", true);
-    // triggers.put("pre_receive_pr_merge_check", false);
-    // triggers.put("pre_receive_internal_merge", false);
-    // triggers.put("pre_receive_repo_push", true);
-
-    // triggers.put("post_receive_branch_create", true);
-    // triggers.put("post_receive_branch_delete", true);
-    // triggers.put("post_receive_tag_create", true);
-    // triggers.put("post_receive_tag_delete", true);
-    // triggers.put("post_receive_file_edit", true);
-    // triggers.put("post_receive_pr_merge_check", false);
-    // triggers.put("post_receive_internal_merge", false);
-    // triggers.put("post_receive_repo_push", true);
+    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
 
     context.put("settings", settings);
 
