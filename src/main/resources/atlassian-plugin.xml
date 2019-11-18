@@ -17,7 +17,7 @@
     <web-resource key="web-resources" name="External Hooks Web Resources">
         <dependency>com.atlassian.auiplugin:ajs</dependency>
         <resource type="download" name="external-hooks.css" location="/css/external-hooks.css"/>
-        <resource type="download" name="external-hooks.js" location="/js/external-hooks.js"/>
+        <resource name="batch.js" type="download" location="js/${reconquest.batch.js}"/>
         <resource type="download" name="images/" location="/images"/>
         <context>web</context>
     </web-resource>
