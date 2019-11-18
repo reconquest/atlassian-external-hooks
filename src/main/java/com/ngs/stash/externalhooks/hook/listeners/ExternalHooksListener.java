@@ -40,9 +40,9 @@ import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-import com.ngs.stash.externalhooks.hook.ExternalHookScript;
-import com.ngs.stash.externalhooks.hook.Walker;
+import com.ngs.stash.externalhooks.ExternalHooks;
 import com.ngs.stash.externalhooks.hook.factory.ExternalHooksFactory;
+import com.ngs.stash.externalhooks.util.Walker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,7 +123,7 @@ public class ExternalHooksListener implements JobRunner {
   public void destroy() {
     int deleted = this.securityService
         .withPermission(Permission.SYS_ADMIN, "External Hook Plugin: Uninstall repo hooks")
-        .call(() -> this.hookScriptService.deleteByPluginKey(ExternalHookScript.PLUGIN_KEY));
+        .call(() -> this.hookScriptService.deleteByPluginKey(ExternalHooks.PLUGIN_KEY));
 
     log.info("Successfully deleted {} HookScripts", deleted);
 
@@ -156,7 +156,7 @@ public class ExternalHooksListener implements JobRunner {
 
     boolean found = false;
     for (RepositoryHook hook : page.getValues()) {
-      if (hook.getDetails().getKey().startsWith(ExternalHookScript.PLUGIN_KEY)) {
+      if (hook.getDetails().getKey().startsWith(ExternalHooks.PLUGIN_KEY)) {
         found = true;
         break;
       }

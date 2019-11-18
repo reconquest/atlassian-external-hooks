@@ -1,8 +1,6 @@
 package com.ngs.stash.externalhooks.hook;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.annotation.Nonnull;
 
@@ -17,9 +15,7 @@ import com.atlassian.bitbucket.hook.repository.PullRequestMergeHookRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSettings;
-import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.repository.RepositoryMergeCheck;
-import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
 import com.atlassian.bitbucket.permission.PermissionService;
@@ -32,6 +28,7 @@ import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.event.api.EventListener;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.ExternalHooksSettings;
 
 public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsValidator {
   private ExternalHookScript externalHookScript;
@@ -72,8 +69,7 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
       PluginSettingsFactory pluginSettingsFactory,
       SecurityService securityService)
       throws IOException {
-    List<RepositoryHookTrigger> triggers = new ArrayList<RepositoryHookTrigger>();
-    triggers.add(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE);
+    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
 
     return new ExternalHookScript(
         authenticationContext,
@@ -86,7 +82,7 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
         securityService,
         KEY_ID,
         HookScriptType.PRE,
-        triggers);
+        settings.triggers.getMergeCheckHookTriggers());
   }
 
   @Override
