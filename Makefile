@@ -5,3 +5,6 @@ run@%:
 
 package:
 	@atlas-mvn package -q -T $(shell nproc)
+
+batchjs:
+	@./buildutils/batchjs

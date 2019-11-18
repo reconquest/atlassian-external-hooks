@@ -1,0 +1,24 @@
+#!/bin/python
+
+sources = "./src/main/resources/js"
+prepend = "(function ($) {\n"
+append  = "\n}(AJS.$));"
+target  = "batch.js";
+
+import os
+import os.path
+
+chunks = [];
+for dirpath, dirnames, filenames in os.walk(sources):
+    for filename in sorted(filenames):
+        if filename == target or filename.endswith(".loader.js"):
+            continue
+
+        print("batch.js: adding %s" % filename)
+        with open(os.path.join(dirpath, filename)) as file:
+            chunks.append(file.read())
+
+with open(os.path.join(sources, target), "w") as file:
+    file.write(prepend)
+    file.write("\n".join(chunks))
+    file.write(append)

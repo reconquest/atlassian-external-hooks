@@ -1,66 +1,74 @@
 #set(
-    $gitHookConfiguration = {
-        "branch": {
-            "legend": "Branch",
-            "description": "These events are triggered when user creates/deletes branch via Bitbucket web-interface.",
-            "triggers": {
-                "create": {
-                    "label": "Create"
-                },
-                "delete": {
-                    "label": "Delete"
-                }
-            }
-        },
-        "tag": {
-            "legend": "Tag",
-            "description": "These events are triggered when user creates/deletes tag via Bitbucket web-interface.",
-            "triggers": {
-                "create": {
-                    "label": "Create"
-                },
-                "delete": {
-                    "label": "Delete"
-                }
-            }
-        },
-        "file": {
-            "legend": "File",
-            "description": "This event is triggered when user edits a file via Bitbucket web-interface.",
-            "triggers": {
-                "edit": {
-                    "label": "Edit"
-                }
-            }
-        },
-        "pr": {
-            "legend": "Pull Request",
-            "description": "Note, that this event is triggered every time user visits pull request details page.",
-            "triggers": {
-                "merge_check": {
-                    "label": "Merge Check"
-                }
-            }
-        },
-        "repo": {
+    $gitHookConfiguration = [
+        {
             "legend": "Repository",
             "description": "This event is triggered when changes are pushed to a repository via git push command.",
-            "triggers": {
-                "push": {
+            "triggers": [
+                {
+                    "id": "REPO_PUSH",
                     "label": "Push"
                 }
-            }
+            ]
         },
-        "internal": {
+        {
+            "legend": "Branch",
+            "description": "These events are triggered when user creates/deletes branch via Bitbucket web-interface.",
+            "triggers": [
+                {
+                    "id": "BRANCH_CREATE",
+                    "label": "Create"
+                },
+                {
+                    "id": "BRANCH_DELETE",
+                    "label": "Delete"
+                }
+            ]
+        },
+        {
+            "legend": "Tag",
+            "description": "These events are triggered when user creates/deletes tag via Bitbucket web-interface.",
+            "triggers": [
+                {
+                    "id": "TAG_CREATE",
+                    "label": "Create"
+                },
+                {
+                    "id": "TAG_DELETE",
+                    "label": "Delete"
+                }
+            ]
+        },
+        {
+            "legend": "File",
+            "description": "This event is triggered when user edits a file via Bitbucket web-interface.",
+            "triggers": [
+                {
+                    "id": "FILE_EDIT",
+                    "label": "Edit"
+                }
+            ]
+        },
+        {
+            "legend": "Pull Request",
+            "description": "Note, that this event is triggered every time user visits pull request details page.",
+            "triggers": [
+                {
+                    "id": "PULL_REQUEST_MERGE",
+                    "label": "Merge Check"
+                }
+            ]
+        },
+        {
             "legend": "Internal",
             "description": "Invoked when merge(MergeCommandParameters) is called. Note that this is a low-level SCM operation and should not generally be intercepted.",
-            "triggers": {
-                "push": {
+            "triggers": [
+                {
+                    "id": "MERGE",
                     "label": "Merge Event"
                 }
-            }
+            ]
         }
-    }
+    ]
 )
 
 #set(
@@ -85,36 +93,29 @@
     <body>
         <h2>External Hooks Add-on Settings</h2>
 
-        <form class="aui">
+        <form class="aui" id="rq_hooks_global_settings_form">
             #foreach($configuration in $triggerConfigurations.entrySet())
                 <h3>$configuration.value.title</h3>
 
-                #foreach($group in $configuration.value.groups.entrySet())
+                #foreach($group in $configuration.value.groups)
                 <fieldset class="group">
-                    <legend><span>$group.value.legend</span></legend>
-                    #foreach($trigger in $group.value.triggers.entrySet())
+                    <legend><span>$group.legend</span></legend>
+                    #foreach($trigger in $group.triggers)
                         #set(
-                            $settingID =
-                                $configuration.key + "_" +
-                                $group.key + "_" +
-                                $trigger.key
-                        )
-                        #set(
-                            $inputID = "rq_hooks_" + $settingID
+                            $inputID = "rq_hooks_" + $configuration.key + "_" + $settingID
                         )
                         <div class="checkbox">
                             <input
                                 class="checkbox"
                                 type="checkbox"
-                                name="triggers[$configuration.key][$group.key][$trigger.key]"
+                                name="triggers[$configuration.key][$trigger.id]"
                                 id="$inputID"
-                                #if($triggers.get($settingID))checked#end
                                 />
-                            <label for="$inputID">$trigger.value.label</label>
+                            <label for="$inputID">$trigger.label</label>
                         </div>
                     #end
-                    #if($group.value.description)
-                    <div class="description">$group.value.description</div>
+                    #if($group.description)
+                    <div class="description">$group.description</div>
                     #end
                 </fieldset>
                 #end
