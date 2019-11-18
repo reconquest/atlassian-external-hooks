@@ -32,6 +32,7 @@ import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.google.common.base.Charsets;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
+import com.ngs.stash.externalhooks.ExternalHooks;
 import com.ngs.stash.externalhooks.license.LicenseValidator;
 
 import org.apache.commons.io.FilenameUtils;
@@ -39,8 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ExternalHookScript {
-  public static final String PLUGIN_KEY = "com.ngs.stash.externalhooks.external-hooks";
-
   private static Logger log = LoggerFactory.getLogger(ExternalHookScript.class.getSimpleName());
   public final Escaper SHELL_ESCAPE;
   private AuthenticationContext authCtx;
@@ -78,7 +77,7 @@ public class ExternalHookScript {
     this.hookScriptService = hookScriptService;
     this.pluginSettings = pluginSettingsFactory.createGlobalSettings();
     this.hookComponentId = hookComponentId;
-    this.hookId = PLUGIN_KEY + ":" + hookComponentId;
+    this.hookId = ExternalHooks.PLUGIN_KEY + ":" + hookComponentId;
     this.hookScriptType = hookScriptType;
     this.repositoryHookTriggers = repositoryHookTriggers;
     this.securityService = securityService;
@@ -89,8 +88,8 @@ public class ExternalHookScript {
 
     this.hookScriptTemplate = this.getResource("hook-script.template.bash");
 
-    this.license =
-        new LicenseValidator(PLUGIN_KEY, pluginLicenseManager, storageService, clusterService);
+    this.license = new LicenseValidator(
+        ExternalHooks.PLUGIN_KEY, pluginLicenseManager, storageService, clusterService);
   }
 
   public String getHookKey() {
@@ -235,7 +234,7 @@ public class ExternalHookScript {
     }
 
     HookScriptCreateRequest.Builder test = new HookScriptCreateRequest.Builder(
-            this.hookComponentId, PLUGIN_KEY, this.hookScriptType)
+            this.hookComponentId, ExternalHooks.PLUGIN_KEY, this.hookScriptType)
         .content(script);
     HookScriptCreateRequest hookScriptCreateRequest = test.build();
 

@@ -26,6 +26,7 @@ import com.atlassian.bitbucket.util.PageRequestImpl;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.scheduler.SchedulerService;
 import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.ExternalHooks;
 import com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook;
@@ -108,7 +109,7 @@ public class ExternalHooksFactory {
     Integer created = 0;
     for (RepositoryHook hook : page.getValues()) {
       String hookKey = hook.getDetails().getKey();
-      if (!hookKey.startsWith(ExternalHookScript.PLUGIN_KEY)) {
+      if (!hookKey.startsWith(ExternalHooks.PLUGIN_KEY)) {
         continue;
       }
 

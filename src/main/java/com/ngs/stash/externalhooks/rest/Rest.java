@@ -45,10 +45,11 @@ import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
 import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.ExternalHooksSettings;
 import com.ngs.stash.externalhooks.ao.FactoryState;
 import com.ngs.stash.externalhooks.dao.FactoryStateDao;
-import com.ngs.stash.externalhooks.hook.Walker;
 import com.ngs.stash.externalhooks.hook.factory.ExternalHooksFactory;
+import com.ngs.stash.externalhooks.util.Walker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,7 @@ public class Rest implements JobRunner {
   private RepositoryService repositoryService;
   private ProjectService projectService;
   private SecurityService securityService;
+  private PluginSettingsFactory pluginSettingsFactory;
 
   private ExternalHooksFactory factory;
   private FactoryStateDao factoryStateDao;
@@ -94,6 +96,7 @@ public class Rest implements JobRunner {
     this.repositoryService = repositoryService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
+    this.pluginSettingsFactory = pluginSettingsFactory;
 
     this.userManager = userManager;
 
@@ -126,17 +129,21 @@ public class Rest implements JobRunner {
       return Response.status(401).build();
     }
 
-    return Response.ok().build();
+    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
+
+    return Response.ok(settings).build();
   }
 
   @PUT
   @Produces({MediaType.APPLICATION_JSON})
   @Consumes({MediaType.APPLICATION_JSON})
   @Path("/settings")
-  public Response updateSettings() {
+  public Response updateSettings(ExternalHooksSettings settings) {
     if (!isSystemAdmin()) {
       return Response.status(401).build();
     }
+
+    settings.save(this.pluginSettingsFactory);
 
     return Response.ok().build();
   }

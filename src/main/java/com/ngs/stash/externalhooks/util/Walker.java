@@ -1,4 +1,4 @@
-package com.ngs.stash.externalhooks.hook;
+package com.ngs.stash.externalhooks.util;
 
 import com.atlassian.bitbucket.project.Project;
 import com.atlassian.bitbucket.project.ProjectService;

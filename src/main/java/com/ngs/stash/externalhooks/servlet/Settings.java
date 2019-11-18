@@ -14,12 +14,10 @@ import javax.servlet.http.HttpServletResponse;
 import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.auth.LoginUriProvider;
-import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.sal.api.user.UserKey;
 import com.atlassian.sal.api.user.UserManager;
 import com.atlassian.templaterenderer.TemplateRenderer;
-import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +31,6 @@ public class Settings extends HttpServlet {
   private UserManager userManager;
   private LoginUriProvider loginUriProvider;
 
-  private PluginSettings pluginSettings;
-
   @Inject
   public Settings(
       @ComponentImport UserManager userManager,
@@ -44,7 +40,7 @@ public class Settings extends HttpServlet {
     this.userManager = userManager;
     this.templateRenderer = templateRenderer;
     this.loginUriProvider = loginUriProvider;
-    this.pluginSettings = pluginSettingsFactory.createSettingsForKey(ExternalHookScript.PLUGIN_KEY);
+    this.pluginSettingsFactory = pluginSettingsFactory;
   }
 
   @Override
