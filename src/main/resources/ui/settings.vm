@@ -5,7 +5,7 @@
             "description": "This event is triggered when changes are pushed to a repository via git push command.",
             "triggers": [
                 {
-                    "id": "REPO_PUSH",
+                    "id": "push",
                     "label": "Push"
                 }
             ]
@@ -15,11 +15,11 @@
             "description": "These events are triggered when user creates/deletes branch via Bitbucket web-interface.",
             "triggers": [
                 {
-                    "id": "BRANCH_CREATE",
+                    "id": "branch-create",
                     "label": "Create"
                 },
                 {
-                    "id": "BRANCH_DELETE",
+                    "id": "branch-delete",
                     "label": "Delete"
                 }
             ]
@@ -29,11 +29,11 @@
             "description": "These events are triggered when user creates/deletes tag via Bitbucket web-interface.",
             "triggers": [
                 {
-                    "id": "TAG_CREATE",
+                    "id": "tag-create",
                     "label": "Create"
                 },
                 {
-                    "id": "TAG_DELETE",
+                    "id": "tag-delete",
                     "label": "Delete"
                 }
             ]
@@ -43,7 +43,7 @@
             "description": "This event is triggered when user edits a file via Bitbucket web-interface.",
             "triggers": [
                 {
-                    "id": "FILE_EDIT",
+                    "id": "file-edit",
                     "label": "Edit"
                 }
             ]
@@ -53,7 +53,7 @@
             "description": "Note, that this event is triggered every time user visits pull request details page.",
             "triggers": [
                 {
-                    "id": "PULL_REQUEST_MERGE",
+                    "id": "pull-request-merge",
                     "label": "Merge Check"
                 }
             ]
@@ -63,7 +63,7 @@
             "description": "Invoked when merge(MergeCommandParameters) is called. Note that this is a low-level SCM operation and should not generally be intercepted.",
             "triggers": [
                 {
-                    "id": "MERGE",
+                    "id": "merge",
                     "label": "Merge Event"
                 }
             ]
@@ -72,17 +72,19 @@
 )
 
 #set(
-    $triggerConfigurations = {
-        "pre_receive": {
+    $triggerConfigurations = [
+        {
+            "id": "pre_receive",
             "title": "Pre-receive Triggers",
             "groups": $gitHookConfiguration
         },
 
-        "post_receive": {
+        {
+            "id": "post_receive",
             "title": "Post-receive Triggers",
             "groups": $gitHookConfiguration
         }
-    }
+    ]
 )
 <!DOCTYPE html>
 <html>
@@ -91,24 +93,24 @@
         $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
     </head>
     <body>
-        <h2>External Hooks Add-on Settings</h2>
-
         <form class="aui" id="rq_hooks_global_settings_form">
-            #foreach($configuration in $triggerConfigurations.entrySet())
-                <h3>$configuration.value.title</h3>
+            <h2>External Hooks Add-on Settings</h2>
 
-                #foreach($group in $configuration.value.groups)
+            #foreach($configuration in $triggerConfigurations)
+                <h3>$configuration.title</h3>
+
+                #foreach($group in $configuration.groups)
                 <fieldset class="group">
                     <legend><span>$group.legend</span></legend>
                     #foreach($trigger in $group.triggers)
                         #set(
-                            $inputID = "rq_hooks_" + $configuration.key + "_" + $settingID
+                            $inputID = "rq_hooks_" + $configuration.id + "_" + $trigger.id
                         )
                         <div class="checkbox">
                             <input
                                 class="checkbox"
                                 type="checkbox"
-                                name="triggers[$configuration.key][$trigger.id]"
+                                name="triggers.${configuration.id}.${trigger.id}"
                                 id="$inputID"
                                 />
                             <label for="$inputID">$trigger.label</label>
