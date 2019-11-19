@@ -9,6 +9,7 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -162,7 +163,7 @@ public class Rest implements JobRunner {
     return Response.ok(new FactoryStateResponse(state)).build();
   }
 
-  @GET
+  @POST
   @Produces({MediaType.APPLICATION_JSON})
   @Consumes({MediaType.APPLICATION_JSON})
   @Path("/factory/hooks")
@@ -271,7 +272,7 @@ public class Rest implements JobRunner {
   @SuppressWarnings("unused")
   private void sleep() {
     try {
-      Thread.sleep(100);
+      Thread.sleep(10);
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
     }

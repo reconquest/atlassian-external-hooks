@@ -5,6 +5,7 @@ var ViewGlobalSettings = function (context, api) {
     }
 
     this._$spinner = new Spinner();
+    this._$progress = new ProgressBarWithText();
 
     this.mount = function () {
         this._$.find('h2').append(this._$spinner);
@@ -12,47 +13,143 @@ var ViewGlobalSettings = function (context, api) {
         this._$.submit(function (e) {
             e.preventDefault();
 
-            var settings = this._getSettings();
+            this._setLoading(true);
 
-            console.log(settings);
+            var updating = this._updateSettings();
+
+            if (!this._$.find('[name="apply-existing"]').prop('checked')) {
+                updating.done(this._setLoading.bind(this, false));
+                return;
+            }
+
+            updating.done(function () {
+                this._applySettings()
+                    .done(this._renderApplyProgress.bind(this))
+                    .done(function (state) {
+                        this._monitorApplyProgress(state)
+                            .done(this._setLoading.bind(this, false));
+                    }.bind(this))
+            }.bind(this));
         }.bind(this));
 
-        this._loadSettings();
+        this._setLoading(true);
+        this._loadSettings()
+            .done(this._setLoading.bind(this, false));
+    }
+
+    this._setLoading = function (loading) {
+        if (loading) {
+            this._$.find('input, button').prop('disabled', true);
+            this._$spinner.show();
+        } else {
+            this._$.find('input, button').prop('disabled', false);
+            this._$spinner.hide();
+        }
+    }
+
+    this._updateSettings = function () {
+        return api.updateSettings(this._getSettings());
+    }
+
+    this._applySettings = function () {
+        return api.runHooksFactory();
+    }
+
+    this._monitorApplyProgress = function (state) {
+        this._$progress.setIndeterminate(true);
+        this._$.append(this._$progress);
+
+        var promise = $.Deferred();
+
+        var monitor = setInterval(
+            function () {
+                api.getHooksFactoryState(state.id)
+                    .done(
+                        function (state) {
+                            this._renderApplyProgress(state);
+
+                            if (state.finished) {
+                                clearInterval(monitor);
+                                promise.resolve();
+                            }
+                        }.bind(this)
+                    );
+            }.bind(this),
+            500
+        );
+
+        return promise;
+    }
+
+    this._renderApplyProgress = function (state) {
+        if (state.started) {
+            this._$progress
+                .setIndeterminate(false)
+                .setTotal(state.total)
+                .setCurrent(state.current)
+
+            if (state.finished) {
+                this._$progress.setText(
+                    state.total
+                        + " hook" + (state.total > 1 ? "s were" : " was")
+                        + " updated."
+                )
+            } else {
+                this._$progress.setText(
+                    "Configuring hook "
+                        + state.current + " of " + state.total + "…"
+                );
+            }
+        } else {
+            this._$progress
+                .setText("Initializing…");
+        }
+
     }
 
     this._loadSettings = function () {
-        this._$spinner.show();
+        this._$.find('input').prop('checked', false);
 
-        api.getSettings()
-            .done(function (settings) {
-                this._$spinner.hide();
+        return api.getSettings()
+            .done(
+                function (settings) {
+                    $.each(settings.triggers, function(hook, events) {
+                        $.each(events, function (_, event) {
+                            var name = 'triggers.' + hook + '.' + event;
 
-                $.each(settings.triggers, function(hook, events) {
-                    $.each(events, function (_, event) {
-                        var name = 'triggers.' + hook + '.' + event;
-
-                        this._$
-                            .find('[name="' + name + '"]')
-                            .prop('checked', true);
+                            this._$
+                                .find('[name="' + name + '"]')
+                                .prop('checked', true);
+                        }.bind(this))
                     }.bind(this))
-                }.bind(this))
-            }.bind(this));
+                }.bind(this)
+            );
     }
 
     this._getSettings = function() {
-        var settings = {};
+        var triggers = {};
 
-        this._$.find('[name^="triggers."]').each(function () {
-            var matches = $(this).attr('name').match(/triggers\.(\S+)\.(\S+)/);
+        this._$.find('[name^="triggers."]')
+            .each(
+                function () {
+                    var matches = $(this).attr('name')
+                        .match(/triggers\.(\S+)\.(\S+)/);
 
-            if (!settings[matches[1]]) {
-                settings[matches[1]] = {};
-            }
+                    if (!$(this).prop('checked')) {
+                        return;
+                    }
 
-            settings[matches[1]][matches[2]] = $(this).prop('checked');
-        });
+                    if (!triggers[matches[1]]) {
+                        triggers[matches[1]] = [];
+                    }
 
-        return settings;
+                    triggers[matches[1]].push(matches[2]);
+                }
+            );
+
+        return {
+            'triggers': triggers
+        }
     }
 
     return this;
