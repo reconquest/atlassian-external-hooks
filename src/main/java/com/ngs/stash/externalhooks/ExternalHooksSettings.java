@@ -2,6 +2,7 @@ package com.ngs.stash.externalhooks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -147,13 +148,11 @@ public class ExternalHooksSettings {
       List<String> items, List<RepositoryHookTrigger> defaults) {
     List<RepositoryHookTrigger> result = new ArrayList<RepositoryHookTrigger>();
     for (String item : items) {
-      try {
-        RepositoryHookTrigger trigger = StandardRepositoryHookTrigger.valueOf(item);
-
-        result.add(trigger);
-      } catch (IllegalArgumentException e) {
+      Optional<StandardRepositoryHookTrigger> trigger = StandardRepositoryHookTrigger.fromId(item);
+      if (trigger.isPresent()) {
+        result.add(trigger.get());
+      } else {
         log.warn("unrecognized hook trigger in settings: {}", item);
-        continue;
       }
     }
 
