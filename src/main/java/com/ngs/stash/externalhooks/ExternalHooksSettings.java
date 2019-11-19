@@ -97,22 +97,29 @@ public class ExternalHooksSettings {
    * @param pluginSettings
    */
   public void save(PluginSettings pluginSettings) {
-    pluginSettings.put(
-        getPluginSettingsKey("pre_receive"),
-        sanitize(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers));
-    pluginSettings.put(
-        getPluginSettingsKey("post_receive"),
-        sanitize(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers));
-    pluginSettings.put(
-        getPluginSettingsKey("merge_check"),
-        sanitize(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers));
+    if (triggers.preReceive != null) {
+      pluginSettings.put(
+          getPluginSettingsKey("pre_receive"),
+          sanitize(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers));
+      triggers.preReceiveHookTriggers =
+          getHookTriggers(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers);
+    }
 
-    triggers.preReceiveHookTriggers =
-        getHookTriggers(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers);
-    triggers.postReceiveHookTriggers =
-        getHookTriggers(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers);
-    triggers.mergeCheckHookTriggers =
-        getHookTriggers(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers);
+    if (triggers.postReceive != null) {
+      pluginSettings.put(
+          getPluginSettingsKey("post_receive"),
+          sanitize(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers));
+      triggers.postReceiveHookTriggers =
+          getHookTriggers(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers);
+    }
+
+    if (triggers.mergeCheck != null) {
+      pluginSettings.put(
+          getPluginSettingsKey("merge_check"),
+          sanitize(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers));
+      triggers.mergeCheckHookTriggers =
+          getHookTriggers(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers);
+    }
   }
 
   public void save(PluginSettingsFactory pluginSettingsFactory) {

@@ -123,6 +123,21 @@
                 #end
             #end
 
+            <div class="aui-message aui-message-warning">
+                <p class="title">
+                <span class="checkbox">
+                    <input
+                        class="checkbox"
+                        type="checkbox"
+                        name="apply-existing"
+                        id="rq_hooks_apply"
+                        />
+                    <label for="rq_hooks_apply">Apply to existing hooks</label>
+                </span>
+                </p>
+
+                <p>If this checkbox is not set, then settings will apply only to newly configured hooks.</p>
+            </div>
             <button class="aui-button aui-button-primary" id="rq_hooks_settings_save">Save</button>
         </form>
     </body>

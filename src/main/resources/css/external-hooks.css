@@ -2,3 +2,7 @@
     display: inline-block;
     margin-left: 10px;
 }
+
+#rq_hooks_global_settings_form .rq-progress {
+    margin-top: 10px;
+}

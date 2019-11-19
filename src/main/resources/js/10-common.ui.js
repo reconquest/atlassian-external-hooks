@@ -341,3 +341,53 @@ var Nagbar = function (body) {
     return this;
 }
 
+var ProgressBar = function () {
+    this._$ = $('<aui-progressbar/>')
+
+    return $.extend(this._$, {
+        setIndeterminate: function (value) {
+            if (value) {
+                return this.attr('indeterminate', 'indeterminate');
+            } else {
+                return this.removeAttr('indeterminate');
+            }
+        },
+        setCurrent: function (value) {
+            return this.attr('value', value)
+        },
+        setTotal: function (value) {
+            return this.attr('max', value)
+        }
+    });
+}
+
+var ProgressBarWithText = function () {
+    this._$text = $('<span class="rq-progress-text">');
+    this._$bar = new ProgressBar();
+
+    this._$ = $('<div class="rq-progress"/>')
+        .append(this._$bar)
+        .append(this._$text);
+
+    return $.extend(this._$, {
+        setIndeterminate: function (value) {
+            this._$bar.setIndeterminate(value)
+            return this._$;
+        }.bind(this),
+
+        setCurrent: function (value) {
+            this._$bar.setCurrent(value)
+            return this._$;
+        }.bind(this),
+
+        setTotal: function (value) {
+            this._$bar.setTotal(value)
+            return this._$;
+        }.bind(this),
+
+        setText: function (value) {
+            this._$text.text(value)
+            return this._$;
+        }.bind(this)
+    });
+}
