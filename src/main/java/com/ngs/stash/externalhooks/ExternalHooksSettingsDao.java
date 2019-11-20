@@ -35,6 +35,16 @@ public class ExternalHooksSettingsDao {
     return settings;
   }
 
+  public ExternalHooksSettings getDefaultSettings() {
+    ExternalHooksSettings settings = new ExternalHooksSettings();
+
+    settings.triggers.preReceive = getIds(DefaultSettings.PreReceiveHookTriggers);
+    settings.triggers.postReceive = getIds(DefaultSettings.PostReceiveHookTriggers);
+    settings.triggers.mergeCheck = getIds(DefaultSettings.MergeCheckHookTriggers);
+
+    return settings;
+  }
+
   public void save(ExternalHooksSettings settings) {
     ExternalHooksSettings.Triggers triggers = settings.triggers;
 
