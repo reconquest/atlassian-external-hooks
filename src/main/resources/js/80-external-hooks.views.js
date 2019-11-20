@@ -89,11 +89,15 @@ var ViewGlobalSettings = function (context, api) {
                 .setCurrent(state.current)
 
             if (state.finished) {
-                this._$progress.setText(
-                    state.total
+                if (state.total == 0) {
+                    this._$progress.setText("No existing hooks to update.");
+                } else {
+                    this._$progress.setText(
+                        state.total
                         + " hook" + (state.total > 1 ? "s were" : " was")
                         + " updated."
-                )
+                    )
+                }
             } else {
                 this._$progress.setText(
                     "Configuring hook "
