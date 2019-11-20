@@ -1,4 +1,4 @@
-package com.ngs.stash.externalhooks;
+package com.ngs.stash.externalhooks.dao;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +8,9 @@ import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
+import com.ngs.stash.externalhooks.DefaultSettings;
+import com.ngs.stash.externalhooks.ExternalHooks;
+import com.ngs.stash.externalhooks.ExternalHooksSettings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

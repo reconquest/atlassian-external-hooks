@@ -46,8 +46,8 @@ import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
 import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
-import com.ngs.stash.externalhooks.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.ao.FactoryState;
+import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.dao.FactoryStateDao;
 import com.ngs.stash.externalhooks.hook.factory.ExternalHooksFactory;
 import com.ngs.stash.externalhooks.util.Walker;
@@ -67,7 +67,6 @@ public class Rest implements JobRunner {
   private RepositoryService repositoryService;
   private ProjectService projectService;
   private SecurityService securityService;
-  private PluginSettingsFactory pluginSettingsFactory;
 
   private ExternalHooksFactory factory;
   private FactoryStateDao factoryStateDao;
@@ -94,7 +93,6 @@ public class Rest implements JobRunner {
     this.repositoryService = repositoryService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
-    this.pluginSettingsFactory = pluginSettingsFactory;
 
     this.settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
@@ -248,26 +246,30 @@ public class Rest implements JobRunner {
     state.setTotal(total.get());
     state.save();
 
+    // adding a small delay in order to spread the cpu/io load if bb instance
+    // has a lot of hooks installed
+    int millisDelay = 10;
+
     AtomicInteger current = new AtomicInteger();
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
         factory.install(new ProjectScope(project));
-        // uncomment for debugging purposes
-        // sleep();
 
         state.setCurrent(current.incrementAndGet());
         state.save();
+
+        delay(millisDelay);
       }
 
       @Override
       public void onRepository(Repository repository) {
         factory.install(new RepositoryScope(repository));
-        // uncomment for debugging purposes
-        // sleep();
 
         state.setCurrent(current.incrementAndGet());
         state.save();
+
+        delay(millisDelay);
       }
     });
 
@@ -275,10 +277,9 @@ public class Rest implements JobRunner {
     state.save();
   }
 
-  @SuppressWarnings("unused")
-  private void sleep() {
+  private void delay(int ms) {
     try {
-      Thread.sleep(10);
+      Thread.sleep(ms);
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
     }

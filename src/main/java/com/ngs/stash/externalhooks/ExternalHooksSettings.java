@@ -8,7 +8,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 public class ExternalHooksSettings {
   @XmlElement(name = "triggers")
-  public Triggers triggers;
+  public Triggers triggers = new Triggers();
 
   public class Triggers {
     @XmlElement(name = "pre_receive")
@@ -19,9 +19,5 @@ public class ExternalHooksSettings {
 
     @XmlElement(name = "merge_check")
     public List<String> mergeCheck;
-  }
-
-  public ExternalHooksSettings() {
-    this.triggers = new Triggers();
   }
 }
