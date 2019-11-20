@@ -130,6 +130,17 @@ public class Rest implements JobRunner {
     return Response.ok(settingsDao.getSettings()).build();
   }
 
+  @GET
+  @Produces({MediaType.APPLICATION_JSON})
+  @Path("/settings/default")
+  public Response getDefaultSettings() {
+    if (!isSystemAdmin()) {
+      return Response.status(401).build();
+    }
+
+    return Response.ok(settingsDao.getDefaultSettings()).build();
+  }
+
   @PUT
   @Produces({MediaType.APPLICATION_JSON})
   @Consumes({MediaType.APPLICATION_JSON})
