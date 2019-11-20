@@ -38,17 +38,23 @@ public class ExternalHooksSettingsDao {
   public void save(ExternalHooksSettings settings) {
     ExternalHooksSettings.Triggers triggers = settings.triggers;
 
-    pluginSettings.put(
-        getPluginSettingsKey("pre_receive"),
-        sanitize(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers));
+    if (triggers.preReceive != null) {
+      pluginSettings.put(
+          getPluginSettingsKey("pre_receive"),
+          sanitize(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers));
+    }
 
-    pluginSettings.put(
-        getPluginSettingsKey("post_receive"),
-        sanitize(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers));
+    if (triggers.postReceive != null) {
+      pluginSettings.put(
+          getPluginSettingsKey("post_receive"),
+          sanitize(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers));
+    }
 
-    pluginSettings.put(
-        getPluginSettingsKey("merge_check"),
-        sanitize(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers));
+    if (triggers.mergeCheck != null) {
+      pluginSettings.put(
+          getPluginSettingsKey("merge_check"),
+          sanitize(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers));
+    }
   }
 
   public List<RepositoryHookTrigger> getPreReceiveHookTriggers() {

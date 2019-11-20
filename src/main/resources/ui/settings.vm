@@ -50,7 +50,7 @@
         },
         {
             "legend": "Pull Request",
-            "description": "Note, that this event is triggered every time user visits pull request details page.",
+            "description": "Note that this event is triggered every time user visits pull request details page. <br/>Hook-script <b>will not</b> receive any stdin.",
             "triggers": [
                 {
                     "id": "pull-request-merge",
@@ -60,7 +60,7 @@
         },
         {
             "legend": "Internal",
-            "description": "Invoked when merge(MergeCommandParameters) is called. Note that this is a low-level SCM operation and should not generally be intercepted.",
+            "description": "Invoked when merge(MergeCommandParameters) is called. <br/>Note that this is a low-level SCM operation and should not generally be intercepted.",
             "triggers": [
                 {
                     "id": "merge",
@@ -71,21 +71,29 @@
     ]
 )
 
+#set($preReceiveConfiguration = $gitHookConfiguration.clone())
+#set($postReceiveConfiguration = $gitHookConfiguration.clone())
+
+#set($postReceiveConfigurationMergeCheck = $postReceiveConfiguration.get(4).clone())
+#set($postReceiveConfigurationMergeCheck.description = "This event will be triggered after successfull merge done from Bitbucket web-interface.")
+$postReceiveConfiguration.set(4, $postReceiveConfigurationMergeCheck)
+
 #set(
     $triggerConfigurations = [
         {
             "id": "pre_receive",
             "title": "Pre-receive Triggers",
-            "groups": $gitHookConfiguration
+            "groups": $preReceiveConfiguration
         },
 
         {
             "id": "post_receive",
             "title": "Post-receive Triggers",
-            "groups": $gitHookConfiguration
+            "groups": $postReceiveConfiguration
         }
     ]
 )
+#disable_html_escaping()
 <!DOCTYPE html>
 <html>
     <head>
