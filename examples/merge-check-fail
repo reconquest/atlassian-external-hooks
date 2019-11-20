@@ -11,6 +11,7 @@ done
 
 date >> /tmp/merge-check-fail-date
 env > /tmp/merge-check-fail-env
+cat > /tmp/merge-check-fail-stdin
 
 echo "exiting with exitcode 2"
 exit 2

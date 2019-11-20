@@ -78,6 +78,10 @@
 #set($postReceiveConfigurationMergeCheck.description = "This event will be triggered after successfull merge done from Bitbucket web-interface.")
 $postReceiveConfiguration.set(4, $postReceiveConfigurationMergeCheck)
 
+#set($mergeCheckConfiguration = [])
+$mergeCheckConfiguration.add($preReceiveConfiguration.get(4))
+$mergeCheckConfiguration.add($preReceiveConfiguration.get(5))
+
 #set(
     $triggerConfigurations = [
         {
@@ -90,6 +94,12 @@ $postReceiveConfiguration.set(4, $postReceiveConfigurationMergeCheck)
             "id": "post_receive",
             "title": "Post-receive Triggers",
             "groups": $postReceiveConfiguration
+        },
+
+        {
+            "id": "merge_check",
+            "title": "Merge Check Triggers",
+            "groups": $mergeCheckConfiguration
         }
     ]
 )
