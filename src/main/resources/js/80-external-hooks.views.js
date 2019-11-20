@@ -17,19 +17,14 @@ var ViewGlobalSettings = function (context, api) {
 
             var updating = this._updateSettings();
 
-            if (!this._$.find('[name="apply-existing"]').prop('checked')) {
-                updating.done(this._setLoading.bind(this, false));
-                return;
+            if (this._$.find('[name="apply-existing"]').prop('checked')) {
+                updating
+                    .then(this._applySettings.bind(this))
+                    .then(this._renderApplyProgress.bind(this))
+                    .then(this._monitorApplyProgress.bind(this))
             }
 
-            updating.done(function () {
-                this._applySettings()
-                    .done(this._renderApplyProgress.bind(this))
-                    .done(function (state) {
-                        this._monitorApplyProgress(state)
-                            .done(this._setLoading.bind(this, false));
-                    }.bind(this))
-            }.bind(this));
+            updating.done(this._setLoading.bind(this, false));
         }.bind(this));
 
         this._setLoading(true);
@@ -105,6 +100,7 @@ var ViewGlobalSettings = function (context, api) {
                 .setText("Initializing…");
         }
 
+        return state;
     }
 
     this._loadSettings = function () {
