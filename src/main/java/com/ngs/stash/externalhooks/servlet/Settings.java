@@ -14,34 +14,25 @@ import javax.servlet.http.HttpServletResponse;
 import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.auth.LoginUriProvider;
-import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.sal.api.user.UserKey;
 import com.atlassian.sal.api.user.UserManager;
 import com.atlassian.templaterenderer.TemplateRenderer;
-import com.ngs.stash.externalhooks.ExternalHooksSettings;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Scanned
+@SuppressWarnings("serial") // suppress because the http servlet is not going to be serialized
 public class Settings extends HttpServlet {
-  private static final Logger log = LoggerFactory.getLogger(Settings.class);
-
   private TemplateRenderer templateRenderer;
-  private PluginSettingsFactory pluginSettingsFactory;
   private UserManager userManager;
   private LoginUriProvider loginUriProvider;
 
   @Inject
   public Settings(
       @ComponentImport UserManager userManager,
-      @ComponentImport PluginSettingsFactory pluginSettingsFactory,
       @ComponentImport LoginUriProvider loginUriProvider,
       @ComponentImport TemplateRenderer templateRenderer) {
     this.userManager = userManager;
     this.templateRenderer = templateRenderer;
     this.loginUriProvider = loginUriProvider;
-    this.pluginSettingsFactory = pluginSettingsFactory;
   }
 
   @Override
@@ -53,29 +44,9 @@ public class Settings extends HttpServlet {
       return;
     }
 
-    renderPanel(response, false);
-  }
-
-  @Override
-  protected void doPost(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    UserKey user = userManager.getRemoteUserKey(request);
-    if (user == null || !userManager.isSystemAdmin(user)) {
-      redirectToLogin(request, response);
-      return;
-    }
-
-    renderPanel(response, true);
-  }
-
-  protected void renderPanel(HttpServletResponse response, Boolean success) throws IOException {
     response.setContentType("text/html;charset=utf-8");
 
     Map<String, Object> context = new HashMap<String, Object>();
-
-    if (success) {
-      context.put("success", "true");
-    }
 
     templateRenderer.render("ui/settings.vm", context, response.getWriter());
   }

@@ -27,7 +27,7 @@ import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.event.api.EventListener;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-import com.ngs.stash.externalhooks.ExternalHooksSettingsDao;
+import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
 
 public class ExternalAsyncPostReceiveHook
     implements PostRepositoryHook<RepositoryHookRequest>, SettingsValidator {

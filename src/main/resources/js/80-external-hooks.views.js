@@ -75,7 +75,7 @@ var ViewGlobalSettings = function (context, api) {
                         }.bind(this)
                     );
             }.bind(this),
-            500
+            200
         );
 
         return promise;
