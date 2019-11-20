@@ -28,7 +28,7 @@ import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.event.api.EventListener;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-import com.ngs.stash.externalhooks.ExternalHooksSettings;
+import com.ngs.stash.externalhooks.ExternalHooksSettingsDao;
 
 public class ExternalPreReceiveHook
     implements PreRepositoryHook<RepositoryHookRequest>, SettingsValidator {
@@ -71,8 +71,7 @@ public class ExternalPreReceiveHook
       PluginSettingsFactory pluginSettingsFactory,
       SecurityService securityService)
       throws IOException {
-    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
-
+    ExternalHooksSettingsDao settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
     return new ExternalHookScript(
         authenticationContext,
         permissions,
@@ -84,7 +83,7 @@ public class ExternalPreReceiveHook
         securityService,
         KEY_ID,
         HookScriptType.PRE,
-        settings.triggers.getPreReceiveHookTriggers());
+        () -> settingsDao.getPreReceiveHookTriggers());
   }
 
   @Override

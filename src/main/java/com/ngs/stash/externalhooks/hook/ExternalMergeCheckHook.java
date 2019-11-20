@@ -28,7 +28,7 @@ import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.event.api.EventListener;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-import com.ngs.stash.externalhooks.ExternalHooksSettings;
+import com.ngs.stash.externalhooks.ExternalHooksSettingsDao;
 
 public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsValidator {
   private ExternalHookScript externalHookScript;
@@ -69,7 +69,7 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
       PluginSettingsFactory pluginSettingsFactory,
       SecurityService securityService)
       throws IOException {
-    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
+    ExternalHooksSettingsDao settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
     return new ExternalHookScript(
         authenticationContext,
@@ -82,7 +82,7 @@ public class ExternalMergeCheckHook implements RepositoryMergeCheck, SettingsVal
         securityService,
         KEY_ID,
         HookScriptType.PRE,
-        settings.triggers.getMergeCheckHookTriggers());
+        () -> settingsDao.getMergeCheckHookTriggers());
   }
 
   @Override

@@ -77,10 +77,6 @@ public class Settings extends HttpServlet {
       context.put("success", "true");
     }
 
-    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
-
-    context.put("settings", settings);
-
     templateRenderer.render("ui/settings.vm", context, response.getWriter());
   }
 

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# declare HOOK and source this file
+
+URI="${URI:-http://admin:admin@localhost:7990/bitbucket}"
+
+ignore() {
+    "${@}" >&- 2>&-
+}
+
+create-repo() {
+    PROJECT=${HOOK}_$(lojban $RANDOM)
+    REPO=${HOOK}_$(lojban $RANDOM)
+    stacket --uri "$URI" projects create $PROJECT
+    stacket --uri "$URI" repositories create $PROJECT $REPO
+
+    bitbucket-external-hook -b "$URI" -p $PROJECT -r $REPO set \
+        com.ngs.stash.externalhooks.external-hooks:external-$HOOK-hook \
+        -e $EXE -s "$HOOK $EXE $PROJECT $REPO"
+
+    bitbucket-external-hook -b "$URI" -p $PROJECT -r $REPO enable \
+        com.ngs.stash.externalhooks.external-hooks:external-$HOOK-hook
+}
