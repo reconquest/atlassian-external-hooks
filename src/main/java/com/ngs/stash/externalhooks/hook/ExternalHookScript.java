@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
@@ -51,7 +52,7 @@ public class ExternalHookScript {
   private String hookComponentId;
   public String hookId;
   private HookScriptType hookScriptType;
-  private List<RepositoryHookTrigger> repositoryHookTriggers;
+  private IGetRepositoryHookTriggers getRepositoryHookTriggers;
   private SecurityService securityService;
   private String hookScriptTemplate;
 
@@ -68,7 +69,7 @@ public class ExternalHookScript {
       SecurityService securityService,
       String hookComponentId,
       HookScriptType hookScriptType,
-      List<RepositoryHookTrigger> repositoryHookTriggers)
+      IGetRepositoryHookTriggers getRepositoryHookTriggers)
       throws IOException {
     this.authCtx = authenticationContext;
     this.permissionService = permissionService;
@@ -79,8 +80,8 @@ public class ExternalHookScript {
     this.hookComponentId = hookComponentId;
     this.hookId = ExternalHooks.PLUGIN_KEY + ":" + hookComponentId;
     this.hookScriptType = hookScriptType;
-    this.repositoryHookTriggers = repositoryHookTriggers;
     this.securityService = securityService;
+    this.getRepositoryHookTriggers = getRepositoryHookTriggers;
 
     final Escapers.Builder builder = Escapers.builder();
     builder.addEscape('\'', "'\"'\"'");
@@ -244,13 +245,22 @@ public class ExternalHookScript {
         .call(() -> hookScriptService.create(hookScriptCreateRequest));
     pluginSettings.put(hookId, String.valueOf(hookScript.getId()));
 
+    List<RepositoryHookTrigger> triggers = getRepositoryHookTriggers.get();
+
     HookScriptSetConfigurationRequest.Builder configBuilder =
         new HookScriptSetConfigurationRequest.Builder(hookScript, scope);
-    configBuilder.triggers(this.repositoryHookTriggers);
+    configBuilder.triggers(triggers);
     HookScriptSetConfigurationRequest hookScriptSetConfigurationRequest = configBuilder.build();
     hookScriptService.setConfiguration(hookScriptSetConfigurationRequest);
 
-    log.warn("Created HookScript with id: {}", hookScript.getId());
+    log.warn(
+        "Created HookScript with id: {}; triggers: {}", hookScript.getId(), listTriggers(triggers));
+  }
+
+  private String listTriggers(List<RepositoryHookTrigger> list) {
+    return "["
+        + list.stream().map(trigger -> trigger.getId()).collect(Collectors.joining(", "))
+        + "]";
   }
 
   public File getExecutable(String path, boolean safeDir) {
@@ -314,5 +324,9 @@ public class ExternalHookScript {
           hookScriptService.delete(hookScript);
           return null;
         });
+  }
+
+  public interface IGetRepositoryHookTriggers {
+    List<RepositoryHookTrigger> get();
   }
 }

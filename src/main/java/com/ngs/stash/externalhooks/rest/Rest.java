@@ -35,7 +35,6 @@ import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
-import com.atlassian.sal.api.user.UserManager;
 import com.atlassian.scheduler.JobRunner;
 import com.atlassian.scheduler.JobRunnerRequest;
 import com.atlassian.scheduler.JobRunnerResponse;
@@ -47,6 +46,7 @@ import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
 import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
+import com.ngs.stash.externalhooks.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.ao.FactoryState;
 import com.ngs.stash.externalhooks.dao.FactoryStateDao;
 import com.ngs.stash.externalhooks.hook.factory.ExternalHooksFactory;
@@ -62,10 +62,7 @@ import io.atlassian.util.concurrent.atomic.AtomicInteger;
 public class Rest implements JobRunner {
   private static final Logger log = LoggerFactory.getLogger(Rest.class);
 
-  private UserManager userManager;
-
   private SchedulerService schedulerService;
-  private AuthenticationContext authenticationContext;
   private PermissionService permissionService;
   private RepositoryService repositoryService;
   private ProjectService projectService;
@@ -74,11 +71,11 @@ public class Rest implements JobRunner {
 
   private ExternalHooksFactory factory;
   private FactoryStateDao factoryStateDao;
+  private ExternalHooksSettingsDao settingsDao;
 
   @Inject
   public Rest(
       @ComponentImport ActiveObjects ao,
-      @ComponentImport UserManager userManager,
       @ComponentImport RepositoryService repositoryService,
       @ComponentImport SchedulerService schedulerService,
       @ComponentImport HookScriptService hookScriptService,
@@ -99,7 +96,7 @@ public class Rest implements JobRunner {
     this.securityService = securityService;
     this.pluginSettingsFactory = pluginSettingsFactory;
 
-    this.userManager = userManager;
+    this.settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
     this.factory = new ExternalHooksFactory(
         repositoryService,
@@ -130,9 +127,7 @@ public class Rest implements JobRunner {
       return Response.status(401).build();
     }
 
-    ExternalHooksSettings settings = new ExternalHooksSettings(pluginSettingsFactory);
-
-    return Response.ok(settings).build();
+    return Response.ok(settingsDao.getSettings()).build();
   }
 
   @PUT
@@ -144,7 +139,7 @@ public class Rest implements JobRunner {
       return Response.status(401).build();
     }
 
-    settings.save(this.pluginSettingsFactory);
+    settingsDao.save(settings);
 
     return Response.ok().build();
   }

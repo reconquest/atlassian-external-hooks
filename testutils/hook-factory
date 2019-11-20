@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -euo pipefail
+
+HOOK="${1:-}"
+if [[ ! "$HOOK" ]]; then
+    echo "$0 <hook>" >&2
+    echo "Examples:"
+    echo "$0 pre-receive" >&2
+    echo "$0 post-receive" >&2
+    exit 1
+fi
+
+EXE="${EXE:-examples/dump}"
+
+source "$(dirname "$(readlink -f $0)")"/lib
+
+create-repo
+
+cd /tmp/
+ignore git clone $URI/scm/$PROJECT/$REPO.git
+cd $REPO
+
+echo ":: push master branch"
+touch master
+
+git add master
+git commit -m "master"
+git push origin master
