@@ -13,23 +13,15 @@ var ViewGlobalSettings = function (context, api) {
         this._$.submit(function (e) {
             e.preventDefault();
 
-            this._setLoading(true);
-
-            var updating = this._updateSettings();
-
-            if (this._$.find('[name="apply-existing"]').prop('checked')) {
-                updating
-                    .then(this._applySettings.bind(this))
-                    .then(this._renderApplyProgress.bind(this))
-                    .then(this._monitorApplyProgress.bind(this))
-            }
-
-            updating.done(this._setLoading.bind(this, false));
+            this._withLoader(this._saveSettings.bind(this));
         }.bind(this));
 
+        this._withLoader(this._loadSettings.bind(this));
+    }
+
+    this._withLoader = function (fn) {
         this._setLoading(true);
-        this._loadSettings()
-            .done(this._setLoading.bind(this, false));
+        fn().done(this._setLoading.bind(this, false));
     }
 
     this._setLoading = function (loading) {
@@ -40,6 +32,19 @@ var ViewGlobalSettings = function (context, api) {
             this._$.find('input, button').prop('disabled', false);
             this._$spinner.hide();
         }
+    }
+
+    this._saveSettings = function () {
+        var updating = this._updateSettings();
+
+        if (this._$.find('[name="apply-existing"]').prop('checked')) {
+            updating
+                .then(this._applySettings.bind(this))
+                .then(this._renderApplyProgress.bind(this))
+                .then(this._monitorApplyProgress.bind(this))
+        }
+
+        return updating;
     }
 
     this._updateSettings = function () {
