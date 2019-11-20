@@ -85,8 +85,8 @@ var ViewGlobalSettings = function (context, api) {
         if (state.started) {
             this._$progress
                 .setIndeterminate(false)
-                .setTotal(state.total)
                 .setCurrent(state.current)
+                .setTotal(state.total)
 
             if (state.finished) {
                 if (state.total == 0) {
@@ -106,6 +106,7 @@ var ViewGlobalSettings = function (context, api) {
             }
         } else {
             this._$progress
+                .setIndeterminate(true)
                 .setText("Initializing…");
         }
 
