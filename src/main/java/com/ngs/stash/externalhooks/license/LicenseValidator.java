@@ -69,8 +69,6 @@ public class LicenseValidator {
     licenseSignatureVerified = verifyLicense();
     if (licenseSignatureVerified) {
       log.warn("license signature verified");
-    } else {
-      log.warn("license signature is invalid");
     }
   }
 
