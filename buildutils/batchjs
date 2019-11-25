@@ -1,9 +1,8 @@
 #!/bin/python
 
-sources = "./src/main/resources/js"
-prepend = "(function ($) {\n"
-append  = "\n}(AJS.$));"
-target  = "batch.js";
+sources   = "./src/main/js"
+resources = "./src/main/resources/js/"
+target    = "batch.js";
 
 import os
 import os.path
@@ -18,7 +17,13 @@ for dirpath, dirnames, filenames in os.walk(sources):
         with open(os.path.join(dirpath, filename)) as file:
             chunks.append(file.read())
 
-with open(os.path.join(sources, target), "w") as file:
+prepend = "(function ($) {\n"
+append  = "\n}(AJS.$));"
+
+destination = os.path.join(resources, target)
+with open(destination, "w") as file:
     file.write(prepend)
     file.write("\n".join(chunks))
     file.write(append)
+
+print("batch.js: saved to %s" % destination)
