@@ -391,3 +391,22 @@ var ProgressBarWithText = function () {
         }.bind(this)
     });
 }
+
+var Flag = function (type, body) {
+    if (typeof body != 'string') {
+        body = $(body).outerHTML();
+    }
+
+    this.show = function () {
+        AJS.flag({
+            type: type,
+            body: body
+        });
+    }
+
+    return this;
+}
+
+var FlagSuccess = function (body) {
+    return Flag('success', body);
+}

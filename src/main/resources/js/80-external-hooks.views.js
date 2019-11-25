@@ -21,7 +21,7 @@ var ViewGlobalSettings = function (context, api) {
 
     this._withLoader = function (fn) {
         this._setLoading(true);
-        fn().done(this._setLoading.bind(this, false));
+        fn().then(this._setLoading.bind(this, false));
     }
 
     this._setLoading = function (loading) {
@@ -38,13 +38,15 @@ var ViewGlobalSettings = function (context, api) {
         var updating = this._updateSettings();
 
         if (this._$.find('[name="apply-existing"]').prop('checked')) {
-            updating
+            updating = updating
                 .then(this._applySettings.bind(this))
                 .then(this._renderApplyProgress.bind(this))
                 .then(this._monitorApplyProgress.bind(this))
         }
 
-        return updating;
+        var flag = new FlagSuccess('Settings successfully updated.');
+
+        return updating.then(flag.show.bind(flag));
     }
 
     this._updateSettings = function () {
@@ -78,11 +80,11 @@ var ViewGlobalSettings = function (context, api) {
             200
         );
 
-        return promise;
+        return promise.promise();
     }
 
     this._renderApplyProgress = function (state) {
-        if (state.started) {
+        if (state.started && (state.total > 0 || state.finished)) {
             this._$progress
                 .setIndeterminate(false)
                 .setCurrent(state.current)
