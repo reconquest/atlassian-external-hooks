@@ -16,6 +16,10 @@ var ViewGlobalSettings = function (context, api) {
             this._withLoader(this._saveSettings.bind(this));
         }.bind(this));
 
+        this._$.find('#rq_hooks_settings_defaults').click(
+            this._loadSettingsDefaults.bind(this)
+        )
+
         this._withLoader(this._loadSettings.bind(this));
     }
 
@@ -115,23 +119,28 @@ var ViewGlobalSettings = function (context, api) {
         return state;
     }
 
-    this._loadSettings = function () {
+    this._renderSettings = function (settings) {
         this._$.find('input').prop('checked', false);
 
-        return api.getSettings()
-            .done(
-                function (settings) {
-                    $.each(settings.triggers, function(hook, events) {
-                        $.each(events, function (_, event) {
-                            var name = 'triggers.' + hook + '.' + event;
+        $.each(settings.triggers, function(hook, events) {
+            $.each(events, function (_, event) {
+                var name = 'triggers.' + hook + '.' + event;
 
-                            this._$
-                                .find('[name="' + name + '"]')
-                                .prop('checked', true);
-                        }.bind(this))
-                    }.bind(this))
-                }.bind(this)
-            );
+                this._$
+                    .find('[name="' + name + '"]')
+                    .prop('checked', true);
+            }.bind(this))
+        }.bind(this))
+    }
+
+    this._loadSettings = function () {
+        return api.getSettings()
+            .done(this._renderSettings.bind(this));
+    }
+
+    this._loadSettingsDefaults = function () {
+        return api.getSettingsDefaults()
+            .done(this._renderSettings.bind(this));
     }
 
     this._getSettings = function() {

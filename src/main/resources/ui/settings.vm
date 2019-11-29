@@ -112,7 +112,7 @@ $mergeCheckConfiguration.add($preReceiveConfiguration.get(5))
     </head>
     <body>
         <form class="aui" id="rq_hooks_global_settings_form">
-            <h2>External Hooks Add-on Settings</h2>
+            <h2>External Hooks Add-on Trigger Settings</h2>
 
             #foreach($configuration in $triggerConfigurations)
                 <h3>$configuration.title</h3>
@@ -157,6 +157,7 @@ $mergeCheckConfiguration.add($preReceiveConfiguration.get(5))
                 <p>Settings will apply only to newly configured hooks if this checkbox is not set.</p>
             </div>
             <button class="aui-button aui-button-primary" id="rq_hooks_settings_save">Save</button>
+            <button class="aui-button" id="rq_hooks_settings_defaults" type="button">Load Defaults</button>
         </form>
     </body>
 </html>
