@@ -12,7 +12,7 @@
         },
         {
             "legend": "Branch",
-            "description": "These events are triggered when user creates/deletes branch via Bitbucket web-interface.",
+            "description": "These events are triggered when a user creates/deletes branch via Bitbucket web-interface.",
             "triggers": [
                 {
                     "id": "branch-create",
@@ -26,7 +26,7 @@
         },
         {
             "legend": "Tag",
-            "description": "These events are triggered when user creates/deletes tag via Bitbucket web-interface.",
+            "description": "These events are triggered when a user creates/deletes tag via Bitbucket web-interface.",
             "triggers": [
                 {
                     "id": "tag-create",
@@ -40,7 +40,7 @@
         },
         {
             "legend": "File",
-            "description": "This event is triggered when user edits a file via Bitbucket web-interface.",
+            "description": "This event is triggered when a user edits a file via Bitbucket web-interface.",
             "triggers": [
                 {
                     "id": "file-edit",
@@ -50,7 +50,7 @@
         },
         {
             "legend": "Pull Request",
-            "description": "Note that this event is triggered every time user visits pull request details page. <br/>Hook-script <b>will not</b> receive any stdin.",
+            "description": "Note that this event is triggered every time a user visits pull request details page. <br/>Hook-script <b>will not</b> receive any stdin.",
             "triggers": [
                 {
                     "id": "pull-request-merge",
@@ -67,6 +67,16 @@
                     "label": "Merge Event"
                 }
             ]
+        },
+        {
+            "legend": "Git",
+            "description": "This event is triggered when a user rebases a branch via Bitbucket web-interface.<br />Note that this is a git-specific event.",
+            "triggers": [
+                {
+                    "id": "git-rebase",
+                    "label": "Rebase"
+                }
+            ]
         }
     ]
 )
@@ -75,7 +85,7 @@
 #set($postReceiveConfiguration = $gitHookConfiguration.clone())
 
 #set($postReceiveConfigurationMergeCheck = $postReceiveConfiguration.get(4).clone())
-#set($postReceiveConfigurationMergeCheck.description = "This event will be triggered after successfull merge done from Bitbucket web-interface.")
+#set($postReceiveConfigurationMergeCheck.description = "This event will be triggered after successfull merge done via Bitbucket web-interface.")
 $postReceiveConfiguration.set(4, $postReceiveConfigurationMergeCheck)
 
 #set($mergeCheckConfiguration = [])

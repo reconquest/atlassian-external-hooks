@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
+import com.atlassian.bitbucket.scm.git.hook.GitRepositoryHookTrigger;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.ngs.stash.externalhooks.DefaultSettings;
@@ -110,12 +111,12 @@ public class ExternalHooksSettingsDao {
   private List<RepositoryHookTrigger> getHookTriggers(
       List<String> items, List<RepositoryHookTrigger> defaults) {
     List<RepositoryHookTrigger> result = new ArrayList<RepositoryHookTrigger>();
-    for (String item : items) {
-      Optional<StandardRepositoryHookTrigger> trigger = StandardRepositoryHookTrigger.fromId(item);
-      if (trigger.isPresent()) {
-        result.add(trigger.get());
+    for (String id : items) {
+      RepositoryHookTrigger trigger = getHookTrigger(id);
+      if (trigger != null) {
+        result.add(trigger);
       } else {
-        log.warn("unrecognized hook trigger in settings: {}", item);
+        log.warn("unrecognized hook trigger in settings: {}", id);
       }
     }
 
@@ -124,6 +125,20 @@ public class ExternalHooksSettingsDao {
     }
 
     return result;
+  }
+
+  private RepositoryHookTrigger getHookTrigger(String id) {
+    Optional<StandardRepositoryHookTrigger> stdTrigger = StandardRepositoryHookTrigger.fromId(id);
+    if (stdTrigger.isPresent()) {
+      return stdTrigger.get();
+    }
+
+    Optional<GitRepositoryHookTrigger> gitTrigger = GitRepositoryHookTrigger.fromId(id);
+    if (gitTrigger.isPresent()) {
+      return gitTrigger.get();
+    }
+
+    return null;
   }
 
   private List<String> getIds(List<RepositoryHookTrigger> items) {
