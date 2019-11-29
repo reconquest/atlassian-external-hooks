@@ -8,6 +8,10 @@ var API = function (baseURL) {
             return this.root() + 'settings';
         },
 
+        settingsDefaults: function () {
+            return this.root() + 'settings/default';
+        },
+
         factory: function () {
             return this.root() + 'factory/';
         },
@@ -28,6 +32,16 @@ var API = function (baseURL) {
     this.getSettings = function () {
         return $.ajax(
             this.urls.settings(),
+            {
+                method: "GET",
+                headers: this._headers
+            }
+        );
+    }
+
+    this.getSettingsDefaults = function () {
+        return $.ajax(
+            this.urls.settingsDefaults(),
             {
                 method: "GET",
                 headers: this._headers

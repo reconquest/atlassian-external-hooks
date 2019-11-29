@@ -66,12 +66,15 @@
         </scopes>
     </repository-hook>
 
-    <web-item key="global-settings-external-hooks-settings" name="External Hooks Add-On Settings" section="atl.admin/admin-settings-section" weight="-999">
-        <description>Link to External Hooks Add-on Settings Page.</description>
-        <label key="external-hooks.settings.label">External Hooks Add-on Settings</label>
-        <tooltip>Configure confluence settings for External Hooks Add-on</tooltip>
-        <link linkId="external-hooks-settings-link">/plugins/servlet/external-hooks/settings</link>
+    <web-section key="rq-hooks-admin-section" name="Reconquest External Hooks Settings" weight="110" location="atl.admin">
+        <label>External Hooks</label>
+    </web-section>
+
+    <web-item key="rq-hooks-admin-section-runners" name="Reconquest External Hooks Trigger Settings" weight="10" section="atl.admin/rq-hooks-admin-section">
+        <label>Trigger Settings</label>
+        <link>${navBuilder.pluginServlets().path('external-hooks', 'settings').buildRelNoContext()}</link>
     </web-item>
+
 
     <servlet name="External Hooks Settings" i18n-name-key="external-hooks-settings.name" key="external-hooks-settings" class="com.ngs.stash.externalhooks.servlet.Settings">
         <description key="external-hooks-settings.description">External Hooks Add-on Settings</description>
