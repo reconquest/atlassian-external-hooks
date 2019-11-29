@@ -1,3 +1,32 @@
+# 9.0.0
+
+Add global triggers' configuration which is accessible from Bitbucket
+Administration Panel.
+
+Now users with System Admin role can select events which will trigger pre-,
+post-receive & merge check hooks.
+
+Events available for configuration:
+
+* push to repo,
+* web UI: branch create/delete,
+* web UI: tag create/delete,
+* web UI: file edit,
+* web UI: pull request merge check,
+* internal: merge event from other plugins.
+
+See documentation for more information: https://external-hooks.reconquest.io/docs/triggers/
+
+# 8.0.0
+
+Bug fixes & minor improvements.
+
+Additional fixes for https://github.com/reconquest/atlassian-external-hooks/issues/100
+
+# 7.5.0
+
+Fix bug causing inherited hooks to be force-enabled.
+
 # 7.3.0
 
 Fix BB upgrade problem (BB 6.5.1 -> 6.6.0).
