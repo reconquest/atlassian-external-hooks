@@ -17,7 +17,7 @@ var ViewGlobalSettings = function (context, api) {
         }.bind(this));
 
         this._$.find('#rq_hooks_settings_defaults').click(
-            this._loadSettingsDefaults.bind(this)
+            this._withLoader.bind(this, this._loadSettingsDefaults.bind(this))
         )
 
         this._withLoader(this._loadSettings.bind(this));
