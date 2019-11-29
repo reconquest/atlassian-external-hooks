@@ -71,7 +71,7 @@
     </web-section>
 
     <web-item key="rq-hooks-admin-section-runners" name="Reconquest External Hooks Trigger Settings" weight="10" section="atl.admin/rq-hooks-admin-section">
-        <label>Trigger Settings</label>
+        <label>Triggers</label>
         <link>${navBuilder.pluginServlets().path('external-hooks', 'settings').buildRelNoContext()}</link>
     </web-item>
 
