@@ -1,5 +1,9 @@
 End User License Agreement
 
+Version: 2 (updated 27/12/2019).
+Full changelog to this EULA is available at the following URL:
+https://github.com/reconquest/atlassian-external-hooks/commits/master/EULA
+
 This End User License Agreement (EULA) is a binding legal agreement between
 Stanislav Seletskiy (the «Licensor»), a provider of cloud-based and
 downloadable applications including related documentation and services (the
@@ -35,14 +39,20 @@ copy, download, install or otherwise use the Software.
      to any third party without the Licensor's prior express written consent.
 
 1.5. The Licensee is allowed to make necessary backup copies for the purpose of
-     backup only and for no other purpose.
+     backup only.
 
-1.6. The Licensee is allowed to install the Software and make the Software
+1.6. The Licensee is allowed to make necessary copies for using on test servers
+     for testing/evaluation purposes only.
+
+1.7. The Licensee is not allowed to make copies except cases described
+     in 1.5 & 1.6.
+
+1.8. The Licensee is allowed to install the Software and make the Software
      available for use on systems controlled, leased or owned by the Licensee or
      a third-party provider as long as the Licensee remains fully responsible for
      any compliance with this EULA.
 
-1.7. The Software will, if not otherwise agreed or offered, delivered only in
+1.9. The Software will, if not otherwise agreed or offered, delivered only in
      electronic form.
 
 2. Third-Party Software
@@ -94,5 +104,5 @@ copy, download, install or otherwise use the Software.
 6. Contact Us
 
 6.1 If you have any questions or suggestions regarding EULA, please contact us.
-    You find our contact information under Atlassian Marketplace Vendor Page
-    page.
+    You can find our contact information under Atlassian Marketplace Vendor
+    Page page.
