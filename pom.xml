@@ -4,9 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>9.0.0</version>
+    <version>9.0.1</version>
     <organization>
         <name>reconquest</name>
+        <url>https://external-hooks.reconquest.io/</url>
     </organization>
     <name>External Hooks</name>
     <description>This plugin provides Merge Check, Post and Pre receive hooks using any external executable</description>

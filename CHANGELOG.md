@@ -1,3 +1,9 @@
+# 9.0.1
+
+Add organization url to add-on manifest file.
+
+It resolves problem on Manage Apps admin page on some installations.
+
 # 9.0.0
 
 Add global triggers' configuration which is accessible from Bitbucket
