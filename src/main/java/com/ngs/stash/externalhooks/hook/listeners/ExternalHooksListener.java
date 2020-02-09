@@ -19,11 +19,13 @@ import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.Project;
 import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.repository.Repository;
+import com.atlassian.bitbucket.repository.RepositorySearchRequest;
 import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.server.StorageService;
 import com.atlassian.bitbucket.user.SecurityService;
+import com.atlassian.bitbucket.user.UserService;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageRequestImpl;
@@ -66,9 +68,12 @@ public class ExternalHooksListener implements JobRunner {
 
   private ExternalHooksFactory factory;
   private Walker walker;
+  private UserService userService;
+  private RepositoryService repositoryService;
 
   @Inject
   public ExternalHooksListener(
+      @ComponentImport UserService userService,
       @ComponentImport RepositoryService repositoryService,
       @ComponentImport SchedulerService schedulerService,
       @ComponentImport HookScriptService hookScriptService,
@@ -82,11 +87,13 @@ public class ExternalHooksListener implements JobRunner {
       @ComponentImport ClusterService clusterService,
       @ComponentImport StorageService storageService)
       throws IOException {
+    this.userService = userService;
     this.schedulerService = schedulerService;
     this.hookScriptService = hookScriptService;
     this.repositoryHookService = repositoryHookService;
     this.projectService = projectService;
     this.securityService = securityService;
+    this.repositoryService = repositoryService;
 
     this.factory = new ExternalHooksFactory(
         repositoryService,
@@ -102,7 +109,7 @@ public class ExternalHooksListener implements JobRunner {
         clusterService,
         storageService);
 
-    this.walker = new Walker(projectService, repositoryService);
+    this.walker = new Walker(securityService, userService, projectService, repositoryService);
 
     this.pluginSettings = pluginSettingsFactory.createGlobalSettings();
   }
@@ -141,14 +148,19 @@ public class ExternalHooksListener implements JobRunner {
   }
 
   protected boolean isPluginLoaded() {
-    Page<Project> projects = this.projectService.findAll(new PageRequestImpl(0, 1));
-    if (projects.getSize() == 0) {
-      // there is nothing to do, no projects means no job to do
+    Page<Repository> repositories = repositoryService.search(
+        (new RepositorySearchRequest.Builder()).build(), new PageRequestImpl(0, 1));
+
+    if (repositories.getSize() == 0) {
+      // can't really tell if plugin is loaded, but no repositories means no job to do
+      log.warn("No repositories found");
       return true;
     }
 
+    Repository repo = repositories.getValues().iterator().next();
+
     RepositoryHookSearchRequest.Builder searchBuilder = new RepositoryHookSearchRequest.Builder(
-            new ProjectScope(projects.getValues().iterator().next()))
+            new RepositoryScope(repo))
         .type(RepositoryHookType.PRE_RECEIVE);
 
     Page<RepositoryHook> page = repositoryHookService.search(

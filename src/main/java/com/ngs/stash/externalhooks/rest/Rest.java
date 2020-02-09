@@ -32,6 +32,7 @@ import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.server.StorageService;
 import com.atlassian.bitbucket.user.SecurityService;
+import com.atlassian.bitbucket.user.UserService;
 import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
@@ -71,9 +72,11 @@ public class Rest implements JobRunner {
   private ExternalHooksFactory factory;
   private FactoryStateDao factoryStateDao;
   private ExternalHooksSettingsDao settingsDao;
+  private UserService userService;
 
   @Inject
   public Rest(
+      @ComponentImport UserService userService,
       @ComponentImport ActiveObjects ao,
       @ComponentImport RepositoryService repositoryService,
       @ComponentImport SchedulerService schedulerService,
@@ -88,6 +91,7 @@ public class Rest implements JobRunner {
       @ComponentImport ClusterService clusterService,
       @ComponentImport StorageService storageService)
       throws IOException {
+    this.userService = userService;
     this.permissionService = permissionService;
     this.projectService = projectService;
     this.repositoryService = repositoryService;
@@ -230,7 +234,7 @@ public class Rest implements JobRunner {
 
     AtomicInteger total = new AtomicInteger();
 
-    Walker walker = new Walker(projectService, repositoryService);
+    Walker walker = new Walker(securityService, userService, projectService, repositoryService);
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
