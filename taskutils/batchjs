@@ -13,7 +13,7 @@ for dirpath, dirnames, filenames in os.walk(sources):
         if filename == target or filename.endswith(".loader.js"):
             continue
 
-        print("batch.js: adding %s" % filename)
+        print("adding %s" % filename)
         with open(os.path.join(dirpath, filename)) as file:
             chunks.append(file.read())
 
@@ -26,4 +26,4 @@ with open(destination, "w") as file:
     file.write("\n".join(chunks))
     file.write(append)
 
-print("batch.js: saved to %s" % destination)
+print("saved to %s" % destination)

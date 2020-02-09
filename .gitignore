@@ -1,5 +1,4 @@
 /target
-/targets/
 /*.log
 *.iml
 .idea
@@ -10,3 +9,6 @@
 /workbench.xmi
 /jdt:
 batch.js
+/docker
+/taskutils/nginx.crt
+/taskutils/nginx.key

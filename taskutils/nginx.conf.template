@@ -1,0 +1,43 @@
+worker_processes 1;
+user operator;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80;
+
+        access_log /dev/stdout combined;
+
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        access_log /dev/stdout combined;
+
+        ssl_certificate      $PWD/taskutils/nginx.crt;
+        ssl_certificate_key  $PWD/taskutils/nginx.key;
+
+        location / {
+            proxy_pass http://bitbucket.local:7990/;
+            proxy_pass_request_headers on;
+            proxy_set_header Referer http://bitbucket.local:7990/;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Server $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Atlassian-Token no-check;
+        }
+
+        location /js/ {
+            root "$PWD/src/main/resources/";
+        }
+
+        autoindex on;
+    }
+}
+
+# vim: ft=nginx

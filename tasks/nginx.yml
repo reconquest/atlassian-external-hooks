@@ -1,0 +1,32 @@
+version: '2'
+
+vars:
+  hostname:
+    sh: hostname
+
+tasks:
+  ssl:
+    cmds:
+      - mkcert
+          -cert-file taskutils/nginx.crt
+          -key-file taskutils/nginx.key
+          bitbucket.local
+    status:
+      - test -f taskutils/nginx.crt
+      - test -f taskutils/nginx.key
+
+  conf:
+    deps: [ssl]
+    cmds:
+      - envsubst '$PWD' < taskutils/nginx.conf.template > taskutils/nginx.conf
+    sources:
+      - taskutils/nginx.conf.template
+    generates:
+      - taskutils/nginx.conf
+
+  run:
+    desc: run nginx
+    deps: [conf]
+    cmds:
+      - echo 'listening and serving'
+      - sudo nginx -c {{ .pwd }}/taskutils/nginx.conf -g 'daemon off;'

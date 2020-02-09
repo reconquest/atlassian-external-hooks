@@ -184,7 +184,10 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <executable>buildutils/batchjs</executable>
+                    <executable>task</executable>
+                    <arguments>
+                        <argument>frontend:batch</argument>
+                    </arguments>
                 </configuration>
             </plugin>
         </plugins>
