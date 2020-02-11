@@ -67,6 +67,14 @@ possible to start time-consuming tasks such as CI.
 Note, that it's not possible to return any output back to the user invoking
 `git push` from 'async' post-receive hook.
 
+# 7.0.0
+
+The new feature - _Asynchronous_ — has been added to the **Post Receive Hook**
+setup. The field is useful for users, who recently upgraded from
+an old version of the add-on and after that
+the Post Receive Hook is executed in synchronous mode,
+that causes the git push command executes with delays.
+
 # 6.3.2
 
 Pre- & post-receive hooks are extended to be triggered of the following events
@@ -107,6 +115,35 @@ limitations in Bitbucket Server starting from 6.2.0.
 * `STASH_PROJECT_NAME`
 * `STASH_IS_DIRECT_WRITE`
 * `STASH_IS_DIRECT_ADMIN`
+* `PULL_REQUEST_FROM_HASH`
+* `PULL_REQUEST_FROM_ID`
+* `PULL_REQUEST_FROM_BRANCH`
+* `PULL_REQUEST_FROM_REPO_ID`
+* `PULL_REQUEST_FROM_REPO_NAME`
+* `PULL_REQUEST_FROM_REPO_PROJECT_ID`
+* `PULL_REQUEST_FROM_REPO_PROJECT_KEY`
+* `PULL_REQUEST_FROM_REPO_SLUG`
+* `PULL_REQUEST_FROM_SSH_CLONE_URL`
+* `PULL_REQUEST_FROM_HTTP_CLONE_URL`
+* `PULL_REQUEST_URL`
+* `PULL_REQUEST_ID`
+* `PULL_REQUEST_TITLE`
+* `PULL_REQUEST_VERSION`
+* `PULL_REQUEST_AUTHOR_ID`
+* `PULL_REQUEST_AUTHOR_DISPLAY_NAME`
+* `PULL_REQUEST_AUTHOR_NAME`
+* `PULL_REQUEST_AUTHOR_EMAIL`
+* `PULL_REQUEST_AUTHOR_SLUG`
+* `PULL_REQUEST_TO_HASH`
+* `PULL_REQUEST_TO_ID`
+* `PULL_REQUEST_TO_BRANCH`
+* `PULL_REQUEST_TO_REPO_ID`
+* `PULL_REQUEST_TO_REPO_NAME`
+* `PULL_REQUEST_TO_REPO_PROJECT_ID`
+* `PULL_REQUEST_TO_REPO_PROJECT_KEY`
+* `PULL_REQUEST_TO_REPO_SLUG`
+* `PULL_REQUEST_TO_SSH_CLONE_URL`
+* `PULL_REQUEST_TO_HTTP_CLONE_URL`
 
 Merge Check will no longer add comments to Pull Requests or automatically
 reject them and no such configuration is possible.
