@@ -29,13 +29,17 @@ Events available for configuration:
 * web UI: pull request merge check,
 * internal: merge event from other plugins.
 
-See documentation for more information: https://external-hooks.reconquest.io/docs/triggers/
+See documentation for more information:
+
+https://external-hooks.reconquest.io/docs/triggers/
 
 # 8.0.0
 
 Bug fixes & minor improvements.
 
-Additional fixes for https://github.com/reconquest/atlassian-external-hooks/issues/100
+Additional fixes for:
+
+https://github.com/reconquest/atlassian-external-hooks/issues/100
 
 # 7.5.0
 
@@ -69,11 +73,13 @@ Note, that it's not possible to return any output back to the user invoking
 
 # 7.0.0
 
-The new feature - _Asynchronous_ — has been added to the **Post Receive Hook**
+The new feature — _Asynchronous_ — has been added to the **Post Receive Hook**
 setup. The field is useful for users, who recently upgraded from
 an old version of the add-on and after that
 the Post Receive Hook is executed in synchronous mode,
 that causes the git push command executes with delays.
+
+<img src="https://external-hooks.reconquest.io/img/7.0.0-new-feature.png"/>
 
 # 6.3.2
 
@@ -94,6 +100,9 @@ made from BB UI:
 * pull request merge.
 
 # 6.2.0
+
+Pre- and Post-Receive Hooks will now always pass theirs' output to user no
+matter which exit code was returned from script.
 
 Following environment variables are now marked as deprecated and their
 alternatives should be considered to be used instead. No immediate change
@@ -148,5 +157,8 @@ limitations in Bitbucket Server starting from 6.2.0.
 Merge Check will no longer add comments to Pull Requests or automatically
 reject them and no such configuration is possible.
 
-Pre- and Post-Receive Hooks will now always pass theirs' output to user no
-matter which exit code was returned from script.
+The following configuration is **not available**:
+
+<img src="https://external-hooks.reconquest.io/img/7.0.0-new-feature.png"/>
+
+If your workflow requires this feature, please contact us.
