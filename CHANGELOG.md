@@ -1,3 +1,11 @@
+# 9.1.0
+
+Fix need for re-configuration of hooks in personal repositories after the
+add-on enable/disable lifecycle (e.g., after BB restart).
+
+Indirectly fixes migration problem for hooks in personal repositories from BB
+4.14.4 to 6.10 along with add-on upgrade.
+
 # 9.0.1
 
 Add organization url to add-on manifest file.
