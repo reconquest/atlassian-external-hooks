@@ -1,31 +1,45 @@
 package com.ngs.stash.externalhooks.hook;
 
-import com.atlassian.bitbucket.cluster.ClusterService;
-import com.atlassian.bitbucket.hook.repository.*;
-import com.atlassian.bitbucket.repository.*;
-import com.atlassian.bitbucket.setting.*;
-import com.atlassian.bitbucket.user.*;
-import com.atlassian.bitbucket.auth.*;
-import com.atlassian.bitbucket.permission.*;
-import com.atlassian.bitbucket.server.*;
-import com.atlassian.bitbucket.util.*;
-
-import java.util.logging.Logger;
-import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.Collection;
-import org.apache.commons.io.FilenameUtils;
-import java.io.*;
-import java.util.Map;
-import java.util.List;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
+import com.atlassian.bitbucket.auth.AuthenticationContext;
+import com.atlassian.bitbucket.cluster.ClusterService;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHook;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
+import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
+import com.atlassian.bitbucket.permission.Permission;
+import com.atlassian.bitbucket.permission.PermissionService;
+import com.atlassian.bitbucket.repository.RefChange;
+import com.atlassian.bitbucket.repository.Repository;
+import com.atlassian.bitbucket.repository.RepositoryCloneLinksRequest;
+import com.atlassian.bitbucket.repository.RepositoryService;
+import com.atlassian.bitbucket.scm.git.hook.GitRepositoryHookTrigger;
+import com.atlassian.bitbucket.server.ApplicationPropertiesService;
+import com.atlassian.bitbucket.setting.RepositorySettingsValidator;
+import com.atlassian.bitbucket.setting.Settings;
+import com.atlassian.bitbucket.setting.SettingsValidationErrors;
+import com.atlassian.bitbucket.user.ApplicationUser;
+import com.atlassian.bitbucket.util.NamedLink;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-
 import com.atlassian.upm.api.license.entity.PluginLicense;
 import com.atlassian.upm.api.util.Option;
+
+import org.apache.commons.io.FilenameUtils;
 
 public class ExternalPreReceiveHook
     implements PreRepositoryHook<RepositoryHookRequest>, RepositorySettingsValidator {
@@ -58,6 +72,12 @@ public class ExternalPreReceiveHook
   @Override
   public RepositoryHookResult preUpdate(
       PreRepositoryHookContext context, RepositoryHookRequest request) {
+    if (request.isDryRun()
+        && (request.getTrigger().equals(StandardRepositoryHookTrigger.PULL_REQUEST_MERGE)
+            || request.getTrigger().equals(GitRepositoryHookTrigger.REBASE))) {
+      return RepositoryHookResult.accepted();
+    }
+
     return preUpdateImpl(context, request);
   }
 
