@@ -11,34 +11,28 @@ import net.java.ao.Query;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-/**
- * A listener for repository events
- */
+/** A listener for repository events */
 @Named("RepositoryListener")
 public class RepositoryListener {
-    private final ActiveObjects activeObjects;
+  private final ActiveObjects activeObjects;
 
-    @Inject
-    public RepositoryListener(@ComponentImport ActiveObjects activeObjects) {
-        this.activeObjects = activeObjects;
-    }
+  @Inject
+  public RepositoryListener(@ComponentImport ActiveObjects activeObjects) {
+    this.activeObjects = activeObjects;
+  }
 
-    /**
-     * A listener for the repository delete event
-     * @param event
-     */
-    @EventListener
-    public void onDeleteEvent(RepositoryDeletedEvent event) {
-        // Delete connected pull request check entries
-        this.activeObjects.delete(
-            this.activeObjects.find(
-                PullRequestCheck.class,
-                Query.select().where(
-                    "PROJECT_ID = ? AND REPOSITORY_ID = ?",
-                    event.getRepository().getProject().getId(),
-                    event.getRepository().getId()
-                )
-            )
-        );
-    }
+  /**
+   * A listener for the repository delete event
+   *
+   * @param event
+   */
+  @EventListener
+  public void onDeleteEvent(RepositoryDeletedEvent event) {
+    // Delete connected pull request check entries
+    this.activeObjects.delete(this.activeObjects.find(PullRequestCheck.class, Query.select()
+        .where(
+            "PROJECT_ID = ? AND REPOSITORY_ID = ?",
+            event.getRepository().getProject().getId(),
+            event.getRepository().getId())));
+  }
 }

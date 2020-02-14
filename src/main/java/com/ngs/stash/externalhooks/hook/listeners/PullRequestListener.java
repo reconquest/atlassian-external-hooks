@@ -10,36 +10,29 @@ import net.java.ao.Query;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-/**
- * A pull request event listener
- */
+/** A pull request event listener */
 @Named("PullRequestListener")
 public class PullRequestListener {
-    private final ActiveObjects activeObjects;
+  private final ActiveObjects activeObjects;
 
-    @Inject
-    public PullRequestListener(
-        @ComponentImport final ActiveObjects activeObjects) {
-        this.activeObjects = activeObjects;
-    }
+  @Inject
+  public PullRequestListener(@ComponentImport final ActiveObjects activeObjects) {
+    this.activeObjects = activeObjects;
+  }
 
-    /**
-     * An event lister for delete pull request events
-     * @param event
-     */
-    @EventListener
-    public void onDeleteEvent(final PullRequestDeletedEvent event) {
-        // Delete connected pull request check entries
-        this.activeObjects.delete(
-            this.activeObjects.find(
-                PullRequestCheck.class,
-                Query.select().where(
-                    "PROJECT_ID = ? AND REPOSITORY_ID = ? AND PULL_REQUEST_ID = ?",
-                    event.getPullRequest().getToRef().getRepository().getProject().getId(),
-                    event.getPullRequest().getToRef().getRepository().getId(),
-                    event.getPullRequest().getId()
-                )
-            )
-        );
-    }
+  /**
+   * An event lister for delete pull request events
+   *
+   * @param event
+   */
+  @EventListener
+  public void onDeleteEvent(final PullRequestDeletedEvent event) {
+    // Delete connected pull request check entries
+    this.activeObjects.delete(this.activeObjects.find(PullRequestCheck.class, Query.select()
+        .where(
+            "PROJECT_ID = ? AND REPOSITORY_ID = ? AND PULL_REQUEST_ID = ?",
+            event.getPullRequest().getToRef().getRepository().getProject().getId(),
+            event.getPullRequest().getToRef().getRepository().getId(),
+            event.getPullRequest().getId())));
+  }
 }
