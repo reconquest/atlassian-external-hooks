@@ -1,2 +1,8 @@
-target/
+/target
 /*.log
+/.settings
+/.project
+/.classpath
+/docker
+/taskutils/nginx.crt
+/taskutils/nginx.key

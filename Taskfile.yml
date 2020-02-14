@@ -1,0 +1,13 @@
+version: '2'
+
+output: prefixed
+silent: true
+
+vars:
+  pwd:
+    sh: pwd
+
+includes:
+  docker: tasks/docker.yml
+  atlas: tasks/atlas.yml
+  nginx: tasks/nginx.yml

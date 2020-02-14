@@ -1,0 +1,22 @@
+version: '2'
+
+vars:
+  version: 5.16.11
+  dir:
+    sh: readlink -f docker
+  image: atlassian/bitbucket-server:{{ .version }}
+
+tasks:
+  run:
+    desc: start docker container with bitbucket
+    cmds:
+      - mkdir -p {{ .dir }}/{{ .version }}
+      - echo "starting {{ .image }}"
+      - docker run -it --rm --name "{{ .version }}.bitbucket"
+        -p 7990:7990
+        -p 7999:7999
+        -e SERVER_PROXY_NAME=bitbucket.local
+        -e SERVER_PROXY_PORT=443
+        -e SERVER_SECURE=true
+        -v {{ .dir }}/{{ .version }}:/var/atlassian/application-data/bitbucket
+        {{ .image }}
