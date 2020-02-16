@@ -44,7 +44,11 @@ public class Walker {
         break;
       }
 
-      projects.stream().forEach(project -> walk(project, callback));
+      projects.stream().forEach(project -> {
+        walk(project, callback);
+
+        callback.onProject(project);
+      });
 
       page = projects.getNextPageRequest();
       if (page == null) {
@@ -97,9 +101,7 @@ public class Walker {
     }
   }
 
-  private void walk(Project project, Callback callback) {
-    callback.onProject(project);
-
+  public void walk(Project project, RepositoryCallback callback) {
     PageRequest page = new PageRequestImpl(0, 10);
 
     while (true) {
@@ -117,12 +119,14 @@ public class Walker {
     }
   }
 
-  public interface Callback {
+  public interface Callback extends RepositoryCallback {
     void onProject(Project project);
-
-    void onRepository(Repository repository);
 
     // there is no onUser method because this Callback is expected to be used in combination with
     // Hooks Settings and there is no User Scope for Hooks.
+  }
+
+  public interface RepositoryCallback {
+    void onRepository(Repository repository);
   }
 }

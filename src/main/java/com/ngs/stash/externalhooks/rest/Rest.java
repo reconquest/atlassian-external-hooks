@@ -6,7 +6,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -18,10 +17,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
-import com.atlassian.bitbucket.auth.AuthenticationContext;
-import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
-import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.Project;
@@ -30,10 +26,8 @@ import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
-import com.atlassian.bitbucket.server.StorageService;
 import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.bitbucket.user.UserService;
-import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.scheduler.JobRunner;
@@ -45,12 +39,12 @@ import com.atlassian.scheduler.config.JobConfig;
 import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.Schedule;
-import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
+import com.ngs.stash.externalhooks.HooksCoordinator;
+import com.ngs.stash.externalhooks.HooksFactory;
 import com.ngs.stash.externalhooks.ao.FactoryState;
 import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.dao.FactoryStateDao;
-import com.ngs.stash.externalhooks.hook.factory.ExternalHooksFactory;
 import com.ngs.stash.externalhooks.util.Walker;
 
 import org.slf4j.Logger;
@@ -59,62 +53,41 @@ import org.slf4j.LoggerFactory;
 import io.atlassian.util.concurrent.atomic.AtomicInteger;
 
 @Path("/")
-@Scanned
 public class Rest implements JobRunner {
   private static final Logger log = LoggerFactory.getLogger(Rest.class);
 
   private SchedulerService schedulerService;
   private PermissionService permissionService;
-  private RepositoryService repositoryService;
-  private ProjectService projectService;
   private SecurityService securityService;
 
-  private ExternalHooksFactory factory;
   private FactoryStateDao factoryStateDao;
   private ExternalHooksSettingsDao settingsDao;
-  private UserService userService;
+  private HooksFactory hooksFactory;
+  private Walker walker;
 
-  @Inject
   public Rest(
+      @ComponentImport HooksFactory hooksFactory,
+      @ComponentImport HooksCoordinator hooksCoordinator,
       @ComponentImport UserService userService,
       @ComponentImport ActiveObjects ao,
       @ComponentImport RepositoryService repositoryService,
       @ComponentImport SchedulerService schedulerService,
-      @ComponentImport HookScriptService hookScriptService,
       @ComponentImport RepositoryHookService repositoryHookService,
       @ComponentImport ProjectService projectService,
       @ComponentImport PluginSettingsFactory pluginSettingsFactory,
       @ComponentImport SecurityService securityService,
-      @ComponentImport AuthenticationContext authenticationContext,
-      @ComponentImport("permissions") PermissionService permissionService,
-      @ComponentImport PluginLicenseManager pluginLicenseManager,
-      @ComponentImport ClusterService clusterService,
-      @ComponentImport StorageService storageService)
+      @ComponentImport("permissions") PermissionService permissionService)
       throws IOException {
-    this.userService = userService;
+    this.hooksFactory = hooksFactory;
     this.permissionService = permissionService;
-    this.projectService = projectService;
-    this.repositoryService = repositoryService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
 
     this.settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
-    this.factory = new ExternalHooksFactory(
-        repositoryService,
-        schedulerService,
-        hookScriptService,
-        repositoryHookService,
-        projectService,
-        pluginSettingsFactory,
-        securityService,
-        authenticationContext,
-        permissionService,
-        pluginLicenseManager,
-        clusterService,
-        storageService);
-
     this.factoryStateDao = new FactoryStateDao(ao);
+
+    this.walker = new Walker(securityService, userService, projectService, repositoryService);
   }
 
   private boolean isSystemAdmin() {
@@ -234,7 +207,6 @@ public class Rest implements JobRunner {
 
     AtomicInteger total = new AtomicInteger();
 
-    Walker walker = new Walker(securityService, userService, projectService, repositoryService);
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
@@ -258,7 +230,7 @@ public class Rest implements JobRunner {
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
-        factory.install(new ProjectScope(project));
+        hooksFactory.install(new ProjectScope(project));
 
         state.setCurrent(current.incrementAndGet());
         state.save();
@@ -268,7 +240,7 @@ public class Rest implements JobRunner {
 
       @Override
       public void onRepository(Repository repository) {
-        factory.install(new RepositoryScope(repository));
+        hooksFactory.install(new RepositoryScope(repository));
 
         state.setCurrent(current.incrementAndGet());
         state.save();

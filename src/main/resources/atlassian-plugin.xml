@@ -90,6 +90,30 @@
         <entity>com.ngs.stash.externalhooks.ao.FactoryState</entity>
     </ao>
 
+    <component
+            key="externalHooksService"
+            class="com.ngs.stash.externalhooks.ExternalHooksService" />
+    <component
+            key="ExternalHooksLauncher"
+            class="com.ngs.stash.externalhooks.ExternalHooksLauncher"
+            public="true">
+        <description>Controls the initialisation logic of External Hooks</description>
+        <interface>com.atlassian.sal.api.lifecycle.LifecycleAware</interface>
+    </component>
+
+
+    <component
+            key="hooksFactory"
+            class="com.ngs.stash.externalhooks.HooksFactory" />
+
+    <component
+            key="hooksCoordinator"
+            class="com.ngs.stash.externalhooks.HooksCoordinator" />
+    <component
+            key="licenseValidator"
+            class="com.ngs.stash.externalhooks.LicenseValidator" />
+
+
     <!-- import from the product container -->
     <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
     <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />

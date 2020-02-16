@@ -1,4 +1,4 @@
-package com.ngs.stash.externalhooks.license;
+package com.ngs.stash.externalhooks;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,11 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class LicenseValidator {
-  private static Logger log = LoggerFactory.getLogger(LicenseValidator.class.getSimpleName());
+  private static Logger log = LoggerFactory.getLogger(LicenseValidator.class);
   private PluginLicenseManager pluginLicenseManager;
   private StorageService storageService;
   private ClusterService clusterService;
-  private String pluginKey;
   private boolean licenseSignatureVerified = false;
 
   private static final String PUBLIC_KEY = ""
@@ -53,11 +52,9 @@ public class LicenseValidator {
       + "2nOMzOgp6Glhr++St20VeNwfwV2PTN5Je80=";
 
   public LicenseValidator(
-      String pluginKey,
       PluginLicenseManager pluginLicenseManager,
       StorageService storageService,
       ClusterService clusterService) {
-    this.pluginKey = pluginKey;
     this.pluginLicenseManager = pluginLicenseManager;
     this.storageService = storageService;
     this.clusterService = clusterService;
@@ -117,7 +114,7 @@ public class LicenseValidator {
 
   public String readPluginLicense() {
     File homeDir = getHomeDir();
-    File license = new File(homeDir.getAbsolutePath(), pluginKey + ".license");
+    File license = new File(homeDir.getAbsolutePath(), Const.PLUGIN_KEY + ".license");
     if (!license.exists()) {
       return null;
     }

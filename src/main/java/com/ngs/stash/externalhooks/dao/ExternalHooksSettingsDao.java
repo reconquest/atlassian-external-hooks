@@ -8,16 +8,15 @@ import com.atlassian.bitbucket.hook.repository.RepositoryHookTrigger;
 import com.atlassian.bitbucket.hook.repository.StandardRepositoryHookTrigger;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
+import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.DefaultSettings;
-import com.ngs.stash.externalhooks.ExternalHooks;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ExternalHooksSettingsDao {
-  private static Logger log =
-      LoggerFactory.getLogger(ExternalHooksSettingsDao.class.getSimpleName());
+  private static Logger log = LoggerFactory.getLogger(ExternalHooksSettingsDao.class);
   private PluginSettings pluginSettings;
 
   public ExternalHooksSettingsDao(PluginSettingsFactory pluginSettingsFactory) {
@@ -89,7 +88,7 @@ public class ExternalHooksSettingsDao {
   }
 
   private String getPluginSettingsKey(String component) {
-    String prefix = ExternalHooks.PLUGIN_KEY + ":global:settings:";
+    String prefix = Const.PLUGIN_KEY + ":global:settings:";
 
     return prefix + component;
   }

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-URI="${URI:-http://admin:admin@localhost:7990/bitbucket}"
+URI="${URI:-http://admin:admin@localhost:7990}"
 
 stacket --uri "$URI" projects create pwrwo || true
 stacket --uri "$URI" repositories create pwrwo rwo || true

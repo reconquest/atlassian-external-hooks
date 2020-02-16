@@ -2,7 +2,7 @@
 
 # declare HOOK and source this file
 
-URI="${URI:-http://admin:admin@localhost:7990/bitbucket}"
+URI="${URI:-http://admin:admin@localhost:7990}"
 
 ignore() {
     "${@}" >&- 2>&-
