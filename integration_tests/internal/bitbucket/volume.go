@@ -89,7 +89,7 @@ func (volume Volume) Start(
 			break
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond * 100)
 	}
 
 	return New(instance)
