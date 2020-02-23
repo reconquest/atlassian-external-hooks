@@ -15,9 +15,6 @@ tasks:
       - docker run -it --rm --name "{{ .version }}.bitbucket"
         -p 7990:7990
         -p 7999:7999
-        -e SERVER_PROXY_NAME=bitbucket.local
-        -e SERVER_PROXY_PORT=443
-        -e SERVER_SECURE=true
         --add-host=marketplace.atlassian.com:127.0.0.1
         -v {{ .dir }}/{{ .version }}:/var/atlassian/application-data/bitbucket
         {{ .image }}
