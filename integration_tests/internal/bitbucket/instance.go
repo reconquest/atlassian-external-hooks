@@ -34,6 +34,7 @@ type Instance struct {
 	version   string
 	container string
 	volume    string
+	ip        string
 	opts      struct {
 		StartOpts
 		ConfigureOpts
@@ -47,7 +48,7 @@ func (instance *Instance) GetConnectorURI() string {
 			instance.opts.AdminUser,
 			instance.opts.AdminPassword,
 		),
-		Host: fmt.Sprintf("localhost:%d", instance.opts.PortHTTP),
+		Host: fmt.Sprintf("%s:%d", instance.ip, instance.opts.PortHTTP),
 	}
 
 	return url.String()
@@ -56,7 +57,7 @@ func (instance *Instance) GetConnectorURI() string {
 func (instance *Instance) GetURI(path string) string {
 	url := url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("localhost:%d", instance.opts.PortHTTP),
+		Host:   fmt.Sprintf("%s:%d", instance.ip, instance.opts.PortHTTP),
 		Path:   path,
 	}
 
@@ -370,8 +371,6 @@ func (instance *Instance) start() error {
 	execution := exec.New(
 		"docker",
 		"run", "-d",
-		"-p", fmt.Sprintf("%d:7990", instance.opts.PortHTTP),
-		"-p", fmt.Sprintf("%d:7999", instance.opts.PortSSH),
 		"--add-host=marketplace.atlassian.com:127.0.0.1",
 		"-v", fmt.Sprintf(
 			"%s:%s",
@@ -387,6 +386,36 @@ func (instance *Instance) start() error {
 	}
 
 	instance.container = strings.TrimSpace(string(stdout))
+
+	return nil
+}
+
+func (instance *Instance) connect() error {
+	execution := exec.New(
+		"docker",
+		"inspect",
+		"--type", "container",
+		"-f",
+		"{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+		instance.container,
+	)
+
+	stdout, _, err := execution.Output()
+	if err != nil {
+		return err
+	}
+
+	ips := strings.Split(strings.TrimSpace(string(stdout)), "\n")
+	if len(ips) == 0 {
+		return karma.
+			Describe("container", instance.container).
+			Format(
+				err,
+				"no ip addresses found on container",
+			)
+	}
+
+	instance.ip = ips[0]
 
 	return nil
 }

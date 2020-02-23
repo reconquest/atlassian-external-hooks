@@ -63,6 +63,14 @@ func (volume Volume) Start(
 		}
 	}
 
+	err := instance.connect()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to connect to container",
+		)
+	}
+
 	for {
 		status, err := instance.getStartupStatus()
 		if err != nil {
