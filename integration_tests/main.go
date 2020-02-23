@@ -16,8 +16,8 @@ var version = "[manual build]"
 var usage = `external-hooks-tests - run external hooks test suites.
 
 Usage:
-  external-hooks-test [options] run --container=<container>
-  external-hooks-test [options] run [--keep]
+  external-hooks-test [options] --container=<container>
+  external-hooks-test [options] [--keep]
   external-hooks-test -h | --help
 
 Options:
@@ -27,8 +27,6 @@ Options:
 `
 
 type Opts struct {
-	ModeRun bool `docopt:"run"`
-
 	FlagKeep  bool `docopt:"--keep"`
 	FlagTrace bool `docopt:"--trace"`
 
