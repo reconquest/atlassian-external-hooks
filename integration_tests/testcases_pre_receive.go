@@ -71,7 +71,7 @@ func Testcase_PreReceive_RejectPush(
 	err = preReceive.Disable()
 	assert.NoError(err, "should be able to disable pre-receive hook")
 
-	_, err = git.Push()
+	stdout, err = git.Push()
 	assert.NoError(err, "git push should succeed")
 	assert.NotContains(
 		string(stdout),
