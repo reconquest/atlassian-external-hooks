@@ -222,13 +222,8 @@ public class HooksCoordinator {
     script.uninstallLegacy(scope);
 
     walker.walk(scope.getProject(), (repository) -> {
-      RepositoryScope repositoryScope = new RepositoryScope(repository);
-      RepositoryHook hook = repositoryHookService.getByKey(repositoryScope, script.getHookKey());
-
       // RepositoryHook.isEnabled returns true when hook is in state 'enabled (inherited)'
-      if (hook.isEnabled()) {
-        script.uninstall(scope, repositoryScope);
-      }
+      script.uninstall(scope, new RepositoryScope(repository));
     });
   }
 
