@@ -7,6 +7,8 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/reconquest/pkg/log"
+
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
 )
 
 var version = "[manual build]"
@@ -14,8 +16,8 @@ var version = "[manual build]"
 var usage = `external-hooks-tests - run external hooks test suites.
 
 Usage:
-  external-hooks-test [options] --container=<container>
-  external-hooks-test [options] [--keep]
+  external-hooks-test [options] run --container=<container>
+  external-hooks-test [options] run [--keep]
   external-hooks-test -h | --help
 
 Options:
@@ -25,10 +27,12 @@ Options:
 `
 
 type Opts struct {
-	Keep      bool   `docopt:"--keep"`
-	Container string `docopt:"--container"`
-	Trace     bool   `docopt:"--trace"`
-	WorkDir   string `docopt:"<work-dir>"`
+	ModeRun bool `docopt:"run"`
+
+	FlagKeep  bool `docopt:"--keep"`
+	FlagTrace bool `docopt:"--trace"`
+
+	ValueContainer string `docopt:"--container"`
 }
 
 func main() {
@@ -44,7 +48,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if opts.Trace {
+	if opts.FlagTrace {
 		log.SetLevel(log.LevelTrace)
 	}
 
@@ -55,16 +59,16 @@ func main() {
 		log.Fatalf(err, "unable to create work dir")
 	}
 
-	suite := NewSuite()
-	suite.Testcase(TestBasic)
-	suite.Run(dir, RunOpts{
-		opts.Container,
+	run := runner.New()
+	run.Suite(SuiteBasic)
+	run.Run(dir, runner.RunOpts{
+		opts.ValueContainer,
 	})
 
-	if !opts.Keep && opts.Container == "" {
-		err := suite.Cleanup()
+	if !opts.FlagKeep && opts.ValueContainer == "" {
+		err := run.Cleanup()
 		if err != nil {
-			log.Fatalf(err, "unable to cleanup suite")
+			log.Fatalf(err, "unable to cleanup runner")
 		}
 	}
 }

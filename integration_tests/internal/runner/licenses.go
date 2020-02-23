@@ -1,4 +1,4 @@
-package main
+package runner
 
 // https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/
 const (

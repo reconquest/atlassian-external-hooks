@@ -1,8 +1,9 @@
 package git
 
 import (
-	"github.com/reconquest/atlassian-external-hooks/tests/internal/exec"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
+	"github.com/reconquest/lexec-go"
 )
 
 type Git struct {
@@ -30,19 +31,20 @@ func (git *Git) GetWorkDir() string {
 }
 
 func (git *Git) Add(paths ...string) error {
-	return git.command("add", paths...)
+	return git.command("add", paths...).Run()
 }
 
 func (git *Git) Commit(message string) error {
-	return git.command("commit", "-m", message)
+	return git.command("commit", "-m", message).Run()
 }
 
-func (git *Git) Push() error {
-	return git.command("push")
+func (git *Git) Push() (string, error) {
+	_, stderr, err := git.command("push").Output()
+	return string(stderr), err
 }
 
-func (git *Git) command(command string, args ...string) error {
+func (git *Git) command(command string, args ...string) *lexec.Execution {
 	args = append([]string{"-C", git.dir, command}, args...)
 
-	return exec.New("git", args...).Run()
+	return exec.New("git", args...)
 }

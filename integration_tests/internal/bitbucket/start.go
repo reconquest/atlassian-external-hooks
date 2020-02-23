@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/reconquest/atlassian-external-hooks/tests/internal/exec"
-	"github.com/reconquest/atlassian-external-hooks/tests/internal/lojban"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/karma-go"
 )
 

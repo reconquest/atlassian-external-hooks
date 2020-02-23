@@ -1,8 +1,11 @@
-package main
+package runner
 
-import "github.com/reconquest/pkg/log"
+import (
+	"github.com/reconquest/pkg/log"
+	"github.com/stretchr/testify/assert"
+)
 
-type Testcase func(*Suite)
+type Suite func(*Runner, *assert.Assertions)
 
 type Testing struct{}
 

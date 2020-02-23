@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/reconquest/atlassian-external-hooks/tests/internal/exec"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 )
 

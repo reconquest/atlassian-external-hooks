@@ -1,7 +1,7 @@
 package external_hooks
 
 import (
-	"github.com/reconquest/atlassian-external-hooks/tests/internal/exec"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 )
@@ -35,6 +35,10 @@ func (addon *Addon) Register(
 
 func (addon *Addon) Enable(key string, context *Context) error {
 	return addon.command(context, "enable", key)
+}
+
+func (addon *Addon) Disable(key string, context *Context) error {
+	return addon.command(context, "disable", key)
 }
 
 func (addon *Addon) OnProject(project string) *Context {
@@ -140,6 +144,18 @@ func (receive *PreReceiveContext) Enable() error {
 	)
 
 	return receive.Context.Enable(
+		HOOK_KEY_PRE_RECEIVE,
+		receive.Context,
+	)
+}
+
+func (receive *PreReceiveContext) Disable() error {
+	log.Debugf(
+		karma.Describe("context", receive.Context),
+		"disabling pre-receive hook",
+	)
+
+	return receive.Context.Disable(
 		HOOK_KEY_PRE_RECEIVE,
 		receive.Context,
 	)
