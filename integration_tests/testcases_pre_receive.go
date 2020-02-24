@@ -45,7 +45,7 @@ func Testcase_PreReceive_RejectPush(
 	git := run.GitClone(repository)
 
 	err = ioutil.WriteFile(
-		filepath.Join(git.GetWorkDir(), "post."+lojban.GetRandomID(6)),
+		filepath.Join(git.GetWorkDir(), "pre."+lojban.GetRandomID(6)),
 		[]byte(`hello darkness my old friend`),
 		0666,
 	)
