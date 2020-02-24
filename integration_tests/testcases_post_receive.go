@@ -10,7 +10,7 @@ import (
 func Testcase_PostReceive_OutputMessage(
 	run *runner.Runner,
 	assert *assert.Assertions,
-	project *stash.Project,
+	context *external_hooks.Context,
 	repository *stash.Repository,
 ) {
 	err := run.Bitbucket().WriteFile(
@@ -24,9 +24,7 @@ func Testcase_PostReceive_OutputMessage(
 	)
 	assert.NoError(err, "should be able to write hook script to container")
 
-	addon := run.ExternalHooks()
-
-	postReceive := addon.OnProject(project.Key).PostReceive(
+	postReceive := context.PostReceive(
 		external_hooks.NewSettings().
 			UseSafePath(true).
 			WithExecutable("fail.sh"),

@@ -10,7 +10,7 @@ import (
 func Testcase_PreReceive_RejectPush(
 	run *runner.Runner,
 	assert *assert.Assertions,
-	project *stash.Project,
+	context *external_hooks.Context,
 	repository *stash.Repository,
 ) {
 	err := run.Bitbucket().WriteFile(
@@ -24,9 +24,7 @@ func Testcase_PreReceive_RejectPush(
 	)
 	assert.NoError(err, "should be able to write hook script to container")
 
-	addon := run.ExternalHooks()
-
-	preReceive := addon.OnProject(project.Key).PreReceive(
+	preReceive := context.PreReceive(
 		external_hooks.NewSettings().
 			UseSafePath(true).
 			WithExecutable("fail.sh"),

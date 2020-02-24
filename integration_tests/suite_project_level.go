@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func SuiteBasic(run *runner.Runner, assert *assert.Assertions) {
+func SuiteProjectLevel(run *runner.Runner, assert *assert.Assertions) {
 	run.UseBitbucket("6.2.0")
 	run.InstallAddon("target/external-hooks-9.1.0.jar")
 
@@ -17,6 +17,8 @@ func SuiteBasic(run *runner.Runner, assert *assert.Assertions) {
 		Create(lojban.GetRandomID(4))
 	assert.NoError(err, "unable to create repository")
 
-	Testcase_PreReceive_RejectPush(run, assert, project, repository)
-	Testcase_PostReceive_OutputMessage(run, assert, project, repository)
+	context := run.ExternalHooks().OnProject(project.Key)
+
+	Testcase_PreReceive_RejectPush(run, assert, context, repository)
+	Testcase_PostReceive_OutputMessage(run, assert, context, repository)
 }

@@ -58,7 +58,11 @@ func main() {
 	}
 
 	run := runner.New()
-	run.Suite(SuiteBasic)
+
+	run.Suite(SuiteProjectLevel)
+	run.Suite(SuiteRepositoryLevel)
+	run.Suite(SuiteProjectLevel)
+
 	run.Run(dir, runner.RunOpts{
 		opts.ValueContainer,
 	})
