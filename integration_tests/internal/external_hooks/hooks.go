@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	HOOK_KEY_PRE_RECEIVE = "com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook"
+	HOOK_KEY_PRE_RECEIVE  = "com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook"
+	HOOK_KEY_POST_RECEIVE = "com.ngs.stash.externalhooks.external-hooks:external-post-receive-hook"
 )
 
 type Addon struct {
@@ -97,9 +98,11 @@ func (settings *Settings) WithArgs(args ...string) *Settings {
 	return settings
 }
 
-type PreReceiveContext struct {
+type Hook struct {
 	*Context
 	*Settings
+
+	key string
 }
 
 type Context struct {
@@ -115,48 +118,50 @@ func (context *Context) OnRepository(repository string) *Context {
 	return context
 }
 
-func (context *Context) PreReceive(settings *Settings) *PreReceiveContext {
-	return &PreReceiveContext{
+func (context *Context) PreReceive(settings *Settings) *Hook {
+	return &Hook{
 		context,
 		settings,
+		HOOK_KEY_PRE_RECEIVE,
 	}
 }
 
-func (receive *PreReceiveContext) Configure() error {
+func (context *Context) PostReceive(settings *Settings) *Hook {
+	return &Hook{
+		context,
+		settings,
+		HOOK_KEY_POST_RECEIVE,
+	}
+}
+
+func (hook *Hook) Configure() error {
 	log.Debugf(
 		karma.
-			Describe("context", receive.Context).
-			Describe("settings", receive.Settings),
-		"configuring pre-receive hook",
+			Describe("context", hook.Context).
+			Describe("settings", hook.Settings),
+		"configuring hook %s",
+		hook.key,
 	)
 
-	return receive.Context.Register(
-		HOOK_KEY_PRE_RECEIVE,
-		receive.Context,
-		receive.Settings,
-	)
+	return hook.Context.Register(hook.key, hook.Context, hook.Settings)
 }
 
-func (receive *PreReceiveContext) Enable() error {
+func (hook *Hook) Enable() error {
 	log.Debugf(
-		karma.Describe("context", receive.Context),
-		"enabling pre-receive hook",
+		karma.Describe("context", hook.Context),
+		"enabling hook %s",
+		hook.key,
 	)
 
-	return receive.Context.Enable(
-		HOOK_KEY_PRE_RECEIVE,
-		receive.Context,
-	)
+	return hook.Context.Enable(hook.key, hook.Context)
 }
 
-func (receive *PreReceiveContext) Disable() error {
+func (hook *Hook) Disable() error {
 	log.Debugf(
-		karma.Describe("context", receive.Context),
-		"disabling pre-receive hook",
+		karma.Describe("context", hook.Context),
+		"disabling hook %s",
+		hook.key,
 	)
 
-	return receive.Context.Disable(
-		HOOK_KEY_PRE_RECEIVE,
-		receive.Context,
-	)
+	return hook.Context.Disable(hook.key, hook.Context)
 }

@@ -18,4 +18,5 @@ func SuiteBasic(run *runner.Runner, assert *assert.Assertions) {
 	assert.NoError(err, "unable to create repository")
 
 	Testcase_PreReceive_RejectPush(run, assert, project, repository)
+	Testcase_PostReceive_OutputMessage(run, assert, project, repository)
 }
