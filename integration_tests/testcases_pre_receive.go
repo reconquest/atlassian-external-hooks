@@ -46,7 +46,7 @@ func Testcase_PreReceive_RejectPush(
 
 	err = ioutil.WriteFile(
 		filepath.Join(git.GetWorkDir(), "pre."+lojban.GetRandomID(6)),
-		[]byte(`hello darkness my old friend`),
+		[]byte("file."+lojban.GetRandomID(10)),
 		0666,
 	)
 	assert.NoError(err, "should be able to write file in git repo")
@@ -54,7 +54,7 @@ func Testcase_PreReceive_RejectPush(
 	err = git.Add(".")
 	assert.NoError(err, "should be able to add file to git repo")
 
-	err = git.Commit("lyrics added")
+	err = git.Commit("commit." + lojban.GetRandomID(8))
 	assert.NoError(err, "should be able to commit file to git repo")
 
 	stdout, err := git.Push()
