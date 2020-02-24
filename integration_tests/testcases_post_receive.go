@@ -1,12 +1,8 @@
 package main
 
 import (
-	"io/ioutil"
-	"path/filepath"
-
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
-	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,18 +40,7 @@ func Testcase_PostReceive_OutputMessage(
 
 	git := run.GitClone(repository)
 
-	err = ioutil.WriteFile(
-		filepath.Join(git.GetWorkDir(), "post."+lojban.GetRandomID(6)),
-		[]byte("file."+lojban.GetRandomID(10)),
-		0666,
-	)
-	assert.NoError(err, "should be able to write file in git repo")
-
-	err = git.Add(".")
-	assert.NoError(err, "should be able to add file to git repo")
-
-	err = git.Commit("commit." + lojban.GetRandomID(8))
-	assert.NoError(err, "should be able to commit file to git repo")
+	run.GitCommitRandomFile(git)
 
 	stdout, err := git.Push()
 	assert.NoError(err, "git push should succeed")
@@ -67,6 +52,8 @@ func Testcase_PostReceive_OutputMessage(
 
 	err = postReceive.Disable()
 	assert.NoError(err, "should be able to disable post-receive hook")
+
+	run.GitCommitRandomFile(git)
 
 	stdout, err = git.Push()
 	assert.NoError(err, "git push should succeed")

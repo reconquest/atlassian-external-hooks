@@ -3,9 +3,11 @@ package runner
 import (
 	"io/ioutil"
 	"net/url"
+	"path/filepath"
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/git"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 )
 
 func (runner *Runner) GitClone(repository *stash.Repository) *git.Git {
@@ -35,4 +37,19 @@ func (runner *Runner) GitClone(repository *stash.Repository) *git.Git {
 	runner.assert.NoError(err, "unable to clone git repo")
 
 	return git
+}
+
+func (runner *Runner) GitCommitRandomFile(git *git.Git) {
+	err := ioutil.WriteFile(
+		filepath.Join(git.GetWorkDir(), "post."+lojban.GetRandomID(6)),
+		[]byte("file."+lojban.GetRandomID(10)),
+		0666,
+	)
+	runner.assert.NoError(err, "should be able to write file in git repo")
+
+	err = git.Add(".")
+	runner.assert.NoError(err, "should be able to add file to git repo")
+
+	err = git.Commit("commit." + lojban.GetRandomID(8))
+	runner.assert.NoError(err, "should be able to commit file to git repo")
 }
