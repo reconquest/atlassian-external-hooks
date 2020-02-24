@@ -71,6 +71,8 @@ func (volume Volume) Start(
 		)
 	}
 
+	var message string
+
 	for {
 		status, err := instance.getStartupStatus()
 		if err != nil {
@@ -84,14 +86,18 @@ func (volume Volume) Start(
 			continue
 		}
 
-		log.Debugf(
-			nil,
-			"{bitbucket %s} setup: %3d%% %s | %s",
-			version,
-			status.Progress.Percentage,
-			strings.ToLower(status.State),
-			status.Progress.Message,
-		)
+		if message != status.Progress.Message {
+			log.Debugf(
+				nil,
+				"{bitbucket %s} setup: %3d%% %s | %s",
+				version,
+				status.Progress.Percentage,
+				strings.ToLower(status.State),
+				status.Progress.Message,
+			)
+
+			message = status.Progress.Message
+		}
 
 		if status.State == "STARTED" {
 			break
