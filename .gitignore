@@ -12,3 +12,4 @@ batch.js
 /docker
 /taskutils/nginx.crt
 /taskutils/nginx.key
+/taskutils/nginx.conf
