@@ -1,10 +1,15 @@
 package runner
 
 import (
+	"os"
+
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/karma-go"
+	"github.com/reconquest/pkg/log"
 	"github.com/stretchr/testify/assert"
 )
+
+type Suite func(*Runner, *assert.Assertions)
 
 type Runner struct {
 	assert *assert.Assertions
@@ -19,9 +24,11 @@ type Runner struct {
 }
 
 func New() *Runner {
-	return &Runner{
-		assert: assert.New(Testing{}),
-	}
+	var runner Runner
+
+	runner.assert = assert.New(&runner)
+
+	return &runner
 }
 
 func (runner *Runner) UseBitbucket(version string) {
@@ -84,4 +91,17 @@ func (runner *Runner) Cleanup() error {
 	}
 
 	return nil
+}
+
+func (runner *Runner) Errorf(format string, args ...interface{}) {
+	log.Errorf(nil, "<testify> assertion failed:"+format, args...)
+	log.Infof(
+		karma.
+			Describe("work_dir", runner.run.dir).
+			Describe("container", runner.run.container).
+			Describe("volume", runner.run.bitbucket.GetVolume()),
+		"following run resources were kept",
+	)
+
+	os.Exit(1)
 }
