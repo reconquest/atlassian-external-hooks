@@ -139,7 +139,7 @@ func (hook *Hook) Configure() error {
 		karma.
 			Describe("context", hook.Context).
 			Describe("settings", hook.Settings),
-		"configuring hook %s",
+		"{hook} configuring %s",
 		hook.key,
 	)
 
@@ -149,7 +149,7 @@ func (hook *Hook) Configure() error {
 func (hook *Hook) Enable() error {
 	log.Debugf(
 		karma.Describe("context", hook.Context),
-		"enabling hook %s",
+		"{hook} enabling %s",
 		hook.key,
 	)
 
@@ -159,7 +159,7 @@ func (hook *Hook) Enable() error {
 func (hook *Hook) Disable() error {
 	log.Debugf(
 		karma.Describe("context", hook.Context),
-		"disabling hook %s",
+		"{hook} disabling %s",
 		hook.key,
 	)
 

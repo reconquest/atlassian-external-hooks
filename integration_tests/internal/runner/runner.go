@@ -45,7 +45,7 @@ func (runner *Runner) UseBitbucket(version string) {
 			if running.Compare(*requested) == -1 {
 				log.Infof(
 					nil,
-					"upgrading bitbucket: %s -> %s",
+					"{bitbucket} upgrading: %s -> %s",
 					running,
 					requested,
 				)
@@ -54,6 +54,9 @@ func (runner *Runner) UseBitbucket(version string) {
 
 				err := runner.run.bitbucket.Stop()
 				runner.assert.NoError(err, "unable to stop bitbucket")
+
+				err = runner.run.bitbucket.RemoveContainer()
+				runner.assert.NoError(err, "unable to remove previous container")
 
 				runner.run.bitbucket, err = bitbucket.Volume(volume).Start(
 					version,
@@ -115,6 +118,13 @@ func (runner *Runner) Bitbucket() *bitbucket.Bitbucket {
 }
 
 func (runner *Runner) Cleanup() error {
+	log.Infof(
+		karma.
+			Describe("container", runner.run.bitbucket.GetContainerID()).
+			Describe("volume", runner.run.bitbucket.GetVolume()),
+		"{bitbucket} cleaning up resources",
+	)
+
 	err := runner.run.bitbucket.Stop()
 	if err != nil {
 		return karma.Format(

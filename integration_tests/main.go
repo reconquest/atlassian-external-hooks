@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docopt/docopt-go"
+	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
@@ -109,11 +110,24 @@ func main() {
 
 	log.Infof(nil, "{run} all tests passed")
 
+	log.Debugf(nil, "{run} removing work dir: %s", dir)
+	err = os.RemoveAll(dir)
+	if err != nil {
+		log.Errorf(err, "unable to remove work dir")
+	}
+
 	if !opts.FlagKeep && opts.ValueContainer == "" {
 		err := run.Cleanup()
 		if err != nil {
 			log.Fatalf(err, "unable to cleanup runner")
 		}
+	} else {
+		log.Infof(
+			karma.
+				Describe("container", run.Bitbucket().GetContainerID()).
+				Describe("volume", run.Bitbucket().GetVolume()),
+			"{run} following resources can be reused",
+		)
 	}
 }
 

@@ -102,7 +102,7 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 
 	log.Debugf(
 		karma.Describe("upm_token", token),
-		"installing add-on: %s",
+		"{add-on} installing: %s",
 		path,
 	)
 
@@ -128,7 +128,7 @@ func (api *BitbucketAddonsAPI) Uninstall(key string) error {
 
 	log.Debugf(
 		karma.Describe("upm_token", token),
-		"uninstalling add-on: %s",
+		"{add-on} uninstalling: %s",
 		key,
 	)
 
@@ -146,7 +146,7 @@ func (api *BitbucketAddonsAPI) Uninstall(key string) error {
 func (api *BitbucketAddonsAPI) SetLicense(addon string, license string) error {
 	log.Debugf(
 		karma.Describe("license", license),
-		"setting add-on license: %s",
+		"{add-on} setting license: %s",
 		addon,
 	)
 
