@@ -421,7 +421,7 @@ public class ExternalHookScript {
 
     public String getMessage() {
       if (this == MISSING_ID) {
-        return "missing id in settings";
+        return "was not installed";
       }
 
       if (this == MISSING_SCRIPT) {

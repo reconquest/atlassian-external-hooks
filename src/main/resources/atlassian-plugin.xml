@@ -114,7 +114,7 @@
             class="com.ngs.stash.externalhooks.LicenseValidator" />
 
 
-    <!-- import from the product container -->
+    <component-import key="activeObjects" interface="com.atlassian.activeobjects.external.ActiveObjects" />
     <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
     <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />
     <component-import key="pluginLicenseManager" interface="com.atlassian.upm.api.license.PluginLicenseManager" />
