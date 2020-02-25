@@ -38,6 +38,7 @@ import com.atlassian.scheduler.SchedulerServiceException;
 import com.atlassian.scheduler.config.JobConfig;
 import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
+import com.atlassian.scheduler.config.RunMode;
 import com.atlassian.scheduler.config.Schedule;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
 import com.ngs.stash.externalhooks.HooksCoordinator;
@@ -171,6 +172,7 @@ public class Rest implements JobRunner {
 
     JobConfig job = JobConfig.forJobRunnerKey(runner)
         .withSchedule(Schedule.runOnce(new Date()))
+        .withRunMode(RunMode.RUN_ONCE_PER_CLUSTER)
         .withParameters(parameters);
 
     try {
