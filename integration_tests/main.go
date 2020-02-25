@@ -69,6 +69,12 @@ func main() {
 
 	run := runner.New()
 
+	// TODO: add tests for env vars in all type of hooks
+	// TODO: add tests for stdin for all type of hooks
+	// TODO: add tests for merge checks
+	// TODO: add tests for different trigger configurations
+	// TODO: add tests for BB 5.x.x
+
 	run.Suite(
 		suite.WithParams(
 			TestParams{
