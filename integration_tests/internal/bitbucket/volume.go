@@ -41,6 +41,7 @@ func (volume Volume) Start(
 		log.Infof(
 			karma.
 				Describe("container", opts.ContainerID).
+				Describe("volume", string(volume)).
 				Describe("opts", opts),
 			"{bitbucket %s} re-using existing container",
 			version,
@@ -49,7 +50,9 @@ func (volume Volume) Start(
 		instance.container = opts.ContainerID
 	} else {
 		log.Infof(
-			karma.Describe("opts", opts),
+			karma.
+				Describe("volume", string(volume)).
+				Describe("opts", opts),
 			"{bitbucket %s} starting container",
 			version,
 		)

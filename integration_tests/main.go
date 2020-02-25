@@ -57,15 +57,25 @@ func main() {
 		log.Fatalf(err, "unable to create work dir")
 	}
 
+	suite := NewSuite()
+
 	run := runner.New()
 
-	run.Suite(SuiteProjectLevel)
-	run.Suite(SuiteRepositoryLevel)
-	run.Suite(SuiteProjectLevel)
+	run.Suite(
+		suite.Run(
+			//suite.TestProjectHooks,
+			//suite.TestRepositoryHooks,
+			//suite.TestPersonalRepositoriesHooks,
+			suite.TestProjectEnabledRepositoryDisabledHooks,
+			//suite.TestBitbucketUpgrade,
+		),
+	)
 
 	run.Run(dir, runner.RunOpts{
-		opts.ValueContainer,
+		Container: opts.ValueContainer,
 	})
+
+	log.Infof(nil, "{run} all tests passed")
 
 	if !opts.FlagKeep && opts.ValueContainer == "" {
 		err := run.Cleanup()

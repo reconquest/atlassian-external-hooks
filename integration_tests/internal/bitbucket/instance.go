@@ -68,6 +68,10 @@ func (instance *Instance) GetContainerID() string {
 	return instance.container
 }
 
+func (instance *Instance) GetVersion() string {
+	return instance.version
+}
+
 func (instance *Instance) WriteFile(
 	path string,
 	content []byte,
@@ -145,11 +149,15 @@ func (instance *Instance) WriteFile(
 }
 
 func (instance *Instance) Stop() error {
-	return exec.New(
-		"docker",
-		"kill",
-		instance.container,
-	).Run()
+	err := exec.New("docker", "kill", instance.container).Run()
+	if err != nil {
+		return karma.Format(
+			err,
+			"unable to send docker kill",
+		)
+	}
+
+	return exec.New("docker", "wait", instance.container).Run()
 }
 
 func (instance *Instance) RemoveContainer() error {

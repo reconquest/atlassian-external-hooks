@@ -3,6 +3,7 @@ package runner
 import (
 	"os"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
@@ -34,13 +35,54 @@ func New() *Runner {
 func (runner *Runner) UseBitbucket(version string) {
 	var err error
 
-	runner.run.bitbucket, err = bitbucket.Start(
-		version,
-		bitbucket.StartOpts{
-			ContainerID: string(runner.run.container),
-		},
-	)
-	runner.assert.NoError(err, "unable to start bitbucket container")
+	if runner.run.bitbucket != nil {
+		var (
+			running   = semver.New(runner.run.bitbucket.GetVersion())
+			requested = semver.New(version)
+		)
+
+		if !running.Equal(*requested) {
+			if running.Compare(*requested) == -1 {
+				log.Infof(
+					nil,
+					"upgrading bitbucket: %s -> %s",
+					running,
+					requested,
+				)
+
+				volume := runner.run.bitbucket.GetVolume()
+
+				err := runner.run.bitbucket.Stop()
+				runner.assert.NoError(err, "unable to stop bitbucket")
+
+				runner.run.bitbucket, err = bitbucket.Volume(volume).Start(
+					version,
+					bitbucket.StartOpts{},
+				)
+				runner.assert.NoError(
+					err,
+					"unable to upgrade bitbucket container",
+				)
+			} else {
+				runner.assert.FailNowf(
+					"unable to change bitbucket version",
+					"bitbucket instance cannot be downgraded: %s -> %s",
+					running,
+					requested,
+				)
+			}
+		}
+	} else {
+		runner.run.bitbucket, err = bitbucket.Start(
+			version,
+			bitbucket.StartOpts{
+				ContainerID: string(runner.run.container),
+			},
+		)
+		runner.assert.NoError(err, "unable to start bitbucket container")
+	}
+
+	runner.run.container = runner.run.bitbucket.GetContainerID()
 
 	err = runner.run.bitbucket.Configure(bitbucket.ConfigureOpts{
 		License: BITBUCKET_DC_LICENSE_3H,

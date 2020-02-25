@@ -12,7 +12,7 @@ func (runner *Runner) Run(dir string, opts RunOpts) {
 	runner.run.dir = dir
 	runner.run.container = opts.Container
 
-	log.Infof(nil, "work dir: %s", runner.run.dir)
+	log.Infof(nil, "{run} work dir: %s", runner.run.dir)
 
 	for _, suite := range runner.suites {
 		suite(runner, runner.assert)
