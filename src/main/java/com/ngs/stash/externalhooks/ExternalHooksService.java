@@ -21,7 +21,6 @@ import com.atlassian.bitbucket.server.StorageService;
 import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.bitbucket.user.UserService;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
-import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.scheduler.JobRunner;
 import com.atlassian.scheduler.JobRunnerRequest;
@@ -42,20 +41,12 @@ import org.slf4j.LoggerFactory;
 public class ExternalHooksService implements JobRunner {
   private static Logger log = LoggerFactory.getLogger(ExternalHooksService.class);
 
-  private static String statusHookScripts = Const.PLUGIN_KEY + ":hook-scripts";
-
-  private final int jobInterval = 2000;
   private final JobId jobId = JobId.of("external-hooks-enable-job");
 
   private SchedulerService schedulerService;
-  private HookScriptService hookScriptService;
-  private RepositoryHookService repositoryHookService;
   private SecurityService securityService;
 
-  private PluginSettings pluginSettings;
-
   private Walker walker;
-  private RepositoryService repositoryService;
   private HooksFactory hooksFactory;
 
   @Inject
@@ -75,14 +66,9 @@ public class ExternalHooksService implements JobRunner {
       @ComponentImport StorageService storageService)
       throws IOException {
     this.schedulerService = schedulerService;
-    this.hookScriptService = hookScriptService;
-    this.repositoryHookService = repositoryHookService;
     this.securityService = securityService;
-    this.repositoryService = repositoryService;
 
     this.walker = new Walker(securityService, userService, projectService, repositoryService);
-
-    this.pluginSettings = pluginSettingsFactory.createGlobalSettings();
 
     // Unfortunately, no way to @ComponentImport it because Named() used here.
     // Consider it to replace with lifecycle aware listener.
@@ -109,9 +95,15 @@ public class ExternalHooksService implements JobRunner {
     this.schedulerService.registerJobRunner(runner, this);
 
     try {
+      // 10 seconds to give the scheduler some space for maneuver when two instances
+      // of bitbucket started the same time in DC. Scheduler will pick one job
+      // and replace it with latest one if id is the same.
+      //
+      // more info:
+      // https://docs.atlassian.com/atlassian-scheduler-api/1.6.0/atlassian-scheduler-api/apidocs/com/atlassian/scheduler/SchedulerService.html#scheduleJob(com.atlassian.scheduler.config.JobId,%20com.atlassian.scheduler.config.JobConfig)
       this.schedulerService.scheduleJob(this.jobId, JobConfig.forJobRunnerKey(runner)
           .withRunMode(RunMode.RUN_ONCE_PER_CLUSTER)
-          .withSchedule(Schedule.runOnce(new Date())));
+          .withSchedule(Schedule.runOnce(new Date(System.currentTimeMillis() + 10000L))));
     } catch (SchedulerServiceException e) {
       log.error("unable to schedule external hooks job");
       e.printStackTrace();
