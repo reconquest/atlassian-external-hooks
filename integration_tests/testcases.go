@@ -32,17 +32,6 @@ func Testcase_PushRejected(
 		fmt.Sprintf("remote: %s", message),
 		"git push message should contain output from pre-receive hook",
 	)
-
-	//err = hook.Disable()
-	//assert.NoError(err, "should be able to disable pre-receive hook")
-
-	//stdout, err = git.Push()
-	//assert.NoError(err, "git push should succeed")
-	//assert.NotContains(
-	//    string(stdout),
-	//    "remote: external-pre-receive-hook declined",
-	//    "pre-receive-hook should not decline push",
-	//)
 }
 
 func Testcase_PushOutputsMessage(

@@ -112,10 +112,10 @@ type Context struct {
 	Repository string
 }
 
-func (context *Context) OnRepository(repository string) *Context {
+func (context Context) OnRepository(repository string) *Context {
 	context.Repository = repository
 
-	return context
+	return &context
 }
 
 func (context *Context) PreReceive(settings *Settings) *Hook {

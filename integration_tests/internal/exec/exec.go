@@ -20,7 +20,7 @@ func New(command string, args ...string) *lexec.Execution {
 		lexec.Loggerf(
 			func(message string, args ...interface{}) {
 				log.NewChildWithPrefix(
-					fmt.Sprintf("<exec> %s#%03d:", command, id),
+					fmt.Sprintf("{exec} %s#%03d:", command, id),
 				).Tracef(nil, message, args...)
 			},
 		),

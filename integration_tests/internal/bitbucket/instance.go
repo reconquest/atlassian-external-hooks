@@ -149,11 +149,16 @@ func (instance *Instance) WriteFile(
 }
 
 func (instance *Instance) Stop() error {
-	err := exec.New("docker", "kill", instance.container).Run()
+	err := exec.New(
+		"docker",
+		"kill",
+		"-s", "INT",
+		instance.container,
+	).Run()
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to send docker kill",
+			"unable to send docker stop",
 		)
 	}
 
@@ -380,6 +385,7 @@ func (instance *Instance) start() error {
 		"docker",
 		"run", "-d",
 		"--add-host=marketplace.atlassian.com:127.0.0.1",
+		"-e", "ELASTICSEARCH_ENABLED=false",
 		"-v", fmt.Sprintf(
 			"%s:%s",
 			instance.volume,

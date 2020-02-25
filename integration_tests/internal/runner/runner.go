@@ -91,12 +91,19 @@ func (runner *Runner) UseBitbucket(version string) {
 	runner.assert.NoError(err, "unable configure bitbucket")
 }
 
-func (runner *Runner) InstallAddon(path string) {
+func (runner *Runner) InstallAddon(path string) string {
 	addon, err := runner.run.bitbucket.Addons().Install(path)
 	runner.assert.NoError(err, "unable to install addon")
 
 	err = runner.run.bitbucket.Addons().SetLicense(addon, ADDON_LICENSE_3H)
 	runner.assert.NoError(err, "unable to set addon license")
+
+	return addon
+}
+
+func (runner *Runner) UninstallAddon(key string) {
+	err := runner.run.bitbucket.Addons().Uninstall(key)
+	runner.assert.NoError(err, "unable to install addon")
 }
 
 func (runner *Runner) Suite(suite Suite) {

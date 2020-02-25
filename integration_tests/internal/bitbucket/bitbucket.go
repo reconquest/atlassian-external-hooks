@@ -117,6 +117,32 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 	return key, nil
 }
 
+func (api *BitbucketAddonsAPI) Uninstall(key string) error {
+	token, err := api.client.GetUPMToken()
+	if err != nil {
+		return karma.Format(
+			err,
+			"unable to get upm token",
+		)
+	}
+
+	log.Debugf(
+		karma.Describe("upm_token", token),
+		"uninstalling add-on: %s",
+		key,
+	)
+
+	err = api.client.UninstallAddon(token, key)
+	if err != nil {
+		return karma.Format(
+			err,
+			"unable to uninstall add-on",
+		)
+	}
+
+	return nil
+}
+
 func (api *BitbucketAddonsAPI) SetLicense(addon string, license string) error {
 	log.Debugf(
 		karma.Describe("license", license),

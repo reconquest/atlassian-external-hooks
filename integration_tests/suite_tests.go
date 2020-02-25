@@ -3,126 +3,221 @@ package main
 import (
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
-	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 )
 
-func (suite *Suite) TestProjectHooks() {
-	suite.UseBitbucket("6.2.0")
-	suite.InstallAddon("target/external-hooks-9.1.0.jar")
+func (suite *Suite) TestProjectHooks(params TestParams) {
+	suite.UseBitbucket(params["bitbucket"])
+	suite.InstallAddon(params["addon"])
 
-	project, err := suite.Bitbucket().Projects().Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create project")
-
-	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create repository")
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
-	suite.testBasicPreReceiveScenario(nil, context, repository)
-	suite.testBasicPostReceiveScenario(nil, context, repository)
+	suite.testBasicPreReceiveScenario(context, repository)
+	suite.testBasicPostReceiveScenario(context, repository)
 }
 
-func (suite *Suite) TestRepositoryHooks() {
-	suite.UseBitbucket("6.2.0")
-	suite.InstallAddon("target/external-hooks-9.1.0.jar")
+func (suite *Suite) TestRepositoryHooks(params TestParams) {
+	suite.UseBitbucket(params["bitbucket"])
+	suite.InstallAddon(params["addon"])
 
-	project, err := suite.Bitbucket().Projects().
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create project")
-
-	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create repository")
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
-	suite.testBasicPreReceiveScenario(nil, context, repository)
-	suite.testBasicPostReceiveScenario(nil, context, repository)
+	suite.testBasicPreReceiveScenario(context, repository)
+	suite.testBasicPostReceiveScenario(context, repository)
 }
 
-func (suite *Suite) TestProjectEnabledRepositoryDisabledHooks() {
-	suite.UseBitbucket("6.2.0")
-	suite.InstallAddon("target/external-hooks-9.1.0.jar")
-
-	project, err := suite.Bitbucket().Projects().
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create project")
-
-	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create repository")
-
-	context := suite.ExternalHooks().OnProject(project.Key)
-
-	{
-		hook := suite.ConfigurePreReceiveHook(context, `pre.fail.sh`, text(
-			`#!/bin/bash`,
-			`echo XXX`,
-			`exit 1`,
-		))
-
-		Testcase_PushRejected(suite, repository, `XXX`)
-
-		err = context.OnRepository(repository.Slug).PreReceive(hook.Settings).
-			Disable()
-		suite.NoError(err, "unable to disable repository hook")
-
-		Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
-	}
-
-	{
-		hook := suite.ConfigurePostReceiveHook(context, `post.fail.sh`, text(
-			`#!/bin/bash`,
-			`echo YYY`,
-			`exit 1`,
-		))
-
-		Testcase_PushOutputsMessage(suite, repository, `YYY`)
-
-		err = context.OnRepository(repository.Slug).PostReceive(hook.Settings).
-			Disable()
-		suite.NoError(err, "unable to disable repository hook")
-
-		Testcase_PushDoesNotOutputMessage(suite, repository, `YYY`)
-	}
-}
-
-func (suite *Suite) TestPersonalRepositoriesHooks() {
-	suite.UseBitbucket("6.2.0")
-	suite.InstallAddon("target/external-hooks-9.1.0.jar")
+func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
+	suite.UseBitbucket(params["bitbucket"])
+	suite.InstallAddon(params["addon"])
 
 	project := &stash.Project{
 		Key: "~admin",
 	}
 
-	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create repository")
+	var (
+		repository = suite.CreateRandomRepository(project)
+	)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
-	suite.testBasicPreReceiveScenario(nil, context, repository)
-	suite.testBasicPostReceiveScenario(nil, context, repository)
+	suite.testBasicPreReceiveScenario(context, repository)
+	suite.testBasicPostReceiveScenario(context, repository)
 }
 
-func (suite *Suite) TestBitbucketUpgrade() {
-	suite.UseBitbucket("6.2.0")
-	suite.InstallAddon("target/external-hooks-9.1.0.jar")
+func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
+	params TestParams,
+	context *external_hooks.Context,
+	project *stash.Project,
+	repository *stash.Repository,
+) {
+	addon := suite.InstallAddon(params["addon_reproduced"])
 
-	project, err := suite.Bitbucket().Projects().Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create project")
+	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(
+		context,
+		`XXX`,
+	)
 
-	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(4))
-	suite.NoError(err, "unable to create repository")
+	Testcase_PushRejected(suite, repository, `XXX`)
+
+	err := context.OnRepository(repository.Slug).
+		PreReceive(hook.Settings).
+		Disable()
+	suite.NoError(err, "unable to disable repository hook")
+
+	Testcase_PushRejected(suite, repository, `XXX`)
+
+	suite.UninstallAddon(addon)
+}
+
+func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
+	params TestParams,
+	context *external_hooks.Context,
+	project *stash.Project,
+	repository *stash.Repository,
+) {
+	addon := suite.InstallAddon(params["addon_fixed"])
+
+	Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
+
+	suite.UninstallAddon(addon)
+}
+
+func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"])
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
-	pre := suite.testBasicPreReceiveScenario(nil, context, repository)
-	post := suite.testBasicPostReceiveScenario(nil, context, repository)
+	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
+		params,
+		context,
+		project,
+		repository,
+	)
+
+	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
+		params,
+		context,
+		project,
+		repository,
+	)
+}
+
+func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
+	suite.UseBitbucket(params["bitbucket_from"])
+	suite.InstallAddon(params["addon"])
+
+	var cases struct {
+		public, personal struct {
+			repo *stash.Repository
+			pre  *external_hooks.Hook
+			post *external_hooks.Hook
+		}
+	}
+
+	{
+		var (
+			project = suite.CreateRandomProject()
+		)
+
+		cases.public.repo = suite.CreateRandomRepository(project)
+
+		context := suite.ExternalHooks().OnProject(project.Key)
+
+		cases.public.pre, cases.public.post = suite.testBitbucketUpgrade_Before(
+			project, cases.public.repo, context,
+		)
+	}
+
+	{
+		project := &stash.Project{
+			Key: "~admin",
+		}
+
+		cases.personal.repo = suite.CreateRandomRepository(project)
+
+		context := suite.ExternalHooks().OnProject(project.Key).
+			OnRepository(cases.personal.repo.Slug)
+
+		cases.personal.pre, cases.personal.post = suite.testBitbucketUpgrade_Before(
+			project, cases.personal.repo, context,
+		)
+	}
+
+	suite.UseBitbucket(params["bitbucket_to"])
+
+	{
+		suite.testBitbucketUpgrade_After(
+			cases.public.repo,
+			cases.public.pre,
+			cases.public.post,
+		)
+	}
+
+	{
+		suite.testBitbucketUpgrade_After(
+			cases.personal.repo,
+			cases.personal.pre,
+			cases.personal.post,
+		)
+	}
+}
+
+func (suite *Suite) testBitbucketUpgrade_Before(
+	project *stash.Project,
+	repo *stash.Repository,
+	context *external_hooks.Context,
+) (*external_hooks.Hook, *external_hooks.Hook) {
+	pre := suite.ConfigurePreReceiveHook(
+		context,
+		`pre.fail.sh`,
+		text(
+			`#!/bin/bash`,
+			`echo XXX`,
+			`exit 1`,
+		),
+	)
+
+	Testcase_PushRejected(suite, repo, `XXX`)
+
+	err := pre.Disable()
+	suite.NoError(err, "unable to disable pre-receive hook")
+
+	Testcase_PushDoesNotOutputMessage(suite, repo, `XXX`)
+
+	post := suite.ConfigurePostReceiveHook(
+		context,
+		`post.fail.sh`,
+		text(
+			`#!/bin/bash`,
+			`echo YYY`,
+			`exit 1`,
+		),
+	)
+
+	Testcase_PushOutputsMessage(suite, repo, `YYY`)
+
+	err = post.Disable()
+	suite.NoError(err, "unable to disable post-receive hook")
+
+	Testcase_PushDoesNotOutputMessage(suite, repo, `YYY`)
 
 	err = pre.Enable()
 	suite.NoError(err, "unable to enable pre-receive hook")
@@ -130,24 +225,34 @@ func (suite *Suite) TestBitbucketUpgrade() {
 	err = post.Enable()
 	suite.NoError(err, "unable to enable post-receive hook")
 
-	suite.UseBitbucket("6.9.0")
+	return pre, post
+}
 
-	suite.testBasicPreReceiveScenario(pre, context, repository)
-	suite.testBasicPostReceiveScenario(post, context, repository)
+func (suite *Suite) testBitbucketUpgrade_After(
+	repo *stash.Repository,
+	pre, post *external_hooks.Hook,
+) {
+	pre.BitbucketURI = suite.Bitbucket().GetConnectorURI()
+	post.BitbucketURI = suite.Bitbucket().GetConnectorURI()
+
+	Testcase_PushRejected(suite, repo, `XXX`)
+
+	err := pre.Disable()
+	suite.NoError(err, "unable to disable pre-receive hook")
+
+	Testcase_PushOutputsMessage(suite, repo, `YYY`)
+
+	err = post.Disable()
+	suite.NoError(err, "unable to disable post-receive hook")
+
+	Testcase_PushDoesNotOutputMessage(suite, repo, `YYY`)
 }
 
 func (suite *Suite) testBasicPreReceiveScenario(
-	hook *external_hooks.Hook,
 	context *external_hooks.Context,
 	repository *stash.Repository,
 ) *external_hooks.Hook {
-	if hook == nil {
-		hook = suite.ConfigurePreReceiveHook(context, `pre.fail.sh`, text(
-			`#!/bin/bash`,
-			`echo XXX`,
-			`exit 1`,
-		))
-	}
+	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(context, `XXX`)
 
 	Testcase_PushRejected(suite, repository, `XXX`)
 
@@ -160,17 +265,10 @@ func (suite *Suite) testBasicPreReceiveScenario(
 }
 
 func (suite *Suite) testBasicPostReceiveScenario(
-	hook *external_hooks.Hook,
 	context *external_hooks.Context,
 	repository *stash.Repository,
 ) *external_hooks.Hook {
-	if hook == nil {
-		hook = suite.ConfigurePostReceiveHook(context, `post.fail.sh`, text(
-			`#!/bin/bash`,
-			`echo YYY`,
-			`exit 1`,
-		))
-	}
+	hook := suite.CreateSamplePostReceiveHook_FailWithMessage(context, `YYY`)
 
 	Testcase_PushOutputsMessage(suite, repository, `YYY`)
 

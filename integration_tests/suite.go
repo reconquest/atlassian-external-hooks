@@ -1,13 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
 
+	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
+	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,11 +21,16 @@ type Suite struct {
 	*assert.Assertions
 }
 
+type TestParams map[string]string
+
 func NewSuite() *Suite {
 	return &Suite{}
 }
 
-func (suite *Suite) Run(tests ...func()) runner.Suite {
+func (suite *Suite) WithParams(
+	params TestParams,
+	tests ...func(TestParams),
+) runner.Suite {
 	return func(run *runner.Runner, assert *assert.Assertions) {
 		suite.Runner = run
 		suite.Assertions = assert
@@ -31,9 +40,13 @@ func (suite *Suite) Run(tests ...func()) runner.Suite {
 			name = strings.TrimPrefix(name, "main.(*Suite).")
 			name = strings.TrimSuffix(name, "-fm")
 
-			log.Infof(nil, "{test} running %s", name)
+			log.Infof(
+				karma.Describe("params", params),
+				"{test} running %s",
+				name,
+			)
 
-			test()
+			test(params)
 		}
 	}
 }
@@ -64,9 +77,7 @@ func (suite *Suite) ConfigureReceiveHook(
 		hook = context.PostReceive(settings)
 	}
 
-	addon := external_hooks.Addon{
-		BitbucketURI: suite.Bitbucket().GetConnectorURI(),
-	}
+	addon := suite.ExternalHooks()
 
 	hook.Configure()
 	err = addon.Enable(key, context)
@@ -105,4 +116,44 @@ func (suite *Suite) ExternalHooks() *external_hooks.Addon {
 	return &external_hooks.Addon{
 		BitbucketURI: suite.Bitbucket().GetConnectorURI(),
 	}
+}
+
+func (suite *Suite) CreateRandomProject() *stash.Project {
+	project, err := suite.Bitbucket().Projects().
+		Create(lojban.GetRandomID(4))
+	suite.NoError(err, "unable to create project")
+
+	return project
+}
+
+func (suite *Suite) CreateRandomRepository(
+	project *stash.Project,
+) *stash.Repository {
+	repository, err := suite.Bitbucket().Repositories(project.Key).
+		Create(lojban.GetRandomID(4))
+	suite.NoError(err, "unable to create repository")
+
+	return repository
+}
+
+func (suite *Suite) CreateSamplePreReceiveHook_FailWithMessage(
+	context *external_hooks.Context,
+	message string,
+) *external_hooks.Hook {
+	return suite.ConfigurePreReceiveHook(context, `pre.fail.sh`, text(
+		`#!/bin/bash`,
+		fmt.Sprintf(`echo %s`, message),
+		`exit 1`,
+	))
+}
+
+func (suite *Suite) CreateSamplePostReceiveHook_FailWithMessage(
+	context *external_hooks.Context,
+	message string,
+) *external_hooks.Hook {
+	return suite.ConfigurePostReceiveHook(context, `post.fail.sh`, text(
+		`#!/bin/bash`,
+		fmt.Sprintf(`echo %s`, message),
+		`exit 1`,
+	))
 }
