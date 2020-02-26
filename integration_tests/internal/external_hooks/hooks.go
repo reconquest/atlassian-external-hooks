@@ -9,6 +9,7 @@ import (
 const (
 	HOOK_KEY_PRE_RECEIVE  = "com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook"
 	HOOK_KEY_POST_RECEIVE = "com.ngs.stash.externalhooks.external-hooks:external-post-receive-hook"
+	HOOK_KEY_MERGE_CHECK  = "com.ngs.stash.externalhooks.external-hooks:external-merge-check-hook"
 )
 
 type Addon struct {
@@ -131,6 +132,14 @@ func (context *Context) PostReceive(settings *Settings) *Hook {
 		context,
 		settings,
 		HOOK_KEY_POST_RECEIVE,
+	}
+}
+
+func (context *Context) MergeCheck(settings *Settings) *Hook {
+	return &Hook{
+		context,
+		settings,
+		HOOK_KEY_MERGE_CHECK,
 	}
 }
 

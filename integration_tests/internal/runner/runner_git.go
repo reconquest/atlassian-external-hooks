@@ -39,6 +39,15 @@ func (runner *Runner) GitClone(repository *stash.Repository) *git.Git {
 	return git
 }
 
+func (runner *Runner) GitCreateRandomBranch(git *git.Git) string {
+	name := "branch." + lojban.GetRandomID(6)
+
+	err := git.Branch(name)
+	runner.assert.NoError(err, "unable to create random branch")
+
+	return name
+}
+
 func (runner *Runner) GitCommitRandomFile(git *git.Git) {
 	err := ioutil.WriteFile(
 		filepath.Join(git.GetWorkDir(), "post."+lojban.GetRandomID(6)),

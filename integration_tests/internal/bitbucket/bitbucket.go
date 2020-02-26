@@ -2,6 +2,7 @@ package bitbucket
 
 import (
 	"net/url"
+	"strconv"
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/karma-go"
@@ -65,6 +66,8 @@ type BitbucketProjectsAPI struct {
 }
 
 func (api *BitbucketProjectsAPI) Create(key string) (*stash.Project, error) {
+	log.Debugf(nil, "{bitbucket} creating project: %s", key)
+
 	project, err := api.client.CreateProject(key)
 	if err != nil {
 		return nil, err
@@ -79,12 +82,106 @@ type BitbucketRepositoriesAPI struct {
 }
 
 func (api *BitbucketRepositoriesAPI) Create(slug string) (*stash.Repository, error) {
+	log.Debugf(
+		nil,
+		"{bitbucket} creating repository: %s / %s",
+		api.project,
+		slug,
+	)
+
 	repository, err := api.client.CreateRepository(api.project, slug)
 	if err != nil {
 		return nil, err
 	}
 
 	return &repository, nil
+}
+
+func (api *BitbucketRepositoriesAPI) PullRequests(
+	repository string,
+) *BitbucketPullRequestsAPI {
+	return &BitbucketPullRequestsAPI{
+		client:     api.client,
+		project:    api.project,
+		repository: repository,
+	}
+}
+
+type BitbucketPullRequestsAPI struct {
+	client     stash.Stash
+	project    string
+	repository string
+}
+
+func (api *BitbucketPullRequestsAPI) Get(
+	id int,
+) (*stash.PullRequest, error) {
+	pullRequest, err := api.client.GetPullRequest(
+		api.project,
+		api.repository,
+		strconv.Itoa(id),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pullRequest, nil
+}
+
+func (api *BitbucketPullRequestsAPI) Create(
+	title string,
+	description string,
+	fromRef string,
+	toRef string,
+) (*stash.PullRequest, error) {
+	log.Debugf(
+		nil,
+		"{bitbucket} creating pull request: %s / %s / %q (%s -> %s)",
+		api.project,
+		api.repository,
+		title,
+		fromRef, toRef,
+	)
+
+	pullRequest, err := api.client.CreatePullRequest(
+		api.project,
+		api.repository,
+		title,
+		description,
+		fromRef, toRef,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pullRequest, nil
+}
+
+func (api *BitbucketPullRequestsAPI) Merge(
+	id int,
+	version int,
+) (*stash.MergeResult, error) {
+	log.Debugf(
+		nil,
+		"{bitbucket} merging pull request: %s / %s / %d (version %d)",
+		api.project,
+		api.repository,
+		id,
+		version,
+	)
+
+	result, err := api.client.MergePullRequest(
+		api.project,
+		api.repository,
+		strconv.Itoa(id),
+		version,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 type BitbucketAddonsAPI struct {
@@ -141,6 +238,26 @@ func (api *BitbucketAddonsAPI) Uninstall(key string) error {
 	}
 
 	return nil
+}
+
+func (api *BitbucketAddonsAPI) Get(key string) (*stash.Addon, error) {
+	token, err := api.client.GetUPMToken()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to get upm token",
+		)
+	}
+
+	addon, err := api.client.GetAddon(token, key)
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to uninstall add-on",
+		)
+	}
+
+	return &addon, nil
 }
 
 func (api *BitbucketAddonsAPI) SetLicense(addon string, license string) error {

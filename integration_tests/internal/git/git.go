@@ -38,9 +38,18 @@ func (git *Git) Commit(message string) error {
 	return git.command("commit", "-m", message).Run()
 }
 
-func (git *Git) Push() (string, error) {
-	_, stderr, err := git.command("push").Output()
+func (git *Git) Push(args ...string) (string, error) {
+	_, stderr, err := git.command("push", args...).Output()
 	return string(stderr), err
+}
+
+func (git *Git) Branch(name string) error {
+	err := git.command("checkout", "-b", name).Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (git *Git) command(command string, args ...string) *lexec.Execution {

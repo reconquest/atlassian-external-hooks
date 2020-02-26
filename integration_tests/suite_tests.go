@@ -6,27 +6,36 @@ import (
 )
 
 func (suite *Suite) TestProjectHooks(params TestParams) {
-	suite.UseBitbucket(params["bitbucket"])
-	suite.InstallAddon(params["addon"])
+	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.InstallAddon(
+		params["addon"].(Addon).Version,
+		params["addon"].(Addon).Path,
+	)
 
 	var (
-		project    = suite.CreateRandomProject()
-		repository = suite.CreateRandomRepository(project)
+		project     = suite.CreateRandomProject()
+		repository  = suite.CreateRandomRepository(project)
+		pullRequest = suite.CreateRandomPullRequest(project, repository)
 	)
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
 	suite.testBasicPreReceiveScenario(context, repository)
 	suite.testBasicPostReceiveScenario(context, repository)
+	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
 }
 
 func (suite *Suite) TestRepositoryHooks(params TestParams) {
-	suite.UseBitbucket(params["bitbucket"])
-	suite.InstallAddon(params["addon"])
+	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.InstallAddon(
+		params["addon"].(Addon).Version,
+		params["addon"].(Addon).Path,
+	)
 
 	var (
-		project    = suite.CreateRandomProject()
-		repository = suite.CreateRandomRepository(project)
+		project     = suite.CreateRandomProject()
+		repository  = suite.CreateRandomRepository(project)
+		pullRequest = suite.CreateRandomPullRequest(project, repository)
 	)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
@@ -34,18 +43,23 @@ func (suite *Suite) TestRepositoryHooks(params TestParams) {
 
 	suite.testBasicPreReceiveScenario(context, repository)
 	suite.testBasicPostReceiveScenario(context, repository)
+	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
 }
 
 func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
-	suite.UseBitbucket(params["bitbucket"])
-	suite.InstallAddon(params["addon"])
+	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.InstallAddon(
+		params["addon"].(Addon).Version,
+		params["addon"].(Addon).Path,
+	)
 
 	project := &stash.Project{
 		Key: "~admin",
 	}
 
 	var (
-		repository = suite.CreateRandomRepository(project)
+		repository  = suite.CreateRandomRepository(project)
+		pullRequest = suite.CreateRandomPullRequest(project, repository)
 	)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
@@ -53,6 +67,7 @@ func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 
 	suite.testBasicPreReceiveScenario(context, repository)
 	suite.testBasicPostReceiveScenario(context, repository)
+	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
 }
 
 func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
@@ -61,7 +76,10 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 	project *stash.Project,
 	repository *stash.Repository,
 ) {
-	addon := suite.InstallAddon(params["addon_reproduced"])
+	addon := suite.InstallAddon(
+		params["addon_reproduced"].(Addon).Version,
+		params["addon_reproduced"].(Addon).Path,
+	)
 
 	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(
 		context,
@@ -86,7 +104,10 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 	project *stash.Project,
 	repository *stash.Repository,
 ) {
-	addon := suite.InstallAddon(params["addon_fixed"])
+	addon := suite.InstallAddon(
+		params["addon_fixed"].(Addon).Version,
+		params["addon_fixed"].(Addon).Path,
+	)
 
 	Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
 
@@ -96,7 +117,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"])
+	suite.UseBitbucket(params["bitbucket"].(string))
 
 	var (
 		project    = suite.CreateRandomProject()
@@ -121,8 +142,11 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
 }
 
 func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
-	suite.UseBitbucket(params["bitbucket_from"])
-	suite.InstallAddon(params["addon"])
+	suite.UseBitbucket(params["bitbucket_from"].(string))
+	suite.InstallAddon(
+		params["addon"].(Addon).Version,
+		params["addon"].(Addon).Path,
+	)
 
 	var cases struct {
 		public, personal struct {
@@ -161,7 +185,7 @@ func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 		)
 	}
 
-	suite.UseBitbucket(params["bitbucket_to"])
+	suite.UseBitbucket(params["bitbucket_to"].(string))
 
 	{
 		suite.testBitbucketUpgrade_After(
@@ -276,6 +300,70 @@ func (suite *Suite) testBasicPostReceiveScenario(
 	suite.NoError(err, "unable to disable hook")
 
 	Testcase_PushDoesNotOutputMessage(suite, repository, `YYY`)
+
+	return hook
+}
+
+func (suite *Suite) testBasicMergeCheckScenario(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	pullRequest *stash.PullRequest,
+) *external_hooks.Hook {
+	hook := suite.CreateSampleMergeCheckHook_FailWithMessage(context, `ZZZ`)
+
+	service := suite.Bitbucket().Repositories(repository.Project.Key).
+		PullRequests(repository.Slug)
+
+	pullRequest, err := service.Get(pullRequest.ID)
+	suite.NoError(err, "unable to get pull request object")
+
+	result, err := service.Merge(
+		pullRequest.ID,
+		pullRequest.Version,
+	)
+	suite.NoError(err, "unable to get merge pull request result")
+
+	suite.Equal(
+		len(result.Errors),
+		1,
+		"no errors found in merge response",
+	)
+	suite.Equal(
+		len(result.Errors[0].Vetoes),
+		1,
+		"no vetoes found in merge response",
+	)
+	suite.Equal(
+		result.Errors[0].Vetoes[0].SummaryMessage,
+		"external-merge-check-hook declined",
+	)
+
+	suite.Contains(
+		result.Errors[0].Vetoes[0].DetailedMessage,
+		"ZZZ",
+	)
+
+	err = hook.Disable()
+	suite.NoError(err, "unable to disable hook")
+
+	pullRequest, err = service.Get(pullRequest.ID)
+	suite.NoError(err, "unable to get pull request object")
+
+	result, err = service.Merge(
+		pullRequest.ID,
+		pullRequest.Version,
+	)
+	suite.NoError(err, "unable to get merge pull request result")
+	suite.Equal(
+		len(result.Errors),
+		0,
+		"should be able to merge pull request",
+	)
+	suite.Equal(
+		"MERGED",
+		result.State,
+		"pull request should be in merged state",
+	)
 
 	return hook
 }

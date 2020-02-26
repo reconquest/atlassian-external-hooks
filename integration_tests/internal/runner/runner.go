@@ -94,14 +94,32 @@ func (runner *Runner) UseBitbucket(version string) {
 	runner.assert.NoError(err, "unable configure bitbucket")
 }
 
-func (runner *Runner) InstallAddon(path string) string {
-	addon, err := runner.run.bitbucket.Addons().Install(path)
+func (runner *Runner) InstallAddon(version string, path string) string {
+	key, err := runner.run.bitbucket.Addons().Install(path)
 	runner.assert.NoError(err, "unable to install addon")
 
-	err = runner.run.bitbucket.Addons().SetLicense(addon, ADDON_LICENSE_3H)
+	addon, err := runner.run.bitbucket.Addons().Get(key)
+	runner.assert.NoError(err, "unable to get addon information")
+
+	if addon.Version != version {
+		log.Debugf(
+			nil,
+			"{add-on} version downgrade requested: %s -> %s",
+			addon.Version,
+			version,
+		)
+
+		err := runner.run.bitbucket.Addons().Uninstall(key)
+		runner.assert.NoError(err, "unable to uninstall add-on for downgrade")
+
+		_, err = runner.run.bitbucket.Addons().Install(path)
+		runner.assert.NoError(err, "unable to install addon")
+	}
+
+	err = runner.run.bitbucket.Addons().SetLicense(key, ADDON_LICENSE_3H)
 	runner.assert.NoError(err, "unable to set addon license")
 
-	return addon
+	return key
 }
 
 func (runner *Runner) UninstallAddon(key string) {

@@ -21,7 +21,12 @@ type Suite struct {
 	*assert.Assertions
 }
 
-type TestParams map[string]string
+type TestParams map[string]interface{}
+
+type Addon struct {
+	Version string
+	Path    string
+}
 
 func NewSuite() *Suite {
 	return &Suite{}
@@ -51,7 +56,7 @@ func (suite *Suite) WithParams(
 	}
 }
 
-func (suite *Suite) ConfigureReceiveHook(
+func (suite *Suite) ConfigureHook(
 	key string,
 	context *external_hooks.Context,
 	name string,
@@ -75,6 +80,8 @@ func (suite *Suite) ConfigureReceiveHook(
 		hook = context.PreReceive(settings)
 	case external_hooks.HOOK_KEY_POST_RECEIVE:
 		hook = context.PostReceive(settings)
+	case external_hooks.HOOK_KEY_MERGE_CHECK:
+		hook = context.MergeCheck(settings)
 	}
 
 	addon := suite.ExternalHooks()
@@ -91,7 +98,7 @@ func (suite *Suite) ConfigurePreReceiveHook(
 	name string,
 	script []byte,
 ) *external_hooks.Hook {
-	return suite.ConfigureReceiveHook(
+	return suite.ConfigureHook(
 		external_hooks.HOOK_KEY_PRE_RECEIVE,
 		context,
 		name,
@@ -104,8 +111,21 @@ func (suite *Suite) ConfigurePostReceiveHook(
 	name string,
 	script []byte,
 ) *external_hooks.Hook {
-	return suite.ConfigureReceiveHook(
+	return suite.ConfigureHook(
 		external_hooks.HOOK_KEY_POST_RECEIVE,
+		context,
+		name,
+		script,
+	)
+}
+
+func (suite *Suite) ConfigureMergeCheckHook(
+	context *external_hooks.Context,
+	name string,
+	script []byte,
+) *external_hooks.Hook {
+	return suite.ConfigureHook(
+		external_hooks.HOOK_KEY_MERGE_CHECK,
 		context,
 		name,
 		script,
@@ -136,6 +156,37 @@ func (suite *Suite) CreateRandomRepository(
 	return repository
 }
 
+func (suite *Suite) CreateRandomPullRequest(
+	project *stash.Project,
+	repository *stash.Repository,
+) *stash.PullRequest {
+	git := suite.GitClone(repository)
+
+	suite.GitCommitRandomFile(git)
+
+	_, err := git.Push()
+	suite.NoError(err, "unable to git push into master")
+
+	branch := suite.GitCreateRandomBranch(git)
+
+	suite.GitCommitRandomFile(git)
+
+	_, err = git.Push("origin", branch)
+	suite.NoErrorf(err, "unable to git push into branch %s", branch)
+
+	pullRequest, err := suite.Bitbucket().Repositories(project.Key).
+		PullRequests(repository.Slug).
+		Create(
+			"pr."+lojban.GetRandomID(8),
+			lojban.GetRandomID(20),
+			branch,
+			"master",
+		)
+	suite.NoError(err, "unable to create pull request")
+
+	return pullRequest
+}
+
 func (suite *Suite) CreateSamplePreReceiveHook_FailWithMessage(
 	context *external_hooks.Context,
 	message string,
@@ -152,6 +203,17 @@ func (suite *Suite) CreateSamplePostReceiveHook_FailWithMessage(
 	message string,
 ) *external_hooks.Hook {
 	return suite.ConfigurePostReceiveHook(context, `post.fail.sh`, text(
+		`#!/bin/bash`,
+		fmt.Sprintf(`echo %s`, message),
+		`exit 1`,
+	))
+}
+
+func (suite *Suite) CreateSampleMergeCheckHook_FailWithMessage(
+	context *external_hooks.Context,
+	message string,
+) *external_hooks.Hook {
+	return suite.ConfigureMergeCheckHook(context, `merge.fail.sh`, text(
 		`#!/bin/bash`,
 		fmt.Sprintf(`echo %s`, message),
 		`exit 1`,
