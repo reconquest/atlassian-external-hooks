@@ -48,6 +48,7 @@ public class ExternalHooksService implements JobRunner {
 
   private Walker walker;
   private HooksFactory hooksFactory;
+  private ClusterService clusterService;
 
   @Inject
   public ExternalHooksService(
@@ -67,6 +68,7 @@ public class ExternalHooksService implements JobRunner {
       throws IOException {
     this.schedulerService = schedulerService;
     this.securityService = securityService;
+    this.clusterService = clusterService;
 
     this.walker = new Walker(securityService, userService, projectService, repositoryService);
 
@@ -101,9 +103,14 @@ public class ExternalHooksService implements JobRunner {
       //
       // more info:
       // https://docs.atlassian.com/atlassian-scheduler-api/1.6.0/atlassian-scheduler-api/apidocs/com/atlassian/scheduler/SchedulerService.html#scheduleJob(com.atlassian.scheduler.config.JobId,%20com.atlassian.scheduler.config.JobConfig)
+      long offset = 0;
+      if (this.clusterService.getInformation().getNodes().size() > 1) {
+        offset = 10000L;
+      }
+
       this.schedulerService.scheduleJob(this.jobId, JobConfig.forJobRunnerKey(runner)
           .withRunMode(RunMode.RUN_ONCE_PER_CLUSTER)
-          .withSchedule(Schedule.runOnce(new Date(System.currentTimeMillis() + 10000L))));
+          .withSchedule(Schedule.runOnce(new Date(System.currentTimeMillis() + offset))));
     } catch (SchedulerServiceException e) {
       log.error("unable to schedule external hooks job");
       e.printStackTrace();
@@ -126,6 +133,8 @@ public class ExternalHooksService implements JobRunner {
         });
 
     this.schedulerService.unscheduleJob(this.jobId);
+
+    log.info("Finished job for creating HookScripts");
 
     return JobRunnerResponse.success();
   }
