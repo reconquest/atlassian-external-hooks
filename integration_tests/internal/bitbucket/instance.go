@@ -2,6 +2,7 @@ package bitbucket
 
 import (
 	"archive/tar"
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,9 +13,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
+	"github.com/reconquest/pkg/log"
 )
 
 type StartupStatus struct {
@@ -39,6 +42,20 @@ type Instance struct {
 		StartOpts
 		ConfigureOpts
 	}
+
+	logs struct {
+		sync.Cond
+
+		lines   []string
+		updated chan struct{}
+	}
+}
+
+func (instance *Instance) GetOpts() struct {
+	StartOpts
+	ConfigureOpts
+} {
+	return instance.opts
 }
 
 func (instance *Instance) GetConnectorURI() string {
@@ -62,6 +79,27 @@ func (instance *Instance) GetURI(path string) string {
 	}
 
 	return url.String()
+}
+
+func (instance *Instance) GetClonePathSSH(repo string, project string) string {
+	url := url.URL{
+		Scheme: "ssh",
+		User:   url.User("git"),
+		Host:   fmt.Sprintf("%s:%d", instance.ip, instance.opts.PortSSH),
+		Path:   fmt.Sprintf("%s/%s.git", strings.ToLower(repo), project),
+	}
+
+	return url.String()
+}
+
+func (instance *Instance) GetClonePathHTTP(repo string, project string) string {
+	return instance.GetURI(
+		fmt.Sprintf(
+			"scm/%s/%s.git",
+			strings.ToLower(repo),
+			project,
+		),
+	)
 }
 
 func (instance *Instance) GetContainerID() string {
@@ -223,6 +261,34 @@ func (instance *Instance) Configure(opts ConfigureOpts) error {
 
 func (instance *Instance) GetVolume() string {
 	return instance.volume
+}
+
+func (instance *Instance) WaitLogEntry(fn func(string) bool) *sync.WaitGroup {
+	waiter := sync.WaitGroup{}
+	waiter.Add(1)
+
+	prev := 0
+
+	go func() {
+		defer waiter.Done()
+
+		for {
+			instance.logs.L.Lock()
+			instance.logs.Wait()
+			lines := instance.logs.lines[prev:]
+			instance.logs.L.Unlock()
+
+			prev += len(lines)
+
+			for _, line := range lines {
+				if fn(line) {
+					return
+				}
+			}
+		}
+	}()
+
+	return &waiter
 }
 
 func (instance *Instance) getAtlToken(
@@ -484,4 +550,64 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 	}
 
 	return &status, nil
+}
+
+func (instance *Instance) startLogReader() error {
+	log.Debugf(
+		nil,
+		"{bitbucket} starting log reader for container %q",
+		instance.container,
+	)
+
+	execution := exec.New(
+		"docker",
+		"logs", "-f",
+		"--tail", "0",
+		instance.container,
+	)
+
+	stdout, err := execution.StdoutPipe()
+	if err != nil {
+		return karma.Format(
+			err,
+			"unable to get stdout pipe for docker logs",
+		)
+	}
+
+	err = execution.Start()
+	if err != nil {
+		return karma.Format(
+			err,
+			"unable to start docker logs",
+		)
+	}
+
+	instance.logs.L = &sync.Mutex{}
+
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+
+		for scanner.Scan() {
+			instance.logs.L.Lock()
+			instance.logs.lines = append(
+				instance.logs.lines,
+				scanner.Text(),
+			)
+			instance.logs.L.Unlock()
+
+			instance.logs.Broadcast()
+
+			log.Tracef(
+				nil, "{bitbucket %s} log | %s",
+				instance.version,
+				scanner.Text(),
+			)
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Errorf(nil, "error while reading bitbucket instance logs")
+		}
+	}()
+
+	return nil
 }

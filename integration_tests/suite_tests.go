@@ -1,36 +1,33 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 )
 
 func (suite *Suite) TestProjectHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.InstallAddon(
-		params["addon"].(Addon).Version,
-		params["addon"].(Addon).Path,
-	)
+	suite.InstallAddon(params["addon"].(Addon))
 
 	var (
-		project     = suite.CreateRandomProject()
-		repository  = suite.CreateRandomRepository(project)
-		pullRequest = suite.CreateRandomPullRequest(project, repository)
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
 	)
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
-	suite.testBasicPreReceiveScenario(context, repository)
-	suite.testBasicPostReceiveScenario(context, repository)
+	suite.testPreReceive(context, repository)
+	suite.testPostReceive(context, repository)
+
+	pullRequest := suite.CreateRandomPullRequest(project, repository)
 	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
 }
 
 func (suite *Suite) TestRepositoryHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.InstallAddon(
-		params["addon"].(Addon).Version,
-		params["addon"].(Addon).Path,
-	)
+	suite.InstallAddon(params["addon"].(Addon))
 
 	var (
 		project     = suite.CreateRandomProject()
@@ -41,17 +38,14 @@ func (suite *Suite) TestRepositoryHooks(params TestParams) {
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
-	suite.testBasicPreReceiveScenario(context, repository)
-	suite.testBasicPostReceiveScenario(context, repository)
+	suite.testPreReceive(context, repository)
+	suite.testPostReceive(context, repository)
 	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
 }
 
 func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.InstallAddon(
-		params["addon"].(Addon).Version,
-		params["addon"].(Addon).Path,
-	)
+	suite.InstallAddon(params["addon"].(Addon))
 
 	project := &stash.Project{
 		Key: "~admin",
@@ -65,8 +59,8 @@ func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
-	suite.testBasicPreReceiveScenario(context, repository)
-	suite.testBasicPostReceiveScenario(context, repository)
+	suite.testPreReceive(context, repository)
+	suite.testPostReceive(context, repository)
 	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
 }
 
@@ -76,10 +70,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 	project *stash.Project,
 	repository *stash.Repository,
 ) {
-	addon := suite.InstallAddon(
-		params["addon_reproduced"].(Addon).Version,
-		params["addon_reproduced"].(Addon).Path,
-	)
+	addon := suite.InstallAddon(params["addon_reproduced"].(Addon))
 
 	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(
 		context,
@@ -104,10 +95,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 	project *stash.Project,
 	repository *stash.Repository,
 ) {
-	addon := suite.InstallAddon(
-		params["addon_fixed"].(Addon).Version,
-		params["addon_fixed"].(Addon).Path,
-	)
+	addon := suite.InstallAddon(params["addon_fixed"].(Addon))
 
 	Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
 
@@ -143,10 +131,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
 
 func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 	suite.UseBitbucket(params["bitbucket_from"].(string))
-	suite.InstallAddon(
-		params["addon"].(Addon).Version,
-		params["addon"].(Addon).Path,
-	)
+	suite.InstallAddon(params["addon"].(Addon))
 
 	var cases struct {
 		public, personal struct {
@@ -211,7 +196,9 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 ) (*external_hooks.Hook, *external_hooks.Hook) {
 	pre := suite.ConfigurePreReceiveHook(
 		context,
-		`pre.fail.sh`,
+		external_hooks.NewSettings().
+			UseSafePath(true).
+			WithExecutable(`pre.fail.sh`),
 		text(
 			`#!/bin/bash`,
 			`echo XXX`,
@@ -228,7 +215,9 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 
 	post := suite.ConfigurePostReceiveHook(
 		context,
-		`post.fail.sh`,
+		external_hooks.NewSettings().
+			UseSafePath(true).
+			WithExecutable(`post.fail.sh`),
 		text(
 			`#!/bin/bash`,
 			`echo YYY`,
@@ -236,7 +225,7 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 		),
 	)
 
-	Testcase_PushOutputsMessage(suite, repo, `YYY`)
+	Testcase_PushOutputsMessages(suite, repo, `YYY`)
 
 	err = post.Disable()
 	suite.NoError(err, "unable to disable post-receive hook")
@@ -264,7 +253,7 @@ func (suite *Suite) testBitbucketUpgrade_After(
 	err := pre.Disable()
 	suite.NoError(err, "unable to disable pre-receive hook")
 
-	Testcase_PushOutputsMessage(suite, repo, `YYY`)
+	Testcase_PushOutputsMessages(suite, repo, `YYY`)
 
 	err = post.Disable()
 	suite.NoError(err, "unable to disable post-receive hook")
@@ -272,10 +261,18 @@ func (suite *Suite) testBitbucketUpgrade_After(
 	Testcase_PushDoesNotOutputMessage(suite, repo, `YYY`)
 }
 
-func (suite *Suite) testBasicPreReceiveScenario(
+func (suite *Suite) testPreReceive(
 	context *external_hooks.Context,
 	repository *stash.Repository,
-) *external_hooks.Hook {
+) {
+	suite.testPreReceiveHookInput(context, repository)
+	suite.testPreReceiveHookReject(context, repository)
+}
+
+func (suite *Suite) testPreReceiveHookReject(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
 	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(context, `XXX`)
 
 	Testcase_PushRejected(suite, repository, `XXX`)
@@ -284,24 +281,28 @@ func (suite *Suite) testBasicPreReceiveScenario(
 	suite.NoError(err, "unable to disable hook")
 
 	Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
-
-	return hook
 }
 
-func (suite *Suite) testBasicPostReceiveScenario(
+func (suite *Suite) testPostReceive(
 	context *external_hooks.Context,
 	repository *stash.Repository,
-) *external_hooks.Hook {
+) {
+	suite.testPostReceiveHookInput(context, repository)
+	suite.testPostReceiveOutputsMessage(context, repository)
+}
+
+func (suite *Suite) testPostReceiveOutputsMessage(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
 	hook := suite.CreateSamplePostReceiveHook_FailWithMessage(context, `YYY`)
 
-	Testcase_PushOutputsMessage(suite, repository, `YYY`)
+	Testcase_PushOutputsMessages(suite, repository, `YYY`)
 
 	err := hook.Disable()
 	suite.NoError(err, "unable to disable hook")
 
 	Testcase_PushDoesNotOutputMessage(suite, repository, `YYY`)
-
-	return hook
 }
 
 func (suite *Suite) testBasicMergeCheckScenario(
@@ -366,4 +367,274 @@ func (suite *Suite) testBasicMergeCheckScenario(
 	)
 
 	return hook
+}
+
+func (suite *Suite) testPreReceiveHookInput(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testReceiveHookInput_Common(context, repository)
+	suite.testHookInput_Env_BB_HOOK_TYPE(context, repository, `PRE`)
+}
+
+func (suite *Suite) testPostReceiveHookInput(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testReceiveHookInput_Common(context, repository)
+	suite.testHookInput_Env_BB_HOOK_TYPE(context, repository, `POST`)
+}
+
+func (suite *Suite) testReceiveHookInput_Common(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testReceiveHookInput_Stdin(context, repository)
+	suite.testReceiveHookInput_Args(context, repository)
+
+	suite.testHookInput_Env_BB_HOOK_TRIGGER_ID(context, repository, `push`)
+	suite.testHookInput_Env_BB_IS_DRY_RUN(context, repository, `false`)
+	suite.testHookInput_Env_BB_REPO_IS_FORK(context, repository, `false`)
+	suite.testHookInput_Env_BB_REPO_IS_PUBLIC(context, repository, `false`)
+
+	suite.testHookInput_Env_BB_PROJECT_KEY(context, repository)
+	suite.testHookInput_Env_BB_REPO_SLUG(context, repository)
+	suite.testHookInput_Env_BB_BASE_URL(context, repository)
+	suite.testHookInput_Env_BB_REPO_CLONE_SSH(context, repository)
+	suite.testHookInput_Env_BB_REPO_CLONE_HTTP(context, repository)
+	suite.testHookInput_Env_BB_USER_NAME(context, repository)
+	suite.testHookInput_Env_BB_USER_DISPLAY_NAME(context, repository)
+	suite.testHookInput_Env_BB_USER_EMAIL(context, repository)
+	suite.testHookInput_Env_BB_USER_PERMISSION(context, repository)
+}
+
+func (suite *Suite) testReceiveHookInput_Stdin(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.CreateSamplePreReceiveHook_Debug(
+		context,
+		`cat`,
+	)
+
+	Testcase_PushOutputsRefInfo(suite, repository)
+}
+
+func (suite *Suite) testReceiveHookInput_Args(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.CreateSamplePreReceiveHook_Debug(
+		context,
+		`printf "[%s]\n" "$@"`,
+		"arg-1",
+		"arg-2",
+		"multi\nline",
+	)
+
+	Testcase_PushOutputsMessages(
+		suite,
+		repository,
+		"[arg-1]",
+		"[arg-2]",
+		"[multi",
+		"line]",
+	)
+}
+
+func (suite *Suite) testHookInput_Env(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	name string,
+	value string,
+) {
+	suite.CreateSamplePreReceiveHook_Debug(
+		context,
+		fmt.Sprintf(`echo [$%s]`, name),
+	)
+
+	Testcase_PushOutputsMessages(
+		suite,
+		repository,
+		fmt.Sprintf("[%s]", value),
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_HOOK_TRIGGER_ID(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	value string,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_HOOK_TRIGGER_ID",
+		value,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_HOOK_TYPE(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	value string,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_HOOK_TYPE",
+		value,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_IS_DRY_RUN(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	value string,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_IS_DRY_RUN",
+		value,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_PROJECT_KEY(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_PROJECT_KEY",
+		repository.Project.Key,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_REPO_SLUG(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_REPO_SLUG",
+		repository.Slug,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_REPO_IS_FORK(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	value string,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_REPO_IS_FORK",
+		value,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_REPO_IS_PUBLIC(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+	value string,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_REPO_IS_PUBLIC",
+		value,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_BASE_URL(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_BASE_URL",
+		suite.Bitbucket().GetURI(""),
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_REPO_CLONE_SSH(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_REPO_CLONE_SSH",
+		suite.Bitbucket().GetClonePathSSH(
+			repository.Project.Key,
+			repository.Slug,
+		),
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_REPO_CLONE_HTTP(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_REPO_CLONE_HTTP",
+		suite.Bitbucket().GetClonePathHTTP(
+			repository.Project.Key,
+			repository.Slug,
+		),
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_USER_NAME(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_USER_NAME",
+		suite.Bitbucket().GetOpts().AdminUser,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_USER_EMAIL(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_USER_EMAIL",
+		suite.Bitbucket().GetOpts().AdminEmail,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_USER_DISPLAY_NAME(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_USER_DISPLAY_NAME",
+		suite.Bitbucket().GetOpts().AdminUser,
+	)
+}
+
+func (suite *Suite) testHookInput_Env_BB_USER_PERMISSION(
+	context *external_hooks.Context,
+	repository *stash.Repository,
+) {
+	suite.testHookInput_Env(
+		context,
+		repository,
+		"BB_USER_PERMISSION",
+		"SYS_ADMIN",
+	)
 }

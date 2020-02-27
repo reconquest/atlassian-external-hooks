@@ -1,6 +1,8 @@
 package git
 
 import (
+	"strings"
+
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/lexec-go"
@@ -50,6 +52,15 @@ func (git *Git) Branch(name string) error {
 	}
 
 	return nil
+}
+
+func (git *Git) RevList(args ...string) ([]string, error) {
+	stdout, _, err := git.command("rev-list", args...).Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return strings.Split(strings.TrimSpace(string(stdout)), "\n"), nil
 }
 
 func (git *Git) command(command string, args ...string) *lexec.Execution {

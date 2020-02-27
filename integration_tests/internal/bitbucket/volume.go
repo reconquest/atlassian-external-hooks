@@ -74,6 +74,14 @@ func (volume Volume) Start(
 		)
 	}
 
+	err = instance.startLogReader()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to start log reader",
+		)
+	}
+
 	var message string
 
 	for {

@@ -171,13 +171,13 @@ func (runner *Runner) Cleanup() error {
 }
 
 func (runner *Runner) Errorf(format string, args ...interface{}) {
-	log.Errorf(nil, "<testify> assertion failed:"+format, args...)
+	log.Errorf(nil, "{testify} assertion failed:"+format, args...)
 	log.Infof(
 		karma.
 			Describe("work_dir", runner.run.dir).
 			Describe("container", runner.run.container).
 			Describe("volume", runner.run.bitbucket.GetVolume()),
-		"following run resources were kept",
+		"{run} following run resources were kept",
 	)
 
 	os.Exit(1)
