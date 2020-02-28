@@ -1,3 +1,11 @@
+# 10.0.0
+
+Allow to disable hooks on repo level bypassing project level hooks.
+
+Previously, due to internal changes in Bitbucket made in 6+ version, it was not
+possible to disable hooks on specific repository while having project level
+hook enabled.
+
 # 9.1.0
 
 Fix need for re-configuration of hooks in personal repositories after the
