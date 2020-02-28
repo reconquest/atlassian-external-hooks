@@ -101,7 +101,6 @@ func (settings *Settings) WithArgs(args ...string) *Settings {
 
 type Hook struct {
 	*Context
-	*Settings
 
 	key string
 }
@@ -119,40 +118,37 @@ func (context Context) OnRepository(repository string) *Context {
 	return &context
 }
 
-func (context *Context) PreReceive(settings *Settings) *Hook {
+func (context *Context) PreReceive() *Hook {
 	return &Hook{
 		context,
-		settings,
 		HOOK_KEY_PRE_RECEIVE,
 	}
 }
 
-func (context *Context) PostReceive(settings *Settings) *Hook {
+func (context *Context) PostReceive() *Hook {
 	return &Hook{
 		context,
-		settings,
 		HOOK_KEY_POST_RECEIVE,
 	}
 }
 
-func (context *Context) MergeCheck(settings *Settings) *Hook {
+func (context *Context) MergeCheck() *Hook {
 	return &Hook{
 		context,
-		settings,
 		HOOK_KEY_MERGE_CHECK,
 	}
 }
 
-func (hook *Hook) Configure() error {
+func (hook *Hook) Configure(settings *Settings) error {
 	log.Debugf(
 		karma.
 			Describe("context", hook.Context).
-			Describe("settings", hook.Settings),
+			Describe("settings", settings),
 		"{hook} configuring %s",
 		hook.key,
 	)
 
-	return hook.Context.Register(hook.key, hook.Context, hook.Settings)
+	return hook.Context.Register(hook.key, hook.Context, settings)
 }
 
 func (hook *Hook) Enable() error {

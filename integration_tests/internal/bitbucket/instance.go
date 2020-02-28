@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -110,21 +111,84 @@ func (instance *Instance) GetVersion() string {
 	return instance.version
 }
 
+func (instance *Instance) ListFiles(path string) ([]string, error) {
+	execution := exec.New(
+		"docker",
+		"cp",
+		fmt.Sprintf("%s:%s",
+			instance.container,
+			filepath.Join(instance.getApplicationDataDir(), path),
+		),
+		"-",
+	)
+
+	stdout, err := execution.StdoutPipe()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to get stdout pipe for docker cp",
+		)
+	}
+
+	err = execution.Start()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to start docker cp",
+		)
+	}
+
+	files := []string{}
+
+	reader := tar.NewReader(stdout)
+
+	for {
+		next, err := reader.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return nil, karma.Format(
+				err,
+				"unable to read next file from docker cp tar output",
+			)
+		}
+
+		files = append(
+			files,
+			strings.TrimPrefix(
+				next.Name,
+				filepath.Base(path)+"/",
+			),
+		)
+	}
+
+	err = execution.Wait()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to finalize docker cp",
+		)
+	}
+
+	// First item is always directory itself.
+	return files[1:], nil
+}
+
 func (instance *Instance) WriteFile(
 	path string,
 	content []byte,
 	mode os.FileMode,
 ) error {
-	var (
-		execution = exec.New(
-			"docker",
-			"cp",
-			"-",
-			fmt.Sprintf("%s:%s",
-				instance.container,
-				instance.getApplicationDataDir(),
-			),
-		)
+	execution := exec.New(
+		"docker",
+		"cp",
+		"-",
+		fmt.Sprintf("%s:%s",
+			instance.container,
+			instance.getApplicationDataDir(),
+		),
 	)
 
 	err := execution.Start()
@@ -447,11 +511,25 @@ func (instance *Instance) getApplicationDataDir() string {
 }
 
 func (instance *Instance) start() error {
+	type M map[string]interface{}
+
+	springApplicationConfig, _ := json.Marshal(M{
+		"logging": M{
+			"logger": M{
+				"com.ngs.stash.externalhooks": "debug",
+			},
+		},
+	})
+
 	execution := exec.New(
 		"docker",
 		"run", "-d",
 		"--add-host=marketplace.atlassian.com:127.0.0.1",
 		"-e", "ELASTICSEARCH_ENABLED=false",
+		"-e", fmt.Sprintf(
+			`SPRING_APPLICATION_JSON=%s`,
+			string(springApplicationConfig),
+		),
 		"-v", fmt.Sprintf(
 			"%s:%s",
 			instance.volume,

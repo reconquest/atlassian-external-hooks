@@ -181,6 +181,26 @@ func (api *BitbucketPullRequestsAPI) Merge(
 		return nil, err
 	}
 
+	if result.State == "" {
+		log.Tracef(
+			karma.Describe("errors", result.Errors),
+			"{bitbucket} merging pull request: %s / %s / %d -> %s",
+			api.project,
+			api.repository,
+			id,
+			"VETOED",
+		)
+	} else {
+		log.Tracef(
+			nil,
+			"{bitbucket} merging pull request: %s / %s / %d -> %s",
+			api.project,
+			api.repository,
+			id,
+			result.State,
+		)
+	}
+
 	return result, nil
 }
 

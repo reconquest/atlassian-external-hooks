@@ -70,26 +70,24 @@ func main() {
 		latestAddon   = getAddon("10.0.0")
 	)
 
-	suite := NewSuite()
-
 	run := runner.New()
 
-	// TODO: add tests for env vars in all type of hooks
-	// TODO: add tests for stdin for all type of hooks
+	suite := NewSuite()
+
 	// TODO: add tests for different trigger configurations
 	// TODO: add tests for BB 5.x.x
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket":        baseBitbucket,
-	//            "addon_reproduced": getAddon("9.1.0"),
-	//            "addon_fixed":      latestAddon,
-	//        },
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("9.1.0"),
+				"addon_fixed":      latestAddon,
+			},
 
-	//        suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
-	//    ),
-	//)
+			suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
+		),
+	)
 
 	run.Suite(
 		suite.WithParams(
@@ -103,16 +101,16 @@ func main() {
 		),
 	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket_from": baseBitbucket,
-	//            "bitbucket_to":   "6.9.0",
-	//            "addon":          latestAddon,
-	//        },
-	//        suite.TestBitbucketUpgrade,
-	//    ),
-	//)
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket_from": baseBitbucket,
+				"bitbucket_to":   "6.9.0",
+				"addon":          latestAddon,
+			},
+			suite.TestBitbucketUpgrade,
+		),
+	)
 
 	run.Run(dir, runner.RunOpts{
 		Container: opts.ValueContainer,

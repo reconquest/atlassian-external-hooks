@@ -2,14 +2,18 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
+	"github.com/reconquest/cog"
+	"github.com/reconquest/pkg/log"
 )
 
 func (suite *Suite) TestProjectHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
 	suite.InstallAddon(params["addon"].(Addon))
+	suite.RecordHookScripts()
 
 	var (
 		project    = suite.CreateRandomProject()
@@ -18,103 +22,135 @@ func (suite *Suite) TestProjectHooks(params TestParams) {
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
-	suite.testPreReceive(context, repository)
-	suite.testPostReceive(context, repository)
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
-	pullRequest := suite.CreateRandomPullRequest(project, repository)
-	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
+	suite.testPreReceive(log, context, repository)
+	suite.testPostReceive(log, context, repository)
+	suite.testMergeCheck(log, context, repository)
+
+	suite.DetectHookScriptsLeak()
 }
 
 func (suite *Suite) TestRepositoryHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
 	suite.InstallAddon(params["addon"].(Addon))
+	suite.RecordHookScripts()
 
 	var (
-		project     = suite.CreateRandomProject()
-		repository  = suite.CreateRandomRepository(project)
-		pullRequest = suite.CreateRandomPullRequest(project, repository)
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
 	)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
-	suite.testPreReceive(context, repository)
-	suite.testPostReceive(context, repository)
-	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
+	log := log.NewChildWithPrefix(
+		fmt.Sprintf("{test} %s / %s", project.Key, repository.Slug),
+	)
+
+	suite.testPreReceive(log, context, repository)
+	suite.testPostReceive(log, context, repository)
+	suite.testMergeCheck(log, context, repository)
+
+	suite.DetectHookScriptsLeak()
 }
 
 func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
 	suite.InstallAddon(params["addon"].(Addon))
+	suite.RecordHookScripts()
 
 	project := &stash.Project{
 		Key: "~admin",
 	}
 
 	var (
-		repository  = suite.CreateRandomRepository(project)
-		pullRequest = suite.CreateRandomPullRequest(project, repository)
+		repository = suite.CreateRandomRepository(project)
 	)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
-	suite.testPreReceive(context, repository)
-	suite.testPostReceive(context, repository)
-	suite.testBasicMergeCheckScenario(context, repository, pullRequest)
+	log := log.NewChildWithPrefix(
+		fmt.Sprintf("{test} %s / %s", project.Key, repository.Slug),
+	)
+
+	suite.testPreReceive(log, context, repository)
+	suite.testPostReceive(log, context, repository)
+	suite.testMergeCheck(log, context, repository)
+
+	suite.DetectHookScriptsLeak()
 }
 
 func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
+	log *cog.Logger,
 	params TestParams,
 	context *external_hooks.Context,
 	project *stash.Project,
 	repository *stash.Repository,
 ) {
-	addon := suite.InstallAddon(params["addon_reproduced"].(Addon))
+	log.Infof(
+		nil,
+		"> reproducing bug on addon version %s",
+		params["addon_reproduced"].(Addon).Version,
+	)
 
-	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(
-		context,
+	suite.InstallAddon(params["addon_reproduced"].(Addon))
+
+	suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
 		`XXX`,
 	)
 
-	Testcase_PushRejected(suite, repository, `XXX`)
+	Assert_PushRejected(suite, repository, `XXX`)
 
-	err := context.OnRepository(repository.Slug).
-		PreReceive(hook.Settings).
-		Disable()
+	err := context.OnRepository(repository.Slug).PreReceive().Disable()
 	suite.NoError(err, "unable to disable repository hook")
 
-	Testcase_PushRejected(suite, repository, `XXX`)
-
-	suite.UninstallAddon(addon)
+	Assert_PushRejected(suite, repository, `XXX`)
 }
 
 func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
+	log *cog.Logger,
 	params TestParams,
 	context *external_hooks.Context,
 	project *stash.Project,
 	repository *stash.Repository,
 ) {
-	addon := suite.InstallAddon(params["addon_fixed"].(Addon))
+	log.Infof(
+		nil,
+		"> validating fix on add-on version %s",
+		params["addon_fixed"].(Addon).Version,
+	)
 
-	Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
+	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.RecordHookScripts()
 
-	suite.UninstallAddon(addon)
+	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
+
+	suite.DisableHook(context.PreReceive())
+
+	suite.DetectHookScriptsLeak()
 }
 
 func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
 	params TestParams,
 ) {
 	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.RecordHookScripts()
 
 	var (
 		project    = suite.CreateRandomProject()
 		repository = suite.CreateRandomRepository(project)
 	)
 
-	context := suite.ExternalHooks().OnProject(project.Key)
+	var (
+		context = suite.ExternalHooks().OnProject(project.Key)
+		log     = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+	)
 
 	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
+		log,
 		params,
 		context,
 		project,
@@ -122,6 +158,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
 	)
 
 	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
+		log,
 		params,
 		context,
 		project,
@@ -171,22 +208,15 @@ func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 	}
 
 	suite.UseBitbucket(params["bitbucket_to"].(string))
+	suite.RecordHookScripts()
 
-	{
-		suite.testBitbucketUpgrade_After(
-			cases.public.repo,
-			cases.public.pre,
-			cases.public.post,
-		)
-	}
+	suite.testBitbucketUpgrade_After(
+		cases.public.repo,
+		cases.public.pre,
+		cases.public.post,
+	)
 
-	{
-		suite.testBitbucketUpgrade_After(
-			cases.personal.repo,
-			cases.personal.pre,
-			cases.personal.post,
-		)
-	}
+	suite.DetectHookScriptsLeak()
 }
 
 func (suite *Suite) testBitbucketUpgrade_Before(
@@ -194,45 +224,29 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 	repo *stash.Repository,
 	context *external_hooks.Context,
 ) (*external_hooks.Hook, *external_hooks.Hook) {
-	pre := suite.ConfigurePreReceiveHook(
-		context,
-		external_hooks.NewSettings().
-			UseSafePath(true).
-			WithExecutable(`pre.fail.sh`),
-		text(
-			`#!/bin/bash`,
-			`echo XXX`,
-			`exit 1`,
-		),
+	pre := suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
+		`XXX`,
 	)
 
-	Testcase_PushRejected(suite, repo, `XXX`)
+	Assert_PushRejected(suite, repo, `XXX`)
 
-	err := pre.Disable()
-	suite.NoError(err, "unable to disable pre-receive hook")
+	suite.DisableHook(pre)
 
-	Testcase_PushDoesNotOutputMessage(suite, repo, `XXX`)
+	Assert_PushDoesNotOutputMessages(suite, repo, `XXX`)
 
-	post := suite.ConfigurePostReceiveHook(
-		context,
-		external_hooks.NewSettings().
-			UseSafePath(true).
-			WithExecutable(`post.fail.sh`),
-		text(
-			`#!/bin/bash`,
-			`echo YYY`,
-			`exit 1`,
-		),
+	post := suite.ConfigureSampleHook_FailWithMessage(
+		context.PostReceive(),
+		`YYY`,
 	)
 
-	Testcase_PushOutputsMessages(suite, repo, `YYY`)
+	Assert_PushOutputsMessages(suite, repo, `YYY`)
 
-	err = post.Disable()
-	suite.NoError(err, "unable to disable post-receive hook")
+	suite.DisableHook(post)
 
-	Testcase_PushDoesNotOutputMessage(suite, repo, `YYY`)
+	Assert_PushDoesNotOutputMessages(suite, repo, `YYY`)
 
-	err = pre.Enable()
+	err := pre.Enable()
 	suite.NoError(err, "unable to enable pre-receive hook")
 
 	err = post.Enable()
@@ -248,393 +262,222 @@ func (suite *Suite) testBitbucketUpgrade_After(
 	pre.BitbucketURI = suite.Bitbucket().GetConnectorURI()
 	post.BitbucketURI = suite.Bitbucket().GetConnectorURI()
 
-	Testcase_PushRejected(suite, repo, `XXX`)
+	Assert_PushRejected(suite, repo, `XXX`)
 
-	err := pre.Disable()
-	suite.NoError(err, "unable to disable pre-receive hook")
+	suite.DisableHook(pre)
 
-	Testcase_PushOutputsMessages(suite, repo, `YYY`)
+	Assert_PushOutputsMessages(suite, repo, `YYY`)
 
-	err = post.Disable()
-	suite.NoError(err, "unable to disable post-receive hook")
+	suite.DisableHook(post)
 
-	Testcase_PushDoesNotOutputMessage(suite, repo, `YYY`)
+	Assert_PushDoesNotOutputMessages(suite, repo, `YYY`)
 }
 
 func (suite *Suite) testPreReceive(
+	log *cog.Logger,
 	context *external_hooks.Context,
 	repository *stash.Repository,
 ) {
-	suite.testPreReceiveHookInput(context, repository)
-	suite.testPreReceiveHookReject(context, repository)
-}
+	log.Infof(nil, "> testing pre-receive hooks")
 
-func (suite *Suite) testPreReceiveHookReject(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	hook := suite.CreateSamplePreReceiveHook_FailWithMessage(context, `XXX`)
+	hook := context.PreReceive()
 
-	Testcase_PushRejected(suite, repository, `XXX`)
+	tester := NewHookTester(log, hook, suite, repository)
 
-	err := hook.Disable()
-	suite.NoError(err, "unable to disable hook")
+	suite.testPreReceiveHook_Input(tester)
+	suite.testPreReceiveHook_Veto(tester)
 
-	Testcase_PushDoesNotOutputMessage(suite, repository, `XXX`)
+	suite.DisableHook(hook)
 }
 
 func (suite *Suite) testPostReceive(
+	log *cog.Logger,
 	context *external_hooks.Context,
 	repository *stash.Repository,
 ) {
-	suite.testPostReceiveHookInput(context, repository)
-	suite.testPostReceiveOutputsMessage(context, repository)
+	log.Infof(nil, "> testing post-receive hooks")
+
+	hook := context.PostReceive()
+
+	tester := NewHookTester(log, hook, suite, repository)
+
+	suite.testPostReceiveHook_Input(tester)
+	suite.testPostReceiveHook_Output(tester)
+
+	suite.DisableHook(hook)
 }
 
-func (suite *Suite) testPostReceiveOutputsMessage(
+func (suite *Suite) testPreReceiveHook_Veto(tester *HookTester) {
+	tester.TestEnableDisable(
+		Assert_PushRejected,
+		Assert_PushDoesNotOutputMessages,
+	)
+}
+
+func (suite *Suite) testPostReceiveHook_Output(
+	tester *HookTester,
+) {
+	tester.TestEnableDisable(
+		Assert_PushOutputsMessages,
+		Assert_PushDoesNotOutputMessages,
+	)
+}
+
+func (suite *Suite) testMergeCheck(
+	log *cog.Logger,
 	context *external_hooks.Context,
 	repository *stash.Repository,
 ) {
-	hook := suite.CreateSamplePostReceiveHook_FailWithMessage(context, `YYY`)
+	log.Infof(nil, "> testing merge check")
 
-	Testcase_PushOutputsMessages(suite, repository, `YYY`)
+	var (
+		hook   = context.MergeCheck()
+		tester = NewHookTester(log, hook, suite, repository).
+			WithExitCode(1)
+		pullRequest = suite.CreateRandomPullRequest(&repository.Project, repository)
+	)
 
-	err := hook.Disable()
-	suite.NoError(err, "unable to disable hook")
+	suite.testMergeCheck_Input(tester, pullRequest)
+	suite.testMergeCheck_Veto(tester, pullRequest)
 
-	Testcase_PushDoesNotOutputMessage(suite, repository, `YYY`)
+	suite.DisableHook(hook)
 }
 
-func (suite *Suite) testBasicMergeCheckScenario(
-	context *external_hooks.Context,
-	repository *stash.Repository,
+func (suite *Suite) testMergeCheck_Veto(
+	tester *HookTester,
 	pullRequest *stash.PullRequest,
-) *external_hooks.Hook {
-	hook := suite.CreateSampleMergeCheckHook_FailWithMessage(context, `ZZZ`)
-
-	service := suite.Bitbucket().Repositories(repository.Project.Key).
-		PullRequests(repository.Slug)
-
-	pullRequest, err := service.Get(pullRequest.ID)
-	suite.NoError(err, "unable to get pull request object")
-
-	result, err := service.Merge(
-		pullRequest.ID,
-		pullRequest.Version,
-	)
-	suite.NoError(err, "unable to get merge pull request result")
-
-	suite.Equal(
-		len(result.Errors),
-		1,
-		"no errors found in merge response",
-	)
-	suite.Equal(
-		len(result.Errors[0].Vetoes),
-		1,
-		"no vetoes found in merge response",
-	)
-	suite.Equal(
-		result.Errors[0].Vetoes[0].SummaryMessage,
-		"external-merge-check-hook declined",
-	)
-
-	suite.Contains(
-		result.Errors[0].Vetoes[0].DetailedMessage,
-		"ZZZ",
-	)
-
-	err = hook.Disable()
-	suite.NoError(err, "unable to disable hook")
-
-	pullRequest, err = service.Get(pullRequest.ID)
-	suite.NoError(err, "unable to get pull request object")
-
-	result, err = service.Merge(
-		pullRequest.ID,
-		pullRequest.Version,
-	)
-	suite.NoError(err, "unable to get merge pull request result")
-	suite.Equal(
-		len(result.Errors),
-		0,
-		"should be able to merge pull request",
-	)
-	suite.Equal(
-		"MERGED",
-		result.State,
-		"pull request should be in merged state",
-	)
-
-	return hook
-}
-
-func (suite *Suite) testPreReceiveHookInput(
-	context *external_hooks.Context,
-	repository *stash.Repository,
 ) {
-	suite.testReceiveHookInput_Common(context, repository)
-	suite.testHookInput_Env_BB_HOOK_TYPE(context, repository, `PRE`)
-}
-
-func (suite *Suite) testPostReceiveHookInput(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testReceiveHookInput_Common(context, repository)
-	suite.testHookInput_Env_BB_HOOK_TYPE(context, repository, `POST`)
-}
-
-func (suite *Suite) testReceiveHookInput_Common(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testReceiveHookInput_Stdin(context, repository)
-	suite.testReceiveHookInput_Args(context, repository)
-
-	suite.testHookInput_Env_BB_HOOK_TRIGGER_ID(context, repository, `push`)
-	suite.testHookInput_Env_BB_IS_DRY_RUN(context, repository, `false`)
-	suite.testHookInput_Env_BB_REPO_IS_FORK(context, repository, `false`)
-	suite.testHookInput_Env_BB_REPO_IS_PUBLIC(context, repository, `false`)
-
-	suite.testHookInput_Env_BB_PROJECT_KEY(context, repository)
-	suite.testHookInput_Env_BB_REPO_SLUG(context, repository)
-	suite.testHookInput_Env_BB_BASE_URL(context, repository)
-	suite.testHookInput_Env_BB_REPO_CLONE_SSH(context, repository)
-	suite.testHookInput_Env_BB_REPO_CLONE_HTTP(context, repository)
-	suite.testHookInput_Env_BB_USER_NAME(context, repository)
-	suite.testHookInput_Env_BB_USER_DISPLAY_NAME(context, repository)
-	suite.testHookInput_Env_BB_USER_EMAIL(context, repository)
-	suite.testHookInput_Env_BB_USER_PERMISSION(context, repository)
-}
-
-func (suite *Suite) testReceiveHookInput_Stdin(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.CreateSamplePreReceiveHook_Debug(
-		context,
-		`cat`,
-	)
-
-	Testcase_PushOutputsRefInfo(suite, repository)
-}
-
-func (suite *Suite) testReceiveHookInput_Args(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.CreateSamplePreReceiveHook_Debug(
-		context,
-		`printf "[%s]\n" "$@"`,
-		"arg-1",
-		"arg-2",
-		"multi\nline",
-	)
-
-	Testcase_PushOutputsMessages(
-		suite,
-		repository,
-		"[arg-1]",
-		"[arg-2]",
-		"[multi",
-		"line]",
+	tester.TestEnableDisable(
+		func(suite *Suite, repository *stash.Repository, messages ...string) {
+			Assert_MergeCheckOutputsMessages(
+				pullRequest, suite, repository, messages...,
+			)
+		},
+		func(suite *Suite, repository *stash.Repository, messages ...string) {
+			Assert_MergeCheckPassed(pullRequest, suite, repository)
+		},
 	)
 }
 
-func (suite *Suite) testHookInput_Env(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-	name string,
-	value string,
-) {
-	suite.CreateSamplePreReceiveHook_Debug(
-		context,
-		fmt.Sprintf(`echo [$%s]`, name),
-	)
-
-	Testcase_PushOutputsMessages(
-		suite,
-		repository,
-		fmt.Sprintf("[%s]", value),
-	)
+func (suite *Suite) testPreReceiveHook_Input(tester *HookTester) {
+	suite.testReceiveHook_Input_Common(tester)
+	tester.TestEnv_BB_HOOK_TYPE(Assert_PushOutputsMessages, `PRE`)
 }
 
-func (suite *Suite) testHookInput_Env_BB_HOOK_TRIGGER_ID(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-	value string,
+func (suite *Suite) testPostReceiveHook_Input(
+	tester *HookTester,
 ) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_HOOK_TRIGGER_ID",
-		value,
-	)
+	suite.testReceiveHook_Input_Common(tester)
+	tester.TestEnv_BB_HOOK_TYPE(Assert_PushOutputsMessages, `POST`)
 }
 
-func (suite *Suite) testHookInput_Env_BB_HOOK_TYPE(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-	value string,
+func (suite *Suite) testMergeCheck_Input(
+	tester *HookTester,
+	pullRequest *stash.PullRequest,
 ) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_HOOK_TYPE",
-		value,
+	suite.testMergeCheck_Input_Common(tester, pullRequest)
+
+	assert := AssertWithPullRequest(
+		pullRequest,
+		Assert_MergeCheckOutputsMessages,
 	)
+
+	tester.TestEnv_BB_HOOK_TYPE(assert, `PRE`)
+	tester.TestEnv_BB_FROM_PROJECT_KEY(assert, pullRequest)
+	tester.TestEnv_BB_FROM_REPO_SLUG(assert, pullRequest)
+	tester.TestEnv_BB_FROM_REPO_IS_FORK(assert, `false`)
+	tester.TestEnv_BB_FROM_REPO_IS_PUBLIC(assert, `false`)
+	tester.TestEnv_BB_FROM_REF(assert, pullRequest)
+	tester.TestEnv_BB_FROM_HASH(assert, pullRequest)
+	tester.TestEnv_BB_FROM_REPO_CLONE_HTTP(assert, pullRequest)
+	tester.TestEnv_BB_FROM_REPO_CLONE_SSH(assert, pullRequest)
+	tester.TestEnv_BB_MERGE_IS_CROSS_REPO(assert, `false`)
+	tester.TestEnv_BB_TO_REF(assert, pullRequest)
+	tester.TestEnv_BB_TO_HASH(assert, pullRequest)
+	tester.TestEnv_BB_MERGE_STRATEGY_ID(assert, `no-ff`)
+	tester.TestEnv_BB_PULL_REQUEST_ID(assert, pullRequest)
+	tester.TestEnv_BB_PULL_REQUEST_AUTHOR_USER_NAME(assert, pullRequest)
+	tester.TestEnv_BB_PULL_REQUEST_AUTHOR_USER_DISPLAY_NAME(assert, pullRequest)
+	tester.TestEnv_BB_PULL_REQUEST_AUTHOR_USER_EMAIL(assert, pullRequest)
+	tester.TestEnv_BB_PULL_REQUEST_AUTHOR_USER_PERMISION(assert, `SYS_ADMIN`)
 }
 
-func (suite *Suite) testHookInput_Env_BB_IS_DRY_RUN(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-	value string,
+func (suite *Suite) testReceiveHook_Input_Common(
+	tester *HookTester,
 ) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_IS_DRY_RUN",
-		value,
-	)
+	tester.TestStdin(Assert_PushOutputsRefInfo)
+	tester.TestArgs(Assert_PushOutputsMessages)
+	suite.testHookInput_EnvCommon(tester, Assert_PushOutputsMessages)
+	tester.TestEnv_BB_HOOK_TRIGGER_ID(Assert_PushOutputsMessages, `push`)
 }
 
-func (suite *Suite) testHookInput_Env_BB_PROJECT_KEY(
-	context *external_hooks.Context,
-	repository *stash.Repository,
+func (suite *Suite) testHookInput_EnvCommon(
+	tester *HookTester,
+	assert HookTesterAssert,
 ) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_PROJECT_KEY",
-		repository.Project.Key,
-	)
+	tester.TestEnv_BB_IS_DRY_RUN(assert, `false`)
+	tester.TestEnv_BB_IS_DRY_RUN(assert, `false`)
+	tester.TestEnv_BB_REPO_IS_FORK(assert, `false`)
+	tester.TestEnv_BB_REPO_IS_PUBLIC(assert, `false`)
+	tester.TestEnv_BB_PROJECT_KEY(assert)
+	tester.TestEnv_BB_REPO_SLUG(assert)
+	tester.TestEnv_BB_BASE_URL(assert)
+	tester.TestEnv_BB_REPO_CLONE_SSH(assert)
+	tester.TestEnv_BB_REPO_CLONE_HTTP(assert)
+	tester.TestEnv_BB_USER_NAME(assert)
+	tester.TestEnv_BB_USER_DISPLAY_NAME(assert)
+	tester.TestEnv_BB_USER_EMAIL(assert)
+	tester.TestEnv_BB_USER_PERMISSION(assert)
 }
 
-func (suite *Suite) testHookInput_Env_BB_REPO_SLUG(
-	context *external_hooks.Context,
-	repository *stash.Repository,
+func (suite *Suite) testMergeCheck_Input_Common(
+	tester *HookTester,
+	pullRequest *stash.PullRequest,
 ) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_REPO_SLUG",
-		repository.Slug,
-	)
-}
+	tester.TestStdin(
+		func(suite *Suite, repository *stash.Repository, _ ...string) {
+			// Since BB uses non-fast-forward merge strategy by default,
+			// merge check script will receive merge commit SHA to stdin
+			// which is unknown at the time of test, so we need to retrieve
+			// it directly in test script.
+			Assert_MergeCheck_Callback(
+				pullRequest,
+				suite, repository,
+				func(reply string) {
+					lines := strings.Split(strings.TrimSpace(reply), "\n")
 
-func (suite *Suite) testHookInput_Env_BB_REPO_IS_FORK(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-	value string,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_REPO_IS_FORK",
-		value,
-	)
-}
+					suite.GreaterOrEqual(
+						len(lines), 2,
+						"output from merge hook must contain at least 2 lines",
+					)
 
-func (suite *Suite) testHookInput_Env_BB_REPO_IS_PUBLIC(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-	value string,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_REPO_IS_PUBLIC",
-		value,
-	)
-}
+					suite.Equal(
+						fmt.Sprintf(
+							"%s %s %s",
+							pullRequest.ToRef.LatestCommit,
+							lines[0],
+							pullRequest.ToRef.ID,
+						),
+						lines[1],
+					)
+				},
+			)
+		},
 
-func (suite *Suite) testHookInput_Env_BB_BASE_URL(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_BASE_URL",
-		suite.Bitbucket().GetURI(""),
+		`echo $BB_MERGE_HASH`,
 	)
-}
 
-func (suite *Suite) testHookInput_Env_BB_REPO_CLONE_SSH(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_REPO_CLONE_SSH",
-		suite.Bitbucket().GetClonePathSSH(
-			repository.Project.Key,
-			repository.Slug,
-		),
+	tester.TestArgs(
+		AssertWithPullRequest(pullRequest, Assert_MergeCheckOutputsMessages),
 	)
-}
 
-func (suite *Suite) testHookInput_Env_BB_REPO_CLONE_HTTP(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_REPO_CLONE_HTTP",
-		suite.Bitbucket().GetClonePathHTTP(
-			repository.Project.Key,
-			repository.Slug,
-		),
+	tester.TestEnv_BB_HOOK_TRIGGER_ID(
+		AssertWithPullRequest(pullRequest, Assert_MergeCheckOutputsMessages),
+		`pull-request-merge`,
 	)
-}
 
-func (suite *Suite) testHookInput_Env_BB_USER_NAME(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_USER_NAME",
-		suite.Bitbucket().GetOpts().AdminUser,
-	)
-}
-
-func (suite *Suite) testHookInput_Env_BB_USER_EMAIL(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_USER_EMAIL",
-		suite.Bitbucket().GetOpts().AdminEmail,
-	)
-}
-
-func (suite *Suite) testHookInput_Env_BB_USER_DISPLAY_NAME(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_USER_DISPLAY_NAME",
-		suite.Bitbucket().GetOpts().AdminUser,
-	)
-}
-
-func (suite *Suite) testHookInput_Env_BB_USER_PERMISSION(
-	context *external_hooks.Context,
-	repository *stash.Repository,
-) {
-	suite.testHookInput_Env(
-		context,
-		repository,
-		"BB_USER_PERMISSION",
-		"SYS_ADMIN",
+	suite.testHookInput_EnvCommon(
+		tester,
+		AssertWithPullRequest(pullRequest, Assert_MergeCheckOutputsMessages),
 	)
 }

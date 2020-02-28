@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
@@ -20,6 +22,8 @@ import (
 type Suite struct {
 	*runner.Runner
 	*assert.Assertions
+
+	hookScripts []string
 }
 
 type TestParams map[string]interface{}
@@ -58,8 +62,7 @@ func (suite *Suite) WithParams(
 }
 
 func (suite *Suite) ConfigureHook(
-	key string,
-	context *external_hooks.Context,
+	hook *external_hooks.Hook,
 	settings *external_hooks.Settings,
 	script []byte,
 ) *external_hooks.Hook {
@@ -75,63 +78,13 @@ func (suite *Suite) ConfigureHook(
 	err := suite.Bitbucket().WriteFile(path, append(script, '\n'), 0777)
 	suite.NoError(err, "should be able to write hook script to container")
 
-	var hook *external_hooks.Hook
-
-	switch key {
-	case external_hooks.HOOK_KEY_PRE_RECEIVE:
-		hook = context.PreReceive(settings)
-	case external_hooks.HOOK_KEY_POST_RECEIVE:
-		hook = context.PostReceive(settings)
-	case external_hooks.HOOK_KEY_MERGE_CHECK:
-		hook = context.MergeCheck(settings)
-	}
-
-	err = hook.Configure()
+	err = hook.Configure(settings)
 	suite.NoError(err, "should be able to configure hook")
 
 	err = hook.Enable()
 	suite.NoError(err, "should be able to enable hook")
 
 	return hook
-}
-
-func (suite *Suite) ConfigurePreReceiveHook(
-	context *external_hooks.Context,
-	settings *external_hooks.Settings,
-	script []byte,
-) *external_hooks.Hook {
-	return suite.ConfigureHook(
-		external_hooks.HOOK_KEY_PRE_RECEIVE,
-		context,
-		settings,
-		script,
-	)
-}
-
-func (suite *Suite) ConfigurePostReceiveHook(
-	context *external_hooks.Context,
-	settings *external_hooks.Settings,
-	script []byte,
-) *external_hooks.Hook {
-	return suite.ConfigureHook(
-		external_hooks.HOOK_KEY_POST_RECEIVE,
-		context,
-		settings,
-		script,
-	)
-}
-
-func (suite *Suite) ConfigureMergeCheckHook(
-	context *external_hooks.Context,
-	settings *external_hooks.Settings,
-	script []byte,
-) *external_hooks.Hook {
-	return suite.ConfigureHook(
-		external_hooks.HOOK_KEY_MERGE_CHECK,
-		context,
-		settings,
-		script,
-	)
 }
 
 func (suite *Suite) ExternalHooks() *external_hooks.Addon {
@@ -189,105 +142,31 @@ func (suite *Suite) CreateRandomPullRequest(
 	return pullRequest
 }
 
-func (suite *Suite) CreateSamplePreReceiveHook_FailWithMessage(
-	context *external_hooks.Context,
+func (suite *Suite) ConfigureSampleHook_FailWithMessage(
+	hook *external_hooks.Hook,
 	message string,
 ) *external_hooks.Hook {
-	settings := external_hooks.NewSettings().
-		UseSafePath(true).
-		WithExecutable(`pre.fail.sh`)
-
-	return suite.ConfigurePreReceiveHook(context, settings, text(
-		`#!/bin/bash`,
-		fmt.Sprintf(`echo %s`, message),
-		`exit 1`,
-	))
-}
-
-func (suite *Suite) CreateSamplePostReceiveHook_FailWithMessage(
-	context *external_hooks.Context,
-	message string,
-) *external_hooks.Hook {
-	settings := external_hooks.NewSettings().
-		UseSafePath(true).
-		WithExecutable(`post.fail.sh`)
-
-	return suite.ConfigurePostReceiveHook(context, settings, text(
-		`#!/bin/bash`,
-		fmt.Sprintf(`echo %s`, message),
-		`exit 1`,
-	))
-}
-
-func (suite *Suite) CreateSampleMergeCheckHook_FailWithMessage(
-	context *external_hooks.Context,
-	message string,
-) *external_hooks.Hook {
-	settings := external_hooks.NewSettings().
-		UseSafePath(true).
-		WithExecutable(`merge.fail.sh`)
-
-	return suite.ConfigureMergeCheckHook(context, settings, text(
-		`#!/bin/bash`,
-		fmt.Sprintf(`echo %s`, message),
-		`exit 1`,
-	))
-}
-
-//var (
-//    debugHookScript = text(
-//        `#!/bin/bash`,
-//        `printf "%s\n" "$@"`,
-//        `cat`,
-//        `echo BB_HOOK_TRIGGER_ID=$BB_HOOK_TRIGGER_ID`,
-//        `echo BB_HOOK_TYPE=$BB_HOOK_TYPE`,
-//        `echo BB_IS_DRY_RUN=$BB_IS_DRY_RUN`,
-//        `echo BB_PROJECT_KEY=$BB_PROJECT_KEY`,
-//        `echo BB_REPO_SLUG=$BB_REPO_SLUG`,
-//        `echo BB_REPO_IS_FORK=$BB_REPO_IS_FORK`,
-//        `echo BB_REPO_IS_PUBLIC=$BB_REPO_IS_PUBLIC`,
-//        `echo BB_BASE_URL=$BB_BASE_URL`,
-//        `echo BB_REPO_CLONE_SSH=$BB_REPO_CLONE_SSH`,
-//        `echo BB_REPO_CLONE_HTTP=$BB_REPO_CLONE_HTTP`,
-//        `echo BB_USER_NAME=$BB_USER_NAME`,
-//        `echo BB_USER_DISPLAY_NAME=$BB_USER_DISPLAY_NAME`,
-//        `echo BB_USER_EMAIL=$BB_USER_EMAIL`,
-//        `echo BB_USER_PERMISSION=$BB_USER_PERMISSION`,
-//    )
-//)
-
-func (suite *Suite) CreateSamplePreReceiveHook_Debug(
-	context *external_hooks.Context,
-	script string,
-	args ...string,
-) *external_hooks.Hook {
-	settings := external_hooks.NewSettings().
-		UseSafePath(true).
-		WithExecutable(`pre.debug.sh`).
-		WithArgs(args...)
-
-	return suite.ConfigurePreReceiveHook(
-		context,
-		settings,
-		text(
-			`#!/bin/bash`,
-			script,
-		),
+	return suite.ConfigureSampleHook(
+		hook,
+		string(text(
+			fmt.Sprintf(`echo %s`, message),
+			`exit 1`,
+		)),
 	)
 }
 
-func (suite *Suite) CreateSamplePostReceiveHook_Debug(
-	context *external_hooks.Context,
+func (suite *Suite) ConfigureSampleHook(
+	hook *external_hooks.Hook,
 	script string,
 	args ...string,
 ) *external_hooks.Hook {
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).
-		WithExecutable(`post.debug.sh`).
+		WithExecutable(`hook.` + lojban.GetRandomID(5)).
 		WithArgs(args...)
 
-	return suite.ConfigurePreReceiveHook(
-		context,
+	return suite.ConfigureHook(
+		hook,
 		settings,
 		text(
 			`#!/bin/bash`,
@@ -297,18 +176,23 @@ func (suite *Suite) CreateSamplePostReceiveHook_Debug(
 }
 
 func (suite *Suite) InstallAddon(addon Addon) string {
-	err := suite.enableAddonLogger(
-		"com.ngs.stash.externalhooks",
-		"debug",
+	var (
+		v       = *semver.New(addon.Version)
+		v10_0_0 = *semver.New("10.0.0")
+		v9_1_0  = *semver.New("9.1.0")
 	)
-	suite.NoError(err, "unable to enable addon logger")
 
 	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		if strings.Contains(line, "Finished job for creating HookScripts") {
+		switch {
+		case v.Compare(v10_0_0) >= 0 &&
+			strings.Contains(line, "Finished job for creating HookScripts"):
 			return true
+		case v.Compare(v10_0_0) < 0 && v.Compare(v9_1_0) >= 0 &&
+			strings.Contains(line, "HookScripts created successfully"):
+			return true
+		default:
+			return false
 		}
-
-		return false
 	})
 
 	key := suite.Runner.InstallAddon(addon.Version, addon.Path)
@@ -318,6 +202,27 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 	waiter.Wait()
 
 	return key
+}
+
+func (suite *Suite) DisableHook(hook *external_hooks.Hook) {
+	// XXX: only for BB>6.2.0
+	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
+		switch {
+		case regexp.MustCompile(
+			`ExternalHookScript deleting .* hook script`,
+		).MatchString(line):
+			return true
+		default:
+			return false
+		}
+	})
+
+	err := hook.Disable()
+	suite.NoError(err, "should be able to disable hook")
+
+	log.Debugf(nil, "{add-on} waiting for hook script to be deleted by bitbucket")
+
+	waiter.Wait()
 }
 
 func (suite *Suite) enableAddonLogger(key string, level string) error {
@@ -357,4 +262,47 @@ func (suite *Suite) enableAddonLogger(key string, level string) error {
 	}
 
 	return nil
+}
+
+func (suite *Suite) RecordHookScripts() {
+	var err error
+	suite.hookScripts, err = suite.Bitbucket().
+		ListFiles("shared/config/hook-scripts/")
+	suite.NoError(err, "should be able to list existing hook scripts")
+
+	log.Infof(
+		karma.Describe("scripts", strings.Join(suite.hookScripts, ", ")),
+		"{leak detector} found %d currently registered hook scripts",
+		len(suite.hookScripts),
+	)
+}
+
+func (suite *Suite) DetectHookScriptsLeak() {
+	current, err := suite.Bitbucket().
+		ListFiles("shared/config/hook-scripts/")
+	suite.NoError(err, "should be able to list current hook scripts")
+
+	index := map[string]bool{}
+
+	for _, name := range suite.hookScripts {
+		index[name] = true
+	}
+
+	leak := []string{}
+
+	for _, name := range current {
+		if !index[name] {
+			leak = append(leak, name)
+		}
+	}
+
+	if len(leak) > 0 {
+		suite.Empty(leak, "found leaking hook scripts")
+	} else {
+		log.Infof(
+			nil,
+			"{leak detector} no hook scripts leak detected",
+		)
+	}
+
 }
