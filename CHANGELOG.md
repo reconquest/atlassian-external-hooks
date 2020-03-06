@@ -1,3 +1,11 @@
+# 10.1.0
+
+Fix bug:
+* project level hooks not triggering with inheritance on first commit/push to
+    new repository
+
+Original issue: https://github.com/reconquest/atlassian-external-hooks/issues/109
+
 # 10.0.0
 
 Allow to disable hooks on repo level bypassing project level hooks.
