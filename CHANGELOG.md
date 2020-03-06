@@ -1,4 +1,4 @@
-# 10.1.0
+## 10.1.0
 
 Fix bug:
 * project level hooks not triggering with inheritance on first commit/push to
@@ -6,7 +6,7 @@ Fix bug:
 
 Original issue: https://github.com/reconquest/atlassian-external-hooks/issues/109
 
-# 10.0.0
+## 10.0.0
 
 Allow to disable hooks on repo level bypassing project level hooks.
 
@@ -14,7 +14,7 @@ Previously, due to internal changes in Bitbucket made in 6+ version, it was not
 possible to disable hooks on specific repository while having project level
 hook enabled.
 
-# 9.1.0
+## 9.1.0
 
 Fix need for re-configuration of hooks in personal repositories after the
 add-on enable/disable lifecycle (e.g., after BB restart).
@@ -22,13 +22,13 @@ add-on enable/disable lifecycle (e.g., after BB restart).
 Indirectly fixes migration problem for hooks in personal repositories from BB
 4.14.4 to 6.10 along with add-on upgrade.
 
-# 9.0.1
+## 9.0.1
 
 Add organization url to add-on manifest file.
 
 It resolves problem on Manage Apps admin page on some installations.
 
-# 9.0.0
+## 9.0.0
 
 Add global triggers' configuration which is accessible from Bitbucket
 Administration Panel.
@@ -49,7 +49,7 @@ See documentation for more information:
 
 https://external-hooks.reconquest.io/docs/triggers/
 
-# 8.0.0
+## 8.0.0
 
 Bug fixes & minor improvements.
 
@@ -57,24 +57,24 @@ Additional fixes for:
 
 https://github.com/reconquest/atlassian-external-hooks/issues/100
 
-# 7.5.0
+## 7.5.0
 
 Fix bug causing inherited hooks to be force-enabled.
 
-# 7.3.0
+## 7.3.0
 
 Fix BB upgrade problem (BB 6.5.1 -> 6.6.0).
 
 https://github.com/reconquest/atlassian-external-hooks/issues/100
 
-# 7.2.0
+## 7.2.0
 
 Revert change made in 6.3.0: do not invoke pre- & post-receive hook on pull
 request merge check.
 
 This feature is already covered by Merge Check Hook.
 
-# 7.1.0
+## 7.1.0
 
 Added 'async' option for post-receive hook configuration.
 
@@ -87,7 +87,7 @@ possible to start time-consuming tasks such as CI.
 Note, that it's not possible to return any output back to the user invoking
 `git push` from 'async' post-receive hook.
 
-# 7.0.0
+## 7.0.0
 
 The new feature — _Asynchronous_ — has been added to the **Post Receive Hook**
 setup. The field is useful for users, who recently upgraded from
@@ -104,7 +104,7 @@ made from BB UI:
 
 * file edit.
 
-# 6.3.0
+## 6.3.0
 
 Pre- & post-receive hooks are extended to be triggered of the following events
 made from BB UI:
@@ -115,7 +115,7 @@ made from BB UI:
 * branch delete,
 * pull request merge.
 
-# 6.2.0
+## 6.2.0
 
 Pre- and Post-Receive Hooks will now always pass theirs' output to user no
 matter which exit code was returned from script.
