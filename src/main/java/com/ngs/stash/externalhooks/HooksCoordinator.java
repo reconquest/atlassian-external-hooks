@@ -11,6 +11,7 @@ import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.event.hook.RepositoryHookDeletedEvent;
 import com.atlassian.bitbucket.event.hook.RepositoryHookDisabledEvent;
 import com.atlassian.bitbucket.event.hook.RepositoryHookEnabledEvent;
+import com.atlassian.bitbucket.event.repository.RepositoryCreatedEvent;
 import com.atlassian.bitbucket.hook.repository.GetRepositoryHookSettingsRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
@@ -111,7 +112,7 @@ public class HooksCoordinator {
   }
 
   @EventListener
-  public void onEnabled(RepositoryHookEnabledEvent event) {
+  public void onHookEnabled(RepositoryHookEnabledEvent event) {
     ExternalHookScript script = getScript(event.getRepositoryHookKey());
     if (script == null) {
       return;
@@ -121,7 +122,7 @@ public class HooksCoordinator {
   }
 
   @EventListener
-  public void onDisabled(RepositoryHookDisabledEvent event) {
+  public void onHookDisabled(RepositoryHookDisabledEvent event) {
     ExternalHookScript script = getScript(event.getRepositoryHookKey());
     if (script == null) {
       return;
@@ -141,7 +142,7 @@ public class HooksCoordinator {
   //
   // Also, triggered when the state changed from 'Disabled' to 'Inherited'
   @EventListener
-  public void onInherited(RepositoryHookDeletedEvent event) {
+  public void onHookInherited(RepositoryHookDeletedEvent event) {
     ExternalHookScript script = getScript(event.getRepositoryHookKey());
     if (script == null) {
       return;
@@ -151,6 +152,14 @@ public class HooksCoordinator {
     if (ScopeUtil.isRepository(scope)) {
       inherit((RepositoryScope) scope, script);
     }
+  }
+
+  @EventListener
+  public void onRepositoryCreated(RepositoryCreatedEvent event) {
+    RepositoryScope scope = new RepositoryScope(event.getRepository());
+    scripts.forEach((hookId, script) -> {
+      inherit(scope, script);
+    });
   }
 
   public void validate(
