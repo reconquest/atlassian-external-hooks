@@ -1,4 +1,6 @@
-## 10.1.0
+## Bitbucket 6.2.0 and higher
+
+### 10.1.0 (2020-03-06)
 
 Fix bug:
 * project level hooks not triggering with inheritance on first commit/push to
@@ -6,7 +8,7 @@ Fix bug:
 
 Original issue: https://github.com/reconquest/atlassian-external-hooks/issues/109
 
-## 10.0.0
+### 10.0.0 (2020-02-28)
 
 Allow to disable hooks on repo level bypassing project level hooks.
 
@@ -14,7 +16,7 @@ Previously, due to internal changes in Bitbucket made in 6+ version, it was not
 possible to disable hooks on specific repository while having project level
 hook enabled.
 
-## 9.1.0
+### 9.1.0 (2020-03-02)
 
 Fix need for re-configuration of hooks in personal repositories after the
 add-on enable/disable lifecycle (e.g., after BB restart).
@@ -22,13 +24,13 @@ add-on enable/disable lifecycle (e.g., after BB restart).
 Indirectly fixes migration problem for hooks in personal repositories from BB
 4.14.4 to 6.10 along with add-on upgrade.
 
-## 9.0.1
+### 9.0.1 (2020-02-06)
 
-Add organization url to add-on manifest file.
+Add organization URL to add-on manifest file.
 
 It resolves problem on Manage Apps admin page on some installations.
 
-## 9.0.0
+### 9.0.0 (2019-11-29)
 
 Add global triggers' configuration which is accessible from Bitbucket
 Administration Panel.
@@ -49,7 +51,7 @@ See documentation for more information:
 
 https://external-hooks.reconquest.io/docs/triggers/
 
-## 8.0.0
+### 8.0.0 (2019-11-11)
 
 Bug fixes & minor improvements.
 
@@ -57,24 +59,24 @@ Additional fixes for:
 
 https://github.com/reconquest/atlassian-external-hooks/issues/100
 
-## 7.5.0
+### 7.5.0 (2019-11-05)
 
 Fix bug causing inherited hooks to be force-enabled.
 
-## 7.3.0
+### 7.3.0 (2019-10-31)
 
 Fix BB upgrade problem (BB 6.5.1 -> 6.6.0).
 
 https://github.com/reconquest/atlassian-external-hooks/issues/100
 
-## 7.2.0
+### 7.2.0 (2019-10-04)
 
 Revert change made in 6.3.0: do not invoke pre- & post-receive hook on pull
 request merge check.
 
 This feature is already covered by Merge Check Hook.
 
-## 7.1.0
+### 7.1.0 (2019-09-11)
 
 Added 'async' option for post-receive hook configuration.
 
@@ -87,7 +89,7 @@ possible to start time-consuming tasks such as CI.
 Note, that it's not possible to return any output back to the user invoking
 `git push` from 'async' post-receive hook.
 
-## 7.0.0
+### 7.0.0 (2019-09-09)
 
 The new feature — _Asynchronous_ — has been added to the **Post Receive Hook**
 setup. The field is useful for users, who recently upgraded from
@@ -97,14 +99,14 @@ that causes the git push command executes with delays.
 
 <img src="https://external-hooks.reconquest.io/img/7.0.0-new-feature.png"/>
 
-# 6.3.2
+### 6.3.2 (2019-07-20)
 
 Pre- & post-receive hooks are extended to be triggered of the following events
 made from BB UI:
 
 * file edit.
 
-## 6.3.0
+### 6.3.1 (2019-06-12)
 
 Pre- & post-receive hooks are extended to be triggered of the following events
 made from BB UI:
@@ -115,7 +117,7 @@ made from BB UI:
 * branch delete,
 * pull request merge.
 
-## 6.2.0
+### 6.2.0 (2019-05-16)
 
 Pre- and Post-Receive Hooks will now always pass theirs' output to user no
 matter which exit code was returned from script.
@@ -178,3 +180,51 @@ The following configuration is **not available**:
 <img src="https://external-hooks.reconquest.io/img/7.0.0-new-feature.png"/>
 
 If your workflow requires this feature, please contact us.
+
+## Bitbucket 5
+
+### 4.8.1 (2020-03-02)
+
+Backport: do not trigger pre-receive on merge check/rebase dry run.
+
+### 4.8 (2019-04-17)
+
+Bitbucket Data Center compatibility.
+
+### 4.7 (2019-01-14)
+
+Two new options for merge check to control cache & tooltip.
+
+### 4.6 (2018-11-21)
+
+Merge checks: update results if merge check file changed.
+
+### 4.5 (2018-11-05)
+
+Fix Merge Check to work with git refs in forked repositories.
+
+Fix Java Exception in Merge Check Hook.
+
+Merge Checks can be configured to add comments to Pull Requests.
+
+### 4.4 (2018-07-25)
+
+Enable project-level hooks configuration.
+
+### 4.3 (2018-04-04)
+
+Compatibility with latest Bitbuckets versions & support offer.
+
+**This is first supported version. Previous add-on versions are free to use and not supported.**
+
+## Unsupported add-on version
+
+### 3.4 (2017-06-13)
+
+Add STASH_IS_DRY_RUN environment variable.
+
+### 3.3 (2017-06-07)
+
+Compatibility with Bitbucket 5+.
+
+Data Center support & additional environment variables.
