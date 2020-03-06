@@ -82,90 +82,6 @@ func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 	suite.DetectHookScriptsLeak()
 }
 
-func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
-	log *cog.Logger,
-	params TestParams,
-	context *external_hooks.Context,
-	project *stash.Project,
-	repository *stash.Repository,
-) {
-	log.Infof(
-		nil,
-		"> reproducing bug on addon version %s",
-		params["addon_reproduced"].(Addon).Version,
-	)
-
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
-
-	suite.ConfigureSampleHook_FailWithMessage(
-		context.PreReceive(),
-		`XXX`,
-	)
-
-	Assert_PushRejected(suite, repository, `XXX`)
-
-	err := context.OnRepository(repository.Slug).PreReceive().Disable()
-	suite.NoError(err, "unable to disable repository hook")
-
-	Assert_PushRejected(suite, repository, `XXX`)
-}
-
-func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
-	log *cog.Logger,
-	params TestParams,
-	context *external_hooks.Context,
-	project *stash.Project,
-	repository *stash.Repository,
-) {
-	log.Infof(
-		nil,
-		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
-	)
-
-	suite.InstallAddon(params["addon_fixed"].(Addon))
-	suite.RecordHookScripts()
-
-	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
-
-	suite.DisableHook(context.PreReceive())
-
-	suite.DetectHookScriptsLeak()
-}
-
-func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
-	params TestParams,
-) {
-	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.RecordHookScripts()
-
-	var (
-		project    = suite.CreateRandomProject()
-		repository = suite.CreateRandomRepository(project)
-	)
-
-	var (
-		context = suite.ExternalHooks().OnProject(project.Key)
-		log     = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
-	)
-
-	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
-		log,
-		params,
-		context,
-		project,
-		repository,
-	)
-
-	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
-		log,
-		params,
-		context,
-		project,
-		repository,
-	)
-}
-
 func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 	suite.UseBitbucket(params["bitbucket_from"].(string))
 	suite.InstallAddon(params["addon"].(Addon))
@@ -273,6 +189,76 @@ func (suite *Suite) testBitbucketUpgrade_After(
 	Assert_PushDoesNotOutputMessages(suite, repo, `YYY`)
 }
 
+func (suite *Suite) TestProjectHooks_DoNotCreateDisabledHooks(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.InstallAddon(params["addon"].(Addon))
+	suite.RecordHookScripts()
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
+
+	context := suite.ExternalHooks().OnProject(project.Key)
+
+	preReceive := suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
+		`XXX`,
+	)
+
+	err := preReceive.Disable()
+	suite.NoError(err, "pre-receive hook should be disabled")
+
+	postReceive := suite.ConfigureSampleHook_FailWithMessage(
+		context.PostReceive(),
+		`YYY`,
+	)
+
+	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
+	Assert_PushOutputsMessages(suite, repository, `YYY`)
+
+	postReceive.Disable()
+
+	suite.DetectHookScriptsLeak()
+}
+
+func (suite *Suite) TestHookScriptsLeak_NoLeakAfterRepositoryDelete(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.InstallAddon(params["addon"].(Addon))
+	suite.RecordHookScripts()
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
+
+	context := suite.ExternalHooks().OnProject(project.Key).
+		OnRepository(repository.Slug)
+
+	suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
+		`XXX`,
+	)
+
+	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
+		return strings.Contains(
+			line,
+			"Successfully deleted repository directory",
+		)
+	})
+
+	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
+	suite.NoError(err, "unable to remove repository")
+
+	waiter.Wait()
+
+	suite.DetectHookScriptsLeak()
+}
+
 func (suite *Suite) testPreReceive(
 	log *cog.Logger,
 	context *external_hooks.Context,
@@ -334,7 +320,10 @@ func (suite *Suite) testMergeCheck(
 		hook   = context.MergeCheck()
 		tester = NewHookTester(log, hook, suite, repository).
 			WithExitCode(1)
-		pullRequest = suite.CreateRandomPullRequest(&repository.Project, repository)
+		pullRequest = suite.CreateRandomPullRequest(
+			&repository.Project,
+			repository,
+		)
 	)
 
 	suite.testMergeCheck_Input(tester, pullRequest)
@@ -415,7 +404,6 @@ func (suite *Suite) testHookInput_EnvCommon(
 	tester *HookTester,
 	assert HookTesterAssert,
 ) {
-	tester.TestEnv_BB_IS_DRY_RUN(assert, `false`)
 	tester.TestEnv_BB_IS_DRY_RUN(assert, `false`)
 	tester.TestEnv_BB_REPO_IS_FORK(assert, `false`)
 	tester.TestEnv_BB_REPO_IS_PUBLIC(assert, `false`)

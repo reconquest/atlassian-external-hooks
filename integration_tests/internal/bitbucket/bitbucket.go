@@ -97,6 +97,22 @@ func (api *BitbucketRepositoriesAPI) Create(slug string) (*stash.Repository, err
 	return &repository, nil
 }
 
+func (api *BitbucketRepositoriesAPI) Remove(slug string) error {
+	log.Debugf(
+		nil,
+		"{bitbucket} removing repository: %s / %s",
+		api.project,
+		slug,
+	)
+
+	err := api.client.RemoveRepository(api.project, slug)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (api *BitbucketRepositoriesAPI) PullRequests(
 	repository string,
 ) *BitbucketPullRequestsAPI {

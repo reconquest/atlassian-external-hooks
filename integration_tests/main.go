@@ -67,7 +67,7 @@ func main() {
 
 	var (
 		baseBitbucket = "6.2.0"
-		latestAddon   = getAddon("10.0.0")
+		latestAddon   = getAddon("10.1.0")
 	)
 
 	run := runner.New()
@@ -81,11 +81,36 @@ func main() {
 		suite.WithParams(
 			TestParams{
 				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("10.0.0"),
+				"addon_fixed":      latestAddon,
+			},
+
+			suite.TestBug_ProjectHookCreatedBeforeRepository,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket":        baseBitbucket,
 				"addon_reproduced": getAddon("9.1.0"),
 				"addon_fixed":      latestAddon,
 			},
 
 			suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket": baseBitbucket,
+				"addon":     latestAddon,
+			},
+			suite.TestProjectHooks_DoNotCreateDisabledHooks,
+
+			// XXX: BB doesn't clean up hook scripts if repository was deleted.
+			//suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
 		),
 	)
 

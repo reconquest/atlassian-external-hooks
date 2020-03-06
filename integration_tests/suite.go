@@ -270,7 +270,7 @@ func (suite *Suite) RecordHookScripts() {
 		ListFiles("shared/config/hook-scripts/")
 	suite.NoError(err, "should be able to list existing hook scripts")
 
-	log.Infof(
+	log.Debugf(
 		karma.Describe("scripts", strings.Join(suite.hookScripts, ", ")),
 		"{leak detector} found %d currently registered hook scripts",
 		len(suite.hookScripts),
@@ -299,7 +299,7 @@ func (suite *Suite) DetectHookScriptsLeak() {
 	if len(leak) > 0 {
 		suite.Empty(leak, "found leaking hook scripts")
 	} else {
-		log.Infof(
+		log.Debugf(
 			nil,
 			"{leak detector} no hook scripts leak detected",
 		)
