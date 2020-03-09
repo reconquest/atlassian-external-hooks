@@ -20,6 +20,7 @@ import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
 import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.ProjectService;
+import com.atlassian.bitbucket.project.ProjectType;
 import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
@@ -238,6 +239,10 @@ public class HooksCoordinator {
 
   public void disable(RepositoryScope scope, ExternalHookScript script) {
     script.uninstall(scope);
+
+    if (scope.getProject().getType().equals(ProjectType.PERSONAL)) {
+      return;
+    }
 
     ProjectScope projectScope = new ProjectScope(scope.getProject());
     RepositoryHook projectHook = repositoryHookService.getByKey(projectScope, script.getHookKey());

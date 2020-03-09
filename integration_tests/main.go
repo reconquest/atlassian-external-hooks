@@ -11,6 +11,7 @@ import (
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
 )
 
@@ -110,7 +111,7 @@ func main() {
 			suite.TestProjectHooks_DoNotCreateDisabledHooks,
 
 			// XXX: BB doesn't clean up hook scripts if repository was deleted.
-			//suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
+			// suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
 		),
 	)
 
@@ -134,6 +135,18 @@ func main() {
 				"addon":          latestAddon,
 			},
 			suite.TestBitbucketUpgrade,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket": "7.0.0",
+				"addon":     latestAddon,
+			},
+			suite.TestProjectHooks,
+			suite.TestRepositoryHooks,
+			suite.TestPersonalRepositoriesHooks,
 		),
 	)
 
@@ -165,14 +178,45 @@ func main() {
 }
 
 func getAddon(version string) Addon {
+	builds := map[string]string{
+		"10.1.0": "6532",
+		"10.0.0": "6512",
+		"9.1.0":  "6492",
+	}
+
 	path := fmt.Sprintf("target/external-hooks-%s.jar", version)
 
-	if _, err := os.Stat(path); err != nil {
-		log.Fatalf(
-			err,
-			"can not find addon version %s at path %q",
-			version, path,
-		)
+	_, err := os.Stat(path)
+	if err != nil {
+		if build, ok := builds[version]; ok {
+			log.Infof(
+				karma.Describe("build", build).Describe("version", version),
+				"downloading add-on from Marketplace",
+			)
+
+			cmd := exec.New(
+				"wget", "-O", path,
+				fmt.Sprintf(
+					"https://marketplace.atlassian.com/download/apps/1211631/version/%v",
+					build,
+				),
+			)
+
+			err := cmd.Run()
+			if err != nil {
+				log.Fatalf(
+					karma.Describe("build", build).Reason(err),
+					"unable to download add-on %s from Marketplace to %q",
+					version, path,
+				)
+			}
+		} else {
+			log.Fatalf(
+				err,
+				"unable to find add-on version %s at path %q",
+				version, path,
+			)
+		}
 	}
 
 	return Addon{

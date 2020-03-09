@@ -22,7 +22,7 @@ func (suite *Suite) TestProjectHooks(params TestParams) {
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
-	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test: project hooks} %s", project.Key))
 
 	suite.testPreReceive(log, context, repository)
 	suite.testPostReceive(log, context, repository)
@@ -45,7 +45,7 @@ func (suite *Suite) TestRepositoryHooks(params TestParams) {
 		OnRepository(repository.Slug)
 
 	log := log.NewChildWithPrefix(
-		fmt.Sprintf("{test} %s / %s", project.Key, repository.Slug),
+		fmt.Sprintf("{test: repository hooks} %s / %s", project.Key, repository.Slug),
 	)
 
 	suite.testPreReceive(log, context, repository)
@@ -64,15 +64,13 @@ func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 		Key: "~admin",
 	}
 
-	var (
-		repository = suite.CreateRandomRepository(project)
-	)
+	repository := suite.CreateRandomRepository(project)
 
 	context := suite.ExternalHooks().OnProject(project.Key).
 		OnRepository(repository.Slug)
 
 	log := log.NewChildWithPrefix(
-		fmt.Sprintf("{test} %s / %s", project.Key, repository.Slug),
+		fmt.Sprintf("{test: personal repositories hooks} %s / %s", project.Key, repository.Slug),
 	)
 
 	suite.testPreReceive(log, context, repository)
@@ -95,9 +93,8 @@ func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 	}
 
 	{
-		var (
-			project = suite.CreateRandomProject()
-		)
+
+		project := suite.CreateRandomProject()
 
 		cases.public.repo = suite.CreateRandomRepository(project)
 

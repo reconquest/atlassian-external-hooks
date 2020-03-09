@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>10.1.0</version>
+    <version>10.2.0</version>
     <organization>
         <name>reconquest</name>
         <url>https://external-hooks.reconquest.io/</url>
