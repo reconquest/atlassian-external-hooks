@@ -4,7 +4,7 @@
 
 Properly override project-level hooks with repository hooks.
 
-Now, for any given repo if there are both project-level and repository-level
+Now, for any given repository, if there are both project-level and repository-level
 hooks are enabled, only repository-level hook will be executed, completely
 overriding project-level settings.
 
@@ -18,7 +18,7 @@ Original issue: https://github.com/reconquest/atlassian-external-hooks/issues/10
 
 ### 10.0.0 (2020-02-28)
 
-Allow to disable hooks on repo level bypassing project level hooks.
+Allow to disable hooks on repository level bypassing project level hooks.
 
 Previously, due to internal changes in Bitbucket made in 6+ version, it was not
 possible to disable hooks on specific repository while having project level
@@ -27,7 +27,7 @@ hook enabled.
 ### 9.1.0 (2020-03-02)
 
 Fix need for re-configuration of hooks in personal repositories after the
-add-on enable/disable lifecycle (e.g., after BB restart).
+add-on enable/disable life-cycle (e.g., after BB restart).
 
 Indirectly fixes migration problem for hooks in personal repositories from BB
 4.14.4 to 6.10 along with add-on upgrade.
@@ -48,7 +48,7 @@ post-receive & merge check hooks.
 
 Events available for configuration:
 
-* push to repo,
+* push to repository,
 * web UI: branch create/delete,
 * web UI: tag create/delete,
 * web UI: file edit,
