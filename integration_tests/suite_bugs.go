@@ -98,9 +98,7 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository(
 ) {
 	suite.UseBitbucket(params["bitbucket"].(string))
 
-	var (
-		project = suite.CreateRandomProject()
-	)
+	project := suite.CreateRandomProject()
 
 	var (
 		context = suite.ExternalHooks().OnProject(project.Key)
@@ -267,7 +265,6 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 		),
 	)
 
-	Assert_PushOutputsMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
 	preReceiveProject.Disable()
@@ -284,9 +281,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
 		repository = suite.CreateRandomRepository(project)
 	)
 
-	var (
-		log = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
-	)
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).

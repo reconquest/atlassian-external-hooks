@@ -225,6 +225,11 @@ public class HooksCoordinator {
 
     RepositoryHookSettings settings = repositoryHookService.getSettings(request);
     script.install(settings.getSettings(), scope);
+
+    // Disable project-wide hook on this specified repository because 'enabled'
+    // hook on Repository means that it's overwritten and two hooks at the same
+    // time is not obvious for customers
+    script.uninstall(new ProjectScope(scope.getProject()), scope);
   }
 
   public void disable(ProjectScope scope, ExternalHookScript script) {
