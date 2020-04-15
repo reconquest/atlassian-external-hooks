@@ -75,6 +75,8 @@ type Settings struct {
 	Safe       bool
 	Executable string
 	Args       []string
+
+	Override *bool
 }
 
 func NewSettings() *Settings {
@@ -83,6 +85,13 @@ func NewSettings() *Settings {
 
 func (settings *Settings) UseSafePath(enabled bool) *Settings {
 	settings.Safe = enabled
+
+	return settings
+}
+
+// UseOverride supported only on add-on version >= 10.2.0
+func (settings *Settings) UseOverride(overridden bool) *Settings {
+	settings.Override = &overridden
 
 	return settings
 }
