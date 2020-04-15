@@ -247,6 +247,22 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 		)
 	}
 
+	addon, err := api.client.GetAddon(token, key)
+	if err != nil {
+		return "", karma.Format(
+			err,
+			"unable to get add-on info",
+		)
+	}
+
+	err = api.client.EnableAddon(token, addon)
+	if err != nil {
+		return "", karma.Format(
+			err,
+			"unable to enable add-on",
+		)
+	}
+
 	return key, nil
 }
 

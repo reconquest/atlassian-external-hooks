@@ -19,7 +19,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 ) {
 	log.Infof(
 		nil,
-		"> reproducing bug on addon version %s",
+		"> reproducing bug on add-on version %s",
 		params["addon_reproduced"].(Addon).Version,
 	)
 
@@ -32,8 +32,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 
 	Assert_PushRejected(suite, repository, `XXX`)
 
-	err := context.OnRepository(repository.Slug).PreReceive().Disable()
-	suite.NoError(err, "unable to disable repository hook")
+	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
 
 	Assert_PushRejected(suite, repository, `XXX`)
 }
@@ -128,7 +127,7 @@ func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Reproduced(
 ) {
 	log.Infof(
 		nil,
-		"> reproducing bug on addon version %s",
+		"> reproducing bug on add-on version %s",
 		params["addon_reproduced"].(Addon).Version,
 	)
 
@@ -144,8 +143,7 @@ func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Reproduced(
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 
-	err := preReceive.Disable()
-	suite.NoError(err, "unable to disable pre-receive hook")
+	suite.DisableHook(preReceive)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -174,8 +172,7 @@ func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Fixed(
 
 	Assert_PushRejected(suite, repository, `XXX`)
 
-	err := preReceive.Disable()
-	suite.NoError(err, "unable to disable pre-receive hook")
+	suite.DisableHook(preReceive)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -185,15 +182,16 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 	params TestParams,
 	settings *external_hooks.Settings,
 	project *stash.Project,
-	repository *stash.Repository,
 ) {
 	log.Infof(
 		nil,
-		"> reproducing bug on addon version %s",
+		"> reproducing bug on add-on version %s",
 		params["addon_reproduced"].(Addon).Version,
 	)
 
 	suite.InstallAddon(params["addon_reproduced"].(Addon))
+
+	var repository = suite.CreateRandomRepository(project)
 
 	preReceiveProject := suite.ConfigureHook(
 		suite.ExternalHooks().
@@ -221,8 +219,8 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 	Assert_PushOutputsMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
-	preReceiveProject.Disable()
-	preReceiveRepository.Disable()
+	suite.DisableHook(preReceiveProject)
+	suite.DisableHook(preReceiveRepository)
 }
 
 func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
@@ -230,17 +228,16 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 	params TestParams,
 	settings *external_hooks.Settings,
 	project *stash.Project,
-	repository *stash.Repository,
 ) {
 	log.Infof(
 		nil,
-		"> reproducing bug on addon version %s",
+		"> validating fix on add-on version %s",
 		params["addon_reproduced"].(Addon).Version,
 	)
 
 	suite.InstallAddon(params["addon_fixed"].(Addon))
 
-	settings = settings.UseOverride(true)
+	repository := suite.CreateRandomRepository(project)
 
 	preReceiveProject := suite.ConfigureHook(
 		suite.ExternalHooks().
@@ -265,10 +262,11 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 		),
 	)
 
+	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
-	preReceiveProject.Disable()
-	preReceiveRepository.Disable()
+	suite.DisableHook(preReceiveProject)
+	suite.DisableHook(preReceiveRepository)
 }
 
 func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
@@ -276,10 +274,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
 ) {
 	suite.UseBitbucket(params["bitbucket"].(string))
 
-	var (
-		project    = suite.CreateRandomProject()
-		repository = suite.CreateRandomRepository(project)
-	)
+	project := suite.CreateRandomProject()
 
 	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
@@ -292,7 +287,6 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
 		params,
 		settings,
 		project,
-		repository,
 	)
 
 	suite.testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
@@ -300,6 +294,5 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
 		params,
 		settings,
 		project,
-		repository,
 	)
 }

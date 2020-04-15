@@ -617,6 +617,8 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 		)
 	}
 
+	defer response.Body.Close()
+
 	var status StartupStatus
 
 	err = json.NewDecoder(response.Body).Decode(&status)

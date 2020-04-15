@@ -81,8 +81,7 @@ func (suite *Suite) ConfigureHook(
 	err = hook.Configure(settings)
 	suite.NoError(err, "should be able to configure hook")
 
-	err = hook.Enable()
-	suite.NoError(err, "should be able to enable hook")
+	suite.EnableHook(hook)
 
 	return hook
 }
@@ -204,7 +203,7 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 	return key
 }
 
-func (suite *Suite) DisableHook(hook *external_hooks.Hook) {
+func (suite *Suite) DisableHook(hook interface{ Disable() error }) {
 	// XXX: only for BB>6.2.0
 	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
 		switch {
@@ -221,6 +220,27 @@ func (suite *Suite) DisableHook(hook *external_hooks.Hook) {
 	suite.NoError(err, "should be able to disable hook")
 
 	log.Debugf(nil, "{add-on} waiting for hook script to be deleted by bitbucket")
+
+	waiter.Wait()
+}
+
+func (suite *Suite) EnableHook(hook interface{ Enable() error }) {
+	// XXX: only for BB>6.2.0
+	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
+		switch {
+		case regexp.MustCompile(
+			`ExternalHookScript created .* hook script`,
+		).MatchString(line):
+			return true
+		default:
+			return false
+		}
+	})
+
+	err := hook.Enable()
+	suite.NoError(err, "should be able to enable hook")
+
+	log.Debugf(nil, "{add-on} waiting for hook script to be created by bitbucket")
 
 	waiter.Wait()
 }

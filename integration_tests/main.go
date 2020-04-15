@@ -82,7 +82,7 @@ func main() {
 		suite.WithParams(
 			TestParams{
 				"bitbucket":        baseBitbucket,
-				"addon_reproduced": getAddon("10.0.0"),
+				"addon_reproduced": getAddon("10.1.0"),
 				"addon_fixed":      latestAddon,
 			},
 
@@ -90,77 +90,79 @@ func main() {
 		),
 	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket":        baseBitbucket,
-	//            "addon_reproduced": getAddon("10.0.0"),
-	//            "addon_fixed":      latestAddon,
-	//        },
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("10.0.0"),
+				"addon_fixed":      latestAddon,
+			},
 
-	//        suite.TestBug_ProjectHookCreatedBeforeRepository,
-	//    ),
-	//)
+			suite.TestBug_ProjectHookCreatedBeforeRepository,
+		),
+	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket":        baseBitbucket,
-	//            "addon_reproduced": getAddon("9.1.0"),
-	//            "addon_fixed":      latestAddon,
-	//        },
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("9.1.0"),
+				"addon_fixed":      latestAddon,
+			},
 
-	//        suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
-	//    ),
-	//)
+			suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
+		),
+	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket": baseBitbucket,
-	//            "addon":     latestAddon,
-	//        },
-	//        suite.TestProjectHooks_DoNotCreateDisabledHooks,
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket": baseBitbucket,
+				"addon":     latestAddon,
+			},
+			suite.TestProjectHooks_DoNotCreateDisabledHooks,
 
-	//        // XXX: BB doesn't clean up hook scripts if repository was deleted.
-	//        // suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
-	//    ),
-	//)
+			// XXX: BB doesn't clean up hook scripts if repository was deleted.
+			// suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
+		),
+	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket": baseBitbucket,
-	//            "addon":     latestAddon,
-	//        },
-	//        suite.TestProjectHooks,
-	//        suite.TestRepositoryHooks,
-	//        suite.TestPersonalRepositoriesHooks,
-	//    ),
-	//)
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket": baseBitbucket,
+				"addon":     latestAddon,
+			},
+			suite.TestProjectHooks,
+			suite.TestRepositoryHooks,
+			suite.TestPersonalRepositoriesHooks,
+		),
+	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket_from": baseBitbucket,
-	//            "bitbucket_to":   "6.9.0",
-	//            "addon":          latestAddon,
-	//        },
-	//        suite.TestBitbucketUpgrade,
-	//    ),
-	//)
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket_from": baseBitbucket,
+				"bitbucket_to":   "6.9.0",
+				"addon":          latestAddon,
+			},
+			suite.TestBitbucketUpgrade,
+		),
+	)
 
-	//run.Suite(
-	//    suite.WithParams(
-	//        TestParams{
-	//            "bitbucket": "7.0.0",
-	//            "addon":     latestAddon,
-	//        },
-	//        suite.TestProjectHooks,
-	//        suite.TestRepositoryHooks,
-	//        suite.TestPersonalRepositoriesHooks,
-	//    ),
-	//)
+	_ = baseBitbucket
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket": "7.0.0",
+				"addon":     latestAddon,
+			},
+			suite.TestProjectHooks,
+			suite.TestRepositoryHooks,
+			suite.TestPersonalRepositoriesHooks,
+		),
+	)
 
 	run.Run(dir, runner.RunOpts{
 		Container: opts.ValueContainer,
