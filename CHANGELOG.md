@@ -1,5 +1,13 @@
 ## Bitbucket 6.2.0 and higher
 
+### 10.2.0 (2020-04-15)
+
+Properly override project-level hooks with repository hooks.
+
+Now, for any given repo if there are both project-level and repository-level
+hooks are enabled, only repository-level hook will be executed, completely
+overriding project-level settings.
+
 ### 10.1.0 (2020-03-06)
 
 Fix bug:
