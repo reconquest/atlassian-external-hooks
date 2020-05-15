@@ -114,7 +114,7 @@ public class ExternalHooksSettingsDao {
       if (trigger.isPresent()) {
         result.add(trigger.get());
       } else {
-        log.warn("unrecognized hook trigger in settings: {}", item);
+        log.error("unrecognized hook trigger in settings: {}", item);
       }
     }
 

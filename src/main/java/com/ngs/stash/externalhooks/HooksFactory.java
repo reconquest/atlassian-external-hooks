@@ -55,7 +55,7 @@ public class HooksFactory {
       }
 
       if (ScopeUtil.isInheritedEnabled(hook, scope)) {
-        log.warn("hook {} is enabled & configured (inherited of {})", hookKey, ScopeUtil.toString(
+        log.info("hook {} is enabled & configured (inherited of {})", hookKey, ScopeUtil.toString(
             hook.getScope()));
         continue;
       }
@@ -71,6 +71,6 @@ public class HooksFactory {
       }
     }
 
-    log.warn("created {} hook scripts on scope {}", created, ScopeUtil.toString(scope));
+    log.info("created {} hook scripts on scope {}", created, ScopeUtil.toString(scope));
   }
 }
