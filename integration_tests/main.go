@@ -10,6 +10,7 @@ import (
 	"github.com/docopt/docopt-go"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/pom"
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
@@ -68,7 +69,7 @@ func main() {
 
 	var (
 		baseBitbucket = "6.2.0"
-		latestAddon   = getAddon("10.2.0")
+		latestAddon   = getAddon(getLatestVersionXML())
 	)
 
 	run := runner.New()
@@ -237,4 +238,23 @@ func getAddon(version string) Addon {
 		Version: version,
 		Path:    path,
 	}
+}
+
+func getLatestVersionXML() string {
+	contents, err := ioutil.ReadFile("pom.xml")
+	if err != nil {
+		log.Fatalf(err, "unable to read pom.xml")
+	}
+
+	model, err := pom.Unmarshal(contents)
+	if err != nil {
+		log.Fatalf(err, "unable to unmarshal pom.xml")
+	}
+
+	version, err := model.Get("version")
+	if err != nil {
+		log.Fatalf(err, "unable to read pom.xml version")
+	}
+
+	return version
 }

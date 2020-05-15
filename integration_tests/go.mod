@@ -18,6 +18,7 @@ require (
 	github.com/reconquest/loreley v0.0.0-20190408221007-9e95b93c818f // indirect
 	github.com/reconquest/nopio-go v0.0.0-20161213101805-20796acb207f // indirect
 	github.com/reconquest/pkg v0.0.0-20200226094950-b0371912242c
+	github.com/reconquest/pom v0.0.0-20200329103042-879cb04db2e6
 	github.com/stretchr/testify v1.5.1
 	github.com/zazab/zhash v0.0.0-20170403032415-ad45b89afe7a // indirect
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073 // indirect

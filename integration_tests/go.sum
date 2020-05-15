@@ -1,5 +1,7 @@
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d h1:licZJFw2RwpHMqeKTCYkitsPqHNxTmd4SNR5r94FGM8=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d/go.mod h1:asat636LX7Bqt5lYEZ27JNDcqxfjdBQuJ/MM4CN/Lzo=
+github.com/clbanning/mxj v1.8.4 h1:HuhwZtbyvyOw+3Z1AowPkU87JkJUSv751ELWaiTpj8I=
+github.com/clbanning/mxj v1.8.4/go.mod h1:BVjHeAH+rl9rs6f+QIpeRl0tfu10SXn1pUSa5PVGJng=
 github.com/coreos/go-semver v0.3.0 h1:wkHLiw0WNATZnSG7epLsujiMCgPAc9xhjJ4tgnAxmfM=
 github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
@@ -32,6 +34,8 @@ github.com/reconquest/nopio-go v0.0.0-20161213101805-20796acb207f h1:IA86P8l4xRM
 github.com/reconquest/nopio-go v0.0.0-20161213101805-20796acb207f/go.mod h1:xyNcU6XK6bQpR3pVBIHFPi4Xh6NV/FBKnWkYV8lwv1k=
 github.com/reconquest/pkg v0.0.0-20200226094950-b0371912242c h1:9x45vr/UAR9e51NHMbLRdeR1821PIaNIXl3JH2TDofo=
 github.com/reconquest/pkg v0.0.0-20200226094950-b0371912242c/go.mod h1:Nqi0AJehtACFbTsZoQYCPPF20kTR78IhkL09CeUUGbU=
+github.com/reconquest/pom v0.0.0-20200329103042-879cb04db2e6 h1:Io5WdCa5+okkn47KqEvCXPMwNOV8jYJ7XetfMOgo5gc=
+github.com/reconquest/pom v0.0.0-20200329103042-879cb04db2e6/go.mod h1:WwzfklKtBLQEK0GYOSx7t772SDEiRRF5vQcT3MlqfMo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.5.1 h1:nOGnQDM7FYENwehXlg/kFVnos3rEvtKTjRvOWSzb6H4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
