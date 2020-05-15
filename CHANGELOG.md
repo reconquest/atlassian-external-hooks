@@ -1,5 +1,10 @@
 ## Bitbucket 6.2.0 and higher
 
+### 10.2.1 (2020-05-15)
+
+* Change the severity of log messages during startup from Warning to Info.
+* Fix grammar typos
+
 ### 10.2.0 (2020-04-15)
 
 Properly override project-level hooks with repository hooks.
