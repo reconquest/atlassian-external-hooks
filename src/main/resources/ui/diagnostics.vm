@@ -1,0 +1,36 @@
+#disable_html_escaping()
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="decorator" content="atl.admin">
+        $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
+    </head>
+    <body>
+        <h2>External Hooks: Diagnostics</h2>
+        #if($success)
+        <div class="aui-message aui-message-warning">
+            <p>
+            You've successfuly removed all HookScript objects.
+            Use <a href="settings">the Settings page</a> with the 'Apply to existing hooks' checkbox checked to re-configure hooks.
+            </p>
+        </div>
+        #end
+        <div class="aui-message aui-message-primary">
+            <p>Current number of HookScripts installed: $hook_scripts_total</p>
+
+            <form class="aui">
+                <a class="aui-button aui-button-warning" href="?dump">HookScripts report</a>
+            </form>
+        </div>
+        <div class="aui-message aui-message-warning">
+            <p>WARNING: The following button immediately removes all internal HookScript objects owned by the add-on.
+            It doesn't create them after the reset.
+            Use <a href="settings">the Settings page</a> with the 'Apply to existing hooks' checkbox checked to re-configure hooks.
+            </p>
+            <form class="aui" method="POST">
+                <input type="hidden" name="action" value="remove_by_plugin_key" />
+                <button class="aui-button aui-button-warning" type="submit">Remove all existing hooks</button>
+            </form>
+        </div>
+    </body>
+</html>

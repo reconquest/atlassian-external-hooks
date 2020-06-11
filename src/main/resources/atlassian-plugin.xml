@@ -117,12 +117,21 @@
     </web-section>
 
     <web-item
-            key="rq-hooks-admin-section-runners"
+            key="rq-hooks-admin-section-settings"
             name="Reconquest External Hooks Trigger Settings"
             weight="10"
             section="atl.admin/rq-hooks-admin-section">
         <label>Triggers</label>
         <link>${navBuilder.pluginServlets().path('external-hooks', 'settings').buildRelNoContext()}</link>
+    </web-item>
+
+    <web-item
+            key="rq-hooks-admin-section-diagnostics"
+            name="Reconquest External Hooks Diagnostics"
+            weight="10"
+            section="atl.admin/rq-hooks-admin-section">
+        <label>Diagnostics</label>
+        <link>${navBuilder.pluginServlets().path('external-hooks', 'diagnostics').buildRelNoContext()}</link>
     </web-item>
 
 
@@ -133,6 +142,15 @@
             class="com.ngs.stash.externalhooks.servlet.Settings">
         <description key="external-hooks-settings.description">External Hooks Add-on Settings</description>
         <url-pattern>/external-hooks/settings</url-pattern>
+    </servlet>
+
+    <servlet
+            name="External Hooks Diagnostics"
+            i18n-name-key="external-hooks-diagnostics.name"
+            key="external-hooks-diagnostics"
+            class="com.ngs.stash.externalhooks.servlet.Diagnostics">
+        <description key="external-hooks-diagnostics.description">External Hooks Add-on Diagnostics</description>
+        <url-pattern>/external-hooks/diagnostics</url-pattern>
     </servlet>
 
     <rest

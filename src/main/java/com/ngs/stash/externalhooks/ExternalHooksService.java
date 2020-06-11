@@ -49,6 +49,7 @@ public class ExternalHooksService implements JobRunner {
   private Walker walker;
   private HooksFactory hooksFactory;
   private ClusterService clusterService;
+  private HookScriptService hookScriptService;
 
   @Inject
   public ExternalHooksService(
@@ -66,6 +67,7 @@ public class ExternalHooksService implements JobRunner {
       @ComponentImport ClusterService clusterService,
       @ComponentImport StorageService storageService)
       throws IOException {
+    this.hookScriptService = hookScriptService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
     this.clusterService = clusterService;
@@ -104,7 +106,7 @@ public class ExternalHooksService implements JobRunner {
       // and replace it with latest one if id is the same.
       //
       // more info:
-      // https://docs.atlassian.com/atlassian-scheduler-api/1.6.0/atlassian-scheduler-api/apidocs/com/atlassian/scheduler/SchedulerService.html#scheduleJob(com.atlassian.scheduler.config.JobId,%20com.atlassian.scheduler.config.JobConfig)
+      //
       long offset = 0;
       if (this.clusterService.getInformation().getNodes().size() > 1) {
         offset = 10000L;
