@@ -1,10 +1,15 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 
-<atlassian-plugin key="com.ngs.stash.externalhooks.external-hooks" name="${project.name}" plugins-version="2">
+<atlassian-plugin
+        key="com.ngs.stash.externalhooks.external-hooks"
+        name="${project.name}"
+        plugins-version="2">
     <plugin-info>
         <description>${project.description}</description>
         <version>${project.version}</version>
-        <vendor name="${project.organization.name}" url="${project.organization.url}"/>
+        <vendor
+                name="${project.organization.name}"
+                url="${project.organization.url}" />
         <param name="atlassian-data-center-status">compatible</param>
         <param name="atlassian-data-center-compatible">true</param>
         <param name="plugin-icon">images/logo.16x16.png</param>
@@ -12,27 +17,52 @@
         <param name="atlassian-licensing-enabled">true</param>
     </plugin-info>
     <!-- add our i18n resource -->
-    <resource type="i18n" name="i18n" location="external-hooks"/>
-        <!-- add our web resources -->
-    <web-resource key="web-resources" name="External Hooks Web Resources">
+    <resource
+            type="i18n"
+            name="i18n"
+            location="external-hooks" />
+    <!-- add our web resources -->
+    <web-resource
+            key="web-resources"
+            name="External Hooks Web Resources">
         <dependency>com.atlassian.auiplugin:ajs</dependency>
-        <resource type="download" name="external-hooks.css" location="/css/external-hooks.css"/>
-        <resource name="batch.js" type="download" location="js/${reconquest.batch.js}"/>
-        <resource type="download" name="images/" location="/images"/>
+        <resource
+                type="download"
+                name="external-hooks.css"
+                location="/css/external-hooks.css" />
+        <resource
+                name="batch.js"
+                type="download"
+                location="js/${reconquest.batch.js}" />
+        <resource
+                type="download"
+                name="images/"
+                location="/images" />
         <context>web</context>
     </web-resource>
 
-    <web-resource key="external-hooks-resources" name="external-hooks Web Resources">
-        <resource type="template" name="/hook-script.template.bash" location="/hook-script.template.bash" />
+    <web-resource
+            key="external-hooks-resources"
+            name="external-hooks Web Resources">
+        <resource
+                type="template"
+                name="/hook-script.template.bash"
+                location="/hook-script.template.bash" />
         <context>external-hooks</context>
     </web-resource>
 
-    <repository-hook name="External Pre Receive Hook" i18n-name-key="external-pre-receive-hook.name" key="external-pre-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
+    <repository-hook
+            name="External Pre Receive Hook"
+            i18n-name-key="external-pre-receive-hook.name"
+            key="external-pre-receive-hook"
+            class="com.ngs.stash.externalhooks.hook.ExternalPreReceiveHook">
         <description key="external-pre-receive-hook.description">The External Pre Receive Hook Add-on</description>
         <icon>images/logo.144x144.png</icon>
-        <config-form name="External Pre Receive Hook Config" key="external-pre-receive-hook-config">
+        <config-form
+                name="External Pre Receive Hook Config"
+                key="external-pre-receive-hook-config">
             <view>com.ngs.stash.externalhooks.hook.externalprereceivehook.view</view>
-            <directory location="/static/"/>
+            <directory location="/static/" />
         </config-form>
         <scopes>
             <scope>project</scope>
@@ -40,12 +70,18 @@
         </scopes>
     </repository-hook>
 
-    <repository-hook name="External Post Receive Hook" i18n-name-key="external-async-post-receive-hook.name" key="external-post-receive-hook" class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
+    <repository-hook
+            name="External Post Receive Hook"
+            i18n-name-key="external-async-post-receive-hook.name"
+            key="external-post-receive-hook"
+            class="com.ngs.stash.externalhooks.hook.ExternalAsyncPostReceiveHook">
         <description key="external-post-receive-hook.description">The External Post Receive Hook Add-on</description>
         <icon>images/logo.144x144.png</icon>
-        <config-form name="External Post Receive Hook Config" key="external-post-receive-hook-config">
+        <config-form
+                name="External Post Receive Hook Config"
+                key="external-post-receive-hook-config">
             <view>com.ngs.stash.externalhooks.hook.externalpostreceivehook.view</view>
-            <directory location="/static/"/>
+            <directory location="/static/" />
         </config-form>
         <scopes>
             <scope>project</scope>
@@ -53,12 +89,18 @@
         </scopes>
     </repository-hook>
 
-    <repository-hook name="External Merge Check Hook" i18n-name-key="external-merge-check-hook.name" key="external-merge-check-hook" class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
+    <repository-hook
+            name="External Merge Check Hook"
+            i18n-name-key="external-merge-check-hook.name"
+            key="external-merge-check-hook"
+            class="com.ngs.stash.externalhooks.hook.ExternalMergeCheckHook">
         <description key="external-merge-check-hook.description">The External Merge Check Hook Add-on</description>
         <icon>images/logo.144x144.png</icon>
-        <config-form name="External Merge Check Hook Config" key="external-merge-check-hook-config">
+        <config-form
+                name="External Merge Check Hook Config"
+                key="external-merge-check-hook-config">
             <view>com.ngs.stash.externalhooks.hook.externalmergecheckhook.view</view>
-            <directory location="/static/"/>
+            <directory location="/static/" />
         </config-form>
         <scopes>
             <scope>project</scope>
@@ -66,22 +108,56 @@
         </scopes>
     </repository-hook>
 
-    <web-section key="rq-hooks-admin-section" name="Reconquest External Hooks Settings" weight="110" location="atl.admin">
+    <web-section
+            key="rq-hooks-admin-section"
+            name="Reconquest External Hooks Settings"
+            weight="110"
+            location="atl.admin">
         <label>External Hooks</label>
     </web-section>
 
-    <web-item key="rq-hooks-admin-section-runners" name="Reconquest External Hooks Trigger Settings" weight="10" section="atl.admin/rq-hooks-admin-section">
+    <web-item
+            key="rq-hooks-admin-section-settings"
+            name="Reconquest External Hooks Trigger Settings"
+            weight="10"
+            section="atl.admin/rq-hooks-admin-section">
         <label>Triggers</label>
         <link>${navBuilder.pluginServlets().path('external-hooks', 'settings').buildRelNoContext()}</link>
     </web-item>
 
+    <web-item
+            key="rq-hooks-admin-section-diagnostics"
+            name="Reconquest External Hooks Diagnostics"
+            weight="10"
+            section="atl.admin/rq-hooks-admin-section">
+        <label>Diagnostics</label>
+        <link>${navBuilder.pluginServlets().path('external-hooks', 'diagnostics').buildRelNoContext()}</link>
+    </web-item>
 
-    <servlet name="External Hooks Settings" i18n-name-key="external-hooks-settings.name" key="external-hooks-settings" class="com.ngs.stash.externalhooks.servlet.Settings">
+
+    <servlet
+            name="External Hooks Settings"
+            i18n-name-key="external-hooks-settings.name"
+            key="external-hooks-settings"
+            class="com.ngs.stash.externalhooks.servlet.Settings">
         <description key="external-hooks-settings.description">External Hooks Add-on Settings</description>
         <url-pattern>/external-hooks/settings</url-pattern>
     </servlet>
 
-    <rest name="External Hooks" key="external-hooks" path="external-hooks" version="1.0">
+    <servlet
+            name="External Hooks Diagnostics"
+            i18n-name-key="external-hooks-diagnostics.name"
+            key="external-hooks-diagnostics"
+            class="com.ngs.stash.externalhooks.servlet.Diagnostics">
+        <description key="external-hooks-diagnostics.description">External Hooks Add-on Diagnostics</description>
+        <url-pattern>/external-hooks/diagnostics</url-pattern>
+    </servlet>
+
+    <rest
+            name="External Hooks"
+            key="external-hooks"
+            path="external-hooks"
+            version="1.0">
         <description>External Hooks Add-on</description>
     </rest>
 
@@ -114,14 +190,34 @@
             class="com.ngs.stash.externalhooks.LicenseValidator" />
 
 
-    <component-import key="activeObjects" interface="com.atlassian.activeobjects.external.ActiveObjects" />
-    <component-import key="authenticationContext" interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
-    <component-import key="permissions" interface="com.atlassian.bitbucket.permission.PermissionService" />
-    <component-import key="pluginLicenseManager" interface="com.atlassian.upm.api.license.PluginLicenseManager" />
-    <component-import key="pullRequestService" interface="com.atlassian.bitbucket.pull.PullRequestService" />
-    <component-import key="clusterService" interface="com.atlassian.bitbucket.cluster.ClusterService" />
-    <component-import key="storageService" interface="com.atlassian.bitbucket.server.StorageService" />
-    <component-import key="hookScriptService" interface="com.atlassian.bitbucket.hook.script.HookScriptService" />
-    <component-import key="pluginSettingsFactory" interface="com.atlassian.sal.api.pluginsettings.PluginSettingsFactory" />
-    <component-import key="securityService" interface="com.atlassian.bitbucket.user.SecurityService" />
+    <component-import
+            key="activeObjects"
+            interface="com.atlassian.activeobjects.external.ActiveObjects" />
+    <component-import
+            key="authenticationContext"
+            interface="com.atlassian.bitbucket.auth.AuthenticationContext" />
+    <component-import
+            key="permissions"
+            interface="com.atlassian.bitbucket.permission.PermissionService" />
+    <component-import
+            key="pluginLicenseManager"
+            interface="com.atlassian.upm.api.license.PluginLicenseManager" />
+    <component-import
+            key="pullRequestService"
+            interface="com.atlassian.bitbucket.pull.PullRequestService" />
+    <component-import
+            key="clusterService"
+            interface="com.atlassian.bitbucket.cluster.ClusterService" />
+    <component-import
+            key="storageService"
+            interface="com.atlassian.bitbucket.server.StorageService" />
+    <component-import
+            key="hookScriptService"
+            interface="com.atlassian.bitbucket.hook.script.HookScriptService" />
+    <component-import
+            key="pluginSettingsFactory"
+            interface="com.atlassian.sal.api.pluginsettings.PluginSettingsFactory" />
+    <component-import
+            key="securityService"
+            interface="com.atlassian.bitbucket.user.SecurityService" />
 </atlassian-plugin>

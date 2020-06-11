@@ -112,7 +112,7 @@ $mergeCheckConfiguration.add($preReceiveConfiguration.get(5))
     </head>
     <body>
         <form class="aui" id="rq_hooks_global_settings_form">
-            <h2>External Hooks</h2>
+            <h2>External Hooks: Settings</h2>
 
             #foreach($configuration in $triggerConfigurations)
                 <h3>$configuration.title</h3>

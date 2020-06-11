@@ -1,10 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project
+        xmlns="http://maven.apache.org/POM/4.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>10.2.1</version>
+    <version>10.3.1</version>
     <organization>
         <name>reconquest</name>
         <url>https://external-hooks.reconquest.io/</url>
@@ -128,6 +131,11 @@
             <artifactId>jakarta.xml.bind-api</artifactId>
             <version>2.3.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1.1</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -233,7 +241,7 @@
                     </snapshots>
                     <releases>
                         <enabled>true</enabled>
-                            <checksumPolicy>warn</checksumPolicy>
+                        <checksumPolicy>warn</checksumPolicy>
                     </releases>
                 </repository>
                 <repository>
@@ -272,6 +280,6 @@
                     </releases>
                 </pluginRepository>
             </pluginRepositories>
-       </profile>
+        </profile>
     </profiles>
 </project>

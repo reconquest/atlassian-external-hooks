@@ -10,6 +10,7 @@ import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.DefaultSettings;
+import com.ngs.stash.externalhooks.ExternalHookSettingsTriggers;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
 
 import org.slf4j.Logger;
@@ -30,9 +31,9 @@ public class ExternalHooksSettingsDao {
   public ExternalHooksSettings getSettings() {
     ExternalHooksSettings settings = new ExternalHooksSettings();
 
-    settings.triggers.preReceive = getIds(getPreReceiveHookTriggers());
-    settings.triggers.postReceive = getIds(getPostReceiveHookTriggers());
-    settings.triggers.mergeCheck = getIds(getMergeCheckHookTriggers());
+    settings.triggers.pre_receive = getIds(getPreReceiveHookTriggers());
+    settings.triggers.post_receive = getIds(getPostReceiveHookTriggers());
+    settings.triggers.merge_check = getIds(getMergeCheckHookTriggers());
 
     return settings;
   }
@@ -40,32 +41,32 @@ public class ExternalHooksSettingsDao {
   public ExternalHooksSettings getDefaultSettings() {
     ExternalHooksSettings settings = new ExternalHooksSettings();
 
-    settings.triggers.preReceive = getIds(DefaultSettings.PreReceiveHookTriggers);
-    settings.triggers.postReceive = getIds(DefaultSettings.PostReceiveHookTriggers);
-    settings.triggers.mergeCheck = getIds(DefaultSettings.MergeCheckHookTriggers);
+    settings.triggers.pre_receive = getIds(DefaultSettings.PreReceiveHookTriggers);
+    settings.triggers.post_receive = getIds(DefaultSettings.PostReceiveHookTriggers);
+    settings.triggers.merge_check = getIds(DefaultSettings.MergeCheckHookTriggers);
 
     return settings;
   }
 
   public void save(ExternalHooksSettings settings) {
-    ExternalHooksSettings.Triggers triggers = settings.triggers;
+    ExternalHookSettingsTriggers triggers = settings.triggers;
 
-    if (triggers.preReceive != null) {
+    if (triggers.pre_receive != null) {
       pluginSettings.put(
           getPluginSettingsKey("pre_receive"),
-          sanitize(triggers.preReceive, DefaultSettings.PreReceiveHookTriggers));
+          sanitize(triggers.pre_receive, DefaultSettings.PreReceiveHookTriggers));
     }
 
-    if (triggers.postReceive != null) {
+    if (triggers.post_receive != null) {
       pluginSettings.put(
           getPluginSettingsKey("post_receive"),
-          sanitize(triggers.postReceive, DefaultSettings.PostReceiveHookTriggers));
+          sanitize(triggers.post_receive, DefaultSettings.PostReceiveHookTriggers));
     }
 
-    if (triggers.mergeCheck != null) {
+    if (triggers.merge_check != null) {
       pluginSettings.put(
           getPluginSettingsKey("merge_check"),
-          sanitize(triggers.mergeCheck, DefaultSettings.MergeCheckHookTriggers));
+          sanitize(triggers.merge_check, DefaultSettings.MergeCheckHookTriggers));
     }
   }
 
