@@ -27,6 +27,3 @@ Supports the following hooks:
 Please [open an issue](https://github.com/reconquest/atlassian-external-hooks/issues/new) for support.
 
 You can always join our Slack community and drop us a line there: [slack.reconquest.io](https://slack.reconquest.io/)
-
-## License
-This project is licensed under the GNU General Public License version 2.
