@@ -82,7 +82,7 @@ func (instance *Instance) GetURI(path string) string {
 	return url.String()
 }
 
-func (instance *Instance) GetClonePathSSH(repo string, project string) string {
+func (instance *Instance) GetClonePathSSH(repo, project string) string {
 	url := url.URL{
 		Scheme: "ssh",
 		User:   url.User("git"),
@@ -93,7 +93,7 @@ func (instance *Instance) GetClonePathSSH(repo string, project string) string {
 	return url.String()
 }
 
-func (instance *Instance) GetClonePathHTTP(repo string, project string) string {
+func (instance *Instance) GetClonePathHTTP(repo, project string) string {
 	return instance.GetURI(
 		fmt.Sprintf(
 			"scm/%s/%s.git",
@@ -109,6 +109,27 @@ func (instance *Instance) GetContainerID() string {
 
 func (instance *Instance) GetVersion() string {
 	return instance.version
+}
+
+func (instance *Instance) ReadFile(path string) (string, error) {
+	execution := exec.New(
+		"docker", "exec", instance.container, "cat", path,
+	)
+
+	err := execution.Start()
+	if err != nil {
+		return "", karma.Format(
+			err,
+			"unable to start docker cp",
+		)
+	}
+
+	data, err := ioutil.ReadAll(execution.GetStdout())
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
 }
 
 func (instance *Instance) ListFiles(path string) ([]string, error) {

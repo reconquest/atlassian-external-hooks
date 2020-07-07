@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
@@ -286,6 +287,7 @@ func (suite *Suite) testPostReceive(
 
 	suite.testPostReceiveHook_Input(tester)
 	suite.testPostReceiveHook_Output(tester)
+	suite.testPostReceiveHook_AfterMerge(tester)
 
 	suite.DisableHook(hook)
 }
@@ -304,6 +306,28 @@ func (suite *Suite) testPostReceiveHook_Output(
 		Assert_PushOutputsMessages,
 		Assert_PushDoesNotOutputMessages,
 	)
+}
+
+func (suite *Suite) testPostReceiveHook_AfterMerge(
+	tester *HookTester,
+) {
+	name := "/tmp/" + fmt.Sprint(time.Now().UnixNano())
+	tester.suite.ConfigureSampleHook(
+		tester.hook,
+		string(text(
+			fmt.Sprintf(`echo 1 > `+name),
+		)),
+	)
+
+	pullRequest := suite.CreateRandomPullRequest(
+		&tester.repository.Project,
+		tester.repository,
+	)
+
+	Assert_MergeCheckPassed(pullRequest, suite, tester.repository)
+
+	_, err := suite.Bitbucket().Instance.ReadFile(name)
+	suite.NoError(err, "should have file")
 }
 
 func (suite *Suite) testMergeCheck(

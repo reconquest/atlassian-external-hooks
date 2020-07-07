@@ -194,6 +194,7 @@ func main() {
 
 func getAddon(version string) Addon {
 	builds := map[string]string{
+		"10.2.1": "6572",
 		"10.1.0": "6532",
 		"10.0.0": "6512",
 		"9.1.0":  "6492",
