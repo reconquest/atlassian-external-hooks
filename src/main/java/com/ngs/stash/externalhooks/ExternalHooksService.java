@@ -74,19 +74,21 @@ public class ExternalHooksService implements JobRunner {
 
     // Unfortunately, no way to @ComponentImport it because Named() used here.
     // Consider it to replace with lifecycle aware listener.
-    this.hooksFactory = new HooksFactory(repositoryHookService, new HooksCoordinator(
-        userService,
-        projectService,
-        repositoryService,
+    this.hooksFactory = new HooksFactory(
         repositoryHookService,
-        authenticationContext,
-        permissionService,
-        pluginLicenseManager,
-        clusterService,
-        storageService,
-        hookScriptService,
-        pluginSettingsFactory,
-        securityService));
+        new HooksCoordinator(
+            userService,
+            projectService,
+            repositoryService,
+            repositoryHookService,
+            authenticationContext,
+            permissionService,
+            pluginLicenseManager,
+            clusterService,
+            storageService,
+            hookScriptService,
+            pluginSettingsFactory,
+            securityService));
   }
 
   public void start() {
@@ -108,9 +110,11 @@ public class ExternalHooksService implements JobRunner {
         offset = 10000L;
       }
 
-      this.schedulerService.scheduleJob(this.jobId, JobConfig.forJobRunnerKey(runner)
-          .withRunMode(RunMode.RUN_ONCE_PER_CLUSTER)
-          .withSchedule(Schedule.runOnce(new Date(System.currentTimeMillis() + offset))));
+      this.schedulerService.scheduleJob(
+          this.jobId,
+          JobConfig.forJobRunnerKey(runner)
+              .withRunMode(RunMode.RUN_ONCE_PER_CLUSTER)
+              .withSchedule(Schedule.runOnce(new Date(System.currentTimeMillis() + offset))));
     } catch (SchedulerServiceException e) {
       log.error("unable to schedule external hooks job");
       e.printStackTrace();

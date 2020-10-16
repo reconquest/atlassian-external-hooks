@@ -18,6 +18,7 @@ import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSettings;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
+import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.project.ProjectType;
@@ -45,6 +46,7 @@ public class HooksCoordinator {
 
   private Map<String, ExternalHookScript> scripts = new HashMap<>();
   private Walker walker;
+  private SecurityService securityService;
 
   public HooksCoordinator(
       @ComponentImport UserService userService,
@@ -61,44 +63,51 @@ public class HooksCoordinator {
       @ComponentImport SecurityService securityService)
       throws IOException {
     this.repositoryHookService = repositoryHookService;
+    this.securityService = securityService;
 
     ExternalHooksSettingsDao settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
-    this.scripts.put(Const.PRE_RECEIVE_HOOK_ID, new ExternalHookScript(
-        permissionService,
-        pluginLicenseManager,
-        clusterService,
-        storageService,
-        hookScriptService,
-        pluginSettingsFactory,
-        securityService,
+    this.scripts.put(
         Const.PRE_RECEIVE_HOOK_ID,
-        HookScriptType.PRE,
-        () -> settingsDao.getPreReceiveHookTriggers()));
+        new ExternalHookScript(
+            permissionService,
+            pluginLicenseManager,
+            clusterService,
+            storageService,
+            hookScriptService,
+            pluginSettingsFactory,
+            securityService,
+            Const.PRE_RECEIVE_HOOK_ID,
+            HookScriptType.PRE,
+            () -> settingsDao.getPreReceiveHookTriggers()));
 
-    this.scripts.put(Const.POST_RECEIVE_HOOK_ID, new ExternalHookScript(
-        permissionService,
-        pluginLicenseManager,
-        clusterService,
-        storageService,
-        hookScriptService,
-        pluginSettingsFactory,
-        securityService,
+    this.scripts.put(
         Const.POST_RECEIVE_HOOK_ID,
-        HookScriptType.POST,
-        () -> settingsDao.getPostReceiveHookTriggers()));
+        new ExternalHookScript(
+            permissionService,
+            pluginLicenseManager,
+            clusterService,
+            storageService,
+            hookScriptService,
+            pluginSettingsFactory,
+            securityService,
+            Const.POST_RECEIVE_HOOK_ID,
+            HookScriptType.POST,
+            () -> settingsDao.getPostReceiveHookTriggers()));
 
-    this.scripts.put(Const.MERGE_CHECK_HOOK_ID, new ExternalHookScript(
-        permissionService,
-        pluginLicenseManager,
-        clusterService,
-        storageService,
-        hookScriptService,
-        pluginSettingsFactory,
-        securityService,
+    this.scripts.put(
         Const.MERGE_CHECK_HOOK_ID,
-        HookScriptType.PRE,
-        () -> settingsDao.getMergeCheckHookTriggers()));
+        new ExternalHookScript(
+            permissionService,
+            pluginLicenseManager,
+            clusterService,
+            storageService,
+            hookScriptService,
+            pluginSettingsFactory,
+            securityService,
+            Const.MERGE_CHECK_HOOK_ID,
+            HookScriptType.PRE,
+            () -> settingsDao.getMergeCheckHookTriggers()));
 
     this.walker = new Walker(securityService, userService, projectService, repositoryService);
   }
@@ -249,11 +258,23 @@ public class HooksCoordinator {
       return;
     }
 
-    ProjectScope projectScope = new ProjectScope(scope.getProject());
-    RepositoryHook projectHook = repositoryHookService.getByKey(projectScope, script.getHookKey());
-    if (projectHook.isEnabled()) {
-      script.uninstall(projectScope, scope);
-    }
+    // The user might not have ADMIN privileges to the project while having
+    // ADMIN privileges on the repository
+    securityService
+        .withPermission(
+            Permission.PROJECT_ADMIN,
+            scope.getProject(),
+            "atlassian-external-hooks: look for project hook")
+        .call(() -> {
+          ProjectScope projectScope = new ProjectScope(scope.getProject());
+          RepositoryHook projectHook =
+              repositoryHookService.getByKey(projectScope, script.getHookKey());
+          if (projectHook.isEnabled()) {
+            script.uninstall(projectScope, scope);
+          }
+
+          return null;
+        });
   }
 
   public void inherit(RepositoryScope scope, ExternalHookScript script) {
@@ -267,17 +288,28 @@ public class HooksCoordinator {
 
     disable(scope, script);
 
-    ProjectScope projectScope = new ProjectScope(scope.getProject());
-    RepositoryHook projectHook = repositoryHookService.getByKey(projectScope, script.getHookKey());
-    if (projectHook.isEnabled()) {
-      GetRepositoryHookSettingsRequest request =
-          (new GetRepositoryHookSettingsRequest.Builder(scope, script.getHookKey())).build();
-      RepositoryHookSettings projectSettings = repositoryHookService.getSettings(request);
-      if (projectSettings == null) {
-        return;
-      }
+    // The user might not have ADMIN privileges to the project while having
+    // ADMIN privileges on the repository
+    securityService
+        .withPermission(
+            Permission.PROJECT_ADMIN,
+            scope.getProject(),
+            "atlassian-external-hooks: look for project hook")
+        .call(() -> {
+          ProjectScope projectScope = new ProjectScope(scope.getProject());
+          RepositoryHook projectHook =
+              repositoryHookService.getByKey(projectScope, script.getHookKey());
+          if (projectHook.isEnabled()) {
+            GetRepositoryHookSettingsRequest request =
+                (new GetRepositoryHookSettingsRequest.Builder(scope, script.getHookKey())).build();
+            RepositoryHookSettings projectSettings = repositoryHookService.getSettings(request);
+            if (projectSettings == null) {
+              return null;
+            }
 
-      script.install(projectSettings.getSettings(), projectScope, scope);
-    }
+            script.install(projectSettings.getSettings(), projectScope, scope);
+          }
+          return null;
+        });
   }
 }

@@ -39,13 +39,15 @@ public class ExternalPreReceiveHook
       @Nonnull PreRepositoryHookContext context, @Nonnull RepositoryHookRequest request) {
     if (!licenseValidator.isDefined()) {
       return RepositoryHookResult.rejected(
-          "Unlicensed Add-on.", "License for External Hooks Add-on is missing.\n"
+          "Unlicensed Add-on.",
+          "License for External Hooks Add-on is missing.\n"
               + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
     }
 
     if (!licenseValidator.isValid()) {
       return RepositoryHookResult.rejected(
-          "License is not valid.", "License for External Hooks Add-on is expired.\n"
+          "License is not valid.",
+          "License for External Hooks Add-on is expired.\n"
               + "Visit \"Manage Apps\" page in your Bitbucket instance for more info.");
     }
 
