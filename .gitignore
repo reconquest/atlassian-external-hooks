@@ -2,6 +2,7 @@
 /*.log
 *.iml
 .idea
+.vim
 /.settings
 /.project
 /.classpath

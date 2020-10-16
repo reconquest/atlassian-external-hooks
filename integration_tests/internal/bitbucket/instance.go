@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
@@ -59,14 +60,22 @@ func (instance *Instance) GetOpts() struct {
 	return instance.opts
 }
 
-func (instance *Instance) GetConnectorURI() string {
-	url := url.URL{
-		Scheme: "http",
-		User: url.UserPassword(
+func (instance *Instance) GetConnectorURI(user *stash.User) string {
+	var auth *url.Userinfo
+
+	if user == nil {
+		auth = url.UserPassword(
 			instance.opts.AdminUser,
 			instance.opts.AdminPassword,
-		),
-		Host: fmt.Sprintf("%s:%d", instance.ip, instance.opts.PortHTTP),
+		)
+	} else {
+		auth = url.UserPassword(user.Name, user.Password)
+	}
+
+	url := url.URL{
+		Scheme: "http",
+		User:   auth,
+		Host:   fmt.Sprintf("%s:%d", instance.ip, instance.opts.PortHTTP),
 	}
 
 	return url.String()

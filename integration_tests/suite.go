@@ -14,6 +14,7 @@ import (
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 	"github.com/stretchr/testify/assert"
@@ -86,9 +87,18 @@ func (suite *Suite) ConfigureHook(
 	return hook
 }
 
-func (suite *Suite) ExternalHooks() *external_hooks.Addon {
+func (suite *Suite) ExternalHooks(opts ...interface{}) *external_hooks.Addon {
+	var user *stash.User
+
+	for _, opt := range opts {
+		switch opt := opt.(type) {
+		case *stash.User:
+			user = opt
+		}
+	}
+
 	return &external_hooks.Addon{
-		BitbucketURI: suite.Bitbucket().GetConnectorURI(),
+		BitbucketURI: suite.Bitbucket().GetConnectorURI(user),
 	}
 }
 
@@ -245,12 +255,44 @@ func (suite *Suite) EnableHook(hook interface{ Enable() error }) {
 	waiter.Wait()
 }
 
+type InheritHookExpectedState string
+
+const (
+	InheritHookExpectedStateEnabledProject InheritHookExpectedState = "created project hook script"
+)
+
+func (suite *Suite) InheritHook(
+	hook interface{ Inherit() error },
+	expectedState InheritHookExpectedState,
+) {
+	// XXX: only for BB>6.2.0
+	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
+		switch {
+		case regexp.MustCompile(`ExternalHookScript`).MatchString(line):
+			return strings.Contains(line, string(expectedState))
+		default:
+			return false
+		}
+	})
+
+	err := hook.Inherit()
+	suite.NoError(err, "should be able to disable hook")
+
+	log.Debugf(
+		nil,
+		"{add-on} waiting for hook script to be inherited by bitbucket: %s",
+		expectedState,
+	)
+
+	waiter.Wait()
+}
+
 func (suite *Suite) enableAddonLogger(key string, level string) error {
 	request, err := http.NewRequest(
 		http.MethodPut,
 		fmt.Sprintf(
 			"%s/rest/api/latest/logs/logger/%s/%s",
-			suite.Bitbucket().GetConnectorURI(),
+			suite.Bitbucket().GetConnectorURI(users.USER_ADMIN),
 			key,
 			level,
 		),
@@ -324,5 +366,24 @@ func (suite *Suite) DetectHookScriptsLeak() {
 			"{leak detector} no hook scripts leak detected",
 		)
 	}
+}
 
+func (suite *Suite) CreateUserAlice() *stash.User {
+	return suite.CreateUser("alice")
+}
+
+func (suite *Suite) CreateUser(name string) *stash.User {
+	password := "p" + name
+	email := name + "@bitbucket.test"
+
+	user, err := suite.Bitbucket().Admin().CreateUser(name, password, email)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			return &stash.User{Name: name, Password: password}
+		}
+
+		suite.NoError(err, "unable to create user")
+	}
+
+	return user
 }

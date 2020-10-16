@@ -43,6 +43,10 @@ func (addon *Addon) Disable(key string, context *Context) error {
 	return addon.command(context, "disable", key)
 }
 
+func (addon *Addon) Inherit(key string, context *Context) error {
+	return addon.command(context, "inherit", key)
+}
+
 func (addon *Addon) OnProject(project string) *Context {
 	return &Context{
 		Addon:   addon,
@@ -169,4 +173,14 @@ func (hook *Hook) Disable() error {
 	)
 
 	return hook.Context.Disable(hook.key, hook.Context)
+}
+
+func (hook *Hook) Inherit() error {
+	log.Debugf(
+		karma.Describe("context", hook.Context),
+		"{hook} inheriting %s",
+		hook.key,
+	)
+
+	return hook.Context.Inherit(hook.key, hook.Context)
 }
