@@ -141,7 +141,8 @@ public class ExternalHookScript {
     if (!settings.getBoolean("safe_path", false)) {
       if (!permissionService.hasGlobalPermission(Permission.SYS_ADMIN)) {
         errors.addFieldError(
-            "exe", "You should be a Bitbucket System Administrator to edit this field "
+            "exe",
+            "You should be a Bitbucket System Administrator to edit this field "
                 + "without \"safe mode\" option.");
         return;
       }
@@ -198,7 +199,7 @@ public class ExternalHookScript {
     DeletionResult result = deleteHookScript(pluginSettingsPath);
 
     log.debug(
-        "deleting project hook script {} of {} on {}: ",
+        "deleting project hook script {} of {} on {}: {}",
         hookId,
         ScopeUtil.toString(parent),
         ScopeUtil.toString(scope),

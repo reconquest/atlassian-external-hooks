@@ -7,11 +7,20 @@ import com.ngs.stash.externalhooks.ao.FactoryState;
 
 @XmlRootElement
 public class FactoryStateResponse {
-  @XmlElement private int id;
-  @XmlElement private boolean started;
-  @XmlElement private boolean finished;
-  @XmlElement private int current;
-  @XmlElement private int total;
+  @XmlElement
+  private int id;
+
+  @XmlElement
+  private boolean started;
+
+  @XmlElement
+  private boolean finished;
+
+  @XmlElement
+  private int current;
+
+  @XmlElement
+  private int total;
 
   public FactoryStateResponse(FactoryState state) {
     id = state.getID();
