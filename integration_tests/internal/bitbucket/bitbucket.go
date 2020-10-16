@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 )
@@ -20,10 +21,10 @@ func New(instance *Instance) (*Bitbucket, error) {
 		Instance: instance,
 	}
 
-	url, err := url.Parse(instance.GetConnectorURI())
+	url, err := url.Parse(instance.GetConnectorURI(users.USER_ADMIN))
 	if err != nil {
 		return nil, karma.
-			Describe("uri", instance.GetConnectorURI()).
+			Describe("uri", instance.GetConnectorURI(users.USER_ADMIN)).
 			Format(
 				err,
 				"unable to parse bitbucket connector uri",
@@ -57,6 +58,12 @@ func (bitbucket *Bitbucket) Repositories(
 
 func (bitbucket *Bitbucket) Addons() *BitbucketAddonsAPI {
 	return &BitbucketAddonsAPI{
+		client: bitbucket.client,
+	}
+}
+
+func (bitbucket *Bitbucket) Admin() *BitbucketAdminAPI {
+	return &BitbucketAdminAPI{
 		client: bitbucket.client,
 	}
 }
@@ -111,6 +118,16 @@ func (api *BitbucketRepositoriesAPI) Remove(slug string) error {
 	}
 
 	return nil
+}
+
+func (api *BitbucketRepositoriesAPI) Permissions(
+	repository string,
+) *BitbucketRepositoryPermissionsAPI {
+	return &BitbucketRepositoryPermissionsAPI{
+		client:     api.client,
+		project:    api.project,
+		repository: repository,
+	}
 }
 
 func (api *BitbucketRepositoriesAPI) PullRequests(
@@ -331,4 +348,37 @@ func (api *BitbucketAddonsAPI) SetLicense(addon string, license string) error {
 	}
 
 	return nil
+}
+
+type BitbucketAdminAPI struct {
+	client stash.Stash
+}
+
+func (api *BitbucketAdminAPI) CreateUser(name, password, email string) (*stash.User, error) {
+	displayName := name
+
+	user, err := api.client.CreateUser(name, password, displayName, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+type BitbucketRepositoryPermissionsAPI struct {
+	client     stash.Stash
+	project    string
+	repository string
+}
+
+func (api *BitbucketRepositoryPermissionsAPI) GrantUserPermission(
+	user string,
+	permission string,
+) error {
+	return api.client.GrantRepositoryUserPermission(
+		api.project,
+		api.repository,
+		user,
+		permission,
+	)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/git"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 )
 
 func (runner *Runner) GitClone(repository *stash.Repository) *git.Git {
@@ -23,7 +24,7 @@ func (runner *Runner) GitClone(repository *stash.Repository) *git.Git {
 	privateURL, err := url.Parse(href)
 	runner.assert.NoError(err, "unable to parse git repository uri")
 
-	publicURL, err := url.Parse(runner.Bitbucket().GetConnectorURI())
+	publicURL, err := url.Parse(runner.Bitbucket().GetConnectorURI(users.USER_ADMIN))
 	runner.assert.NoError(err, "unable to parse bitbucket connector uri")
 
 	publicURL.Path = privateURL.Path

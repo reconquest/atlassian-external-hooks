@@ -7,6 +7,7 @@ import (
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 	"github.com/reconquest/cog"
 	"github.com/reconquest/pkg/log"
 )
@@ -173,8 +174,8 @@ func (suite *Suite) testBitbucketUpgrade_After(
 	repo *stash.Repository,
 	pre, post *external_hooks.Hook,
 ) {
-	pre.BitbucketURI = suite.Bitbucket().GetConnectorURI()
-	post.BitbucketURI = suite.Bitbucket().GetConnectorURI()
+	pre.BitbucketURI = suite.Bitbucket().GetConnectorURI(users.USER_ADMIN)
+	post.BitbucketURI = suite.Bitbucket().GetConnectorURI(users.USER_ADMIN)
 
 	Assert_PushRejected(suite, repo, `XXX`)
 

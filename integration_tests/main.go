@@ -131,6 +131,18 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
+				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("10.2.1"),
+				"addon_fixed":      latestAddon,
+			},
+
+			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
 				"bitbucket": baseBitbucket,
 				"addon":     latestAddon,
 			},

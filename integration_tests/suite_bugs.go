@@ -191,7 +191,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 
 	suite.InstallAddon(params["addon_reproduced"].(Addon))
 
-	var repository = suite.CreateRandomRepository(project)
+	repository := suite.CreateRandomRepository(project)
 
 	preReceiveProject := suite.ConfigureHook(
 		suite.ExternalHooks().
@@ -232,7 +232,7 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
+		params["addon_fixed"].(Addon).Version,
 	)
 
 	suite.InstallAddon(params["addon_fixed"].(Addon))
@@ -295,4 +295,150 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
 		settings,
 		project,
 	)
+}
+
+func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	project := suite.CreateRandomProject()
+
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+
+	settings := external_hooks.NewSettings().
+		UseSafePath(true).
+		WithExecutable(`hook.` + lojban.GetRandomID(5))
+
+	suite.testBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
+		log,
+		params,
+		settings,
+		project,
+	)
+
+	suite.testBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
+		log,
+		params,
+		settings,
+		project,
+	)
+}
+
+func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
+	log *cog.Logger,
+	params TestParams,
+	settings *external_hooks.Settings,
+	project *stash.Project,
+) {
+	log.Infof(
+		nil,
+		"> reproducing bug on add-on version %s",
+		params["addon_reproduced"].(Addon).Version,
+	)
+
+	suite.InstallAddon(params["addon_reproduced"].(Addon))
+
+	repository := suite.CreateRandomRepository(project)
+
+	preReceiveProject := suite.ConfigureHook(
+		suite.ExternalHooks().
+			OnProject(project.Key).
+			PreReceive(),
+		settings.WithArgs(`XXX PROJECT`),
+		text(
+			`#!/bin/bash`,
+			`echo $1`,
+		),
+	)
+
+	alice := suite.CreateUserAlice()
+
+	err := suite.Bitbucket().
+		Repositories(project.Key).
+		Permissions(repository.Slug).
+		GrantUserPermission(alice.Name, "REPO_ADMIN")
+	suite.NoError(err)
+
+	preReceiveRepository := suite.ConfigureHook(
+		suite.ExternalHooks(alice).
+			OnProject(project.Key).
+			OnRepository(repository.Slug).
+			PreReceive(),
+		settings.WithArgs(`YYY REPOSITORY`),
+		text(
+			`#!/bin/bash`,
+			`echo $1`,
+		),
+	)
+
+	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
+
+	suite.InheritHook(
+		preReceiveRepository,
+		InheritHookExpectedStateEnabledProject,
+	)
+
+	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
+
+	suite.DisableHook(preReceiveProject)
+}
+
+func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
+	log *cog.Logger,
+	params TestParams,
+	settings *external_hooks.Settings,
+	project *stash.Project,
+) {
+	log.Infof(
+		nil,
+		"> validating fix on add-on version %s",
+		params["addon_fixed"].(Addon).Version,
+	)
+
+	suite.InstallAddon(params["addon_fixed"].(Addon))
+
+	repository := suite.CreateRandomRepository(project)
+
+	preReceiveProject := suite.ConfigureHook(
+		suite.ExternalHooks().
+			OnProject(project.Key).
+			PreReceive(),
+		settings.WithArgs(`XXX PROJECT`),
+		text(
+			`#!/bin/bash`,
+			`echo $1`,
+		),
+	)
+
+	alice := suite.CreateUserAlice()
+
+	err := suite.Bitbucket().
+		Repositories(project.Key).
+		Permissions(repository.Slug).
+		GrantUserPermission(alice.Name, "REPO_ADMIN")
+	suite.NoError(err)
+
+	preReceiveRepository := suite.ConfigureHook(
+		suite.ExternalHooks(alice).
+			OnProject(project.Key).
+			OnRepository(repository.Slug).
+			PreReceive(),
+		settings.WithArgs(`YYY REPOSITORY`),
+		text(
+			`#!/bin/bash`,
+			`echo $1`,
+		),
+	)
+
+	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
+
+	suite.InheritHook(
+		preReceiveRepository,
+		InheritHookExpectedStateEnabledProject,
+	)
+
+	Assert_PushOutputsMessages(suite, repository, `XXX PROJECT`)
+
+	suite.DisableHook(preReceiveProject)
 }
