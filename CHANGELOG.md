@@ -1,5 +1,14 @@
 ## Bitbucket 6.2.0 and higher
 
+### 10.2.2 (2020-10-20)
+
+Fix error when the user without project admin access but with repository admin
+access changes inherited hook.
+
+Previously, hook state change from Inherited to Enabled (or Disabled) and back
+to Inherited by such user caused Project level hook script to be ignored
+completely. The internal permission model in Bitbucket caused this error.
+
 ### 10.2.1 (2020-05-15)
 
 * Change the severity of log messages during startup from Warning to Info.
