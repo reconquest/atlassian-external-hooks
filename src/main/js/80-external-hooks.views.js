@@ -1,7 +1,7 @@
 var ViewGlobalSettings = function (context, api) {
     this._$ = $('#rq_hooks_global_settings_form');
     if (this._$.length == 0) {
-        return ViewNotApplicable;
+        return new ViewNotApplicable();
     }
 
     this._$spinner = new Spinner();
