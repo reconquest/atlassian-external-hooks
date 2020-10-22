@@ -27,7 +27,7 @@
 
                 <aui-select name="log_level" id="log_level" placeholder="Select log level">
                     <aui-option value="ERROR" #if ($log_level == "ERROR") selected #end>ERROR</aui-option>
-                    <aui-option value="WARNING" #if ($log_level == "WARNING") selected #end>WARNING</aui-option>
+                    <aui-option value="WARN" #if ($log_level == "WARN") selected #end>WARN</aui-option>
                     <aui-option value="INFO" #if ($log_level == "INFO") selected #end>INFO</aui-option>
                     <aui-option value="DEBUG" #if ($log_level == "DEBUG") selected #end>DEBUG</aui-option>
                 </aui-select>
