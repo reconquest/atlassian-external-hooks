@@ -26,6 +26,9 @@ import com.atlassian.templaterenderer.TemplateRenderer;
 import com.ngs.stash.externalhooks.Const;
 
 import org.json.simple.JSONObject;
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.Level;
 
 @Scanned
 @SuppressWarnings("serial") // suppress because the http servlet is not going to be serialized
@@ -71,7 +74,15 @@ public class Diagnostics extends HttpServlet {
     if (context == null) {
       context = new HashMap<String, Object>();
     }
+
     context.put("hook_scripts_total", this.getTotalHookScripts());
+
+    ch.qos.logback.classic.Logger logger =
+        (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Const.PACKAGE);
+
+    context.put(
+        "log_level",
+        logger.getLevel() == null ? Level.INFO.toString() : logger.getLevel().toString());
 
     templateRenderer.render("ui/diagnostics.vm", context, response.getWriter());
   }
@@ -79,9 +90,11 @@ public class Diagnostics extends HttpServlet {
   private void dumpHookScripts(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
     response.setContentType("application/octet-stream");
-    response.setHeader("Content-Disposition", "attachment; filename=\"external_hooks_scripts_"
-        + String.valueOf(System.currentTimeMillis())
-        + ".json\"");
+    response.setHeader(
+        "Content-Disposition",
+        "attachment; filename=\"external_hooks_scripts_"
+            + String.valueOf(System.currentTimeMillis())
+            + ".json\"");
 
     OutputStream output = response.getOutputStream();
 
@@ -133,10 +146,24 @@ public class Diagnostics extends HttpServlet {
       return;
     }
 
-    hookScriptService.deleteByPluginKey(Const.PLUGIN_KEY);
-
     Map<String, Object> context = new HashMap<String, Object>();
-    context.put("success", Boolean.TRUE);
+    if (request.getParameter("action") != null) {
+      if (request.getParameter("action").equals("remove_by_plugin_key")) {
+        hookScriptService.deleteByPluginKey(Const.PLUGIN_KEY);
+        context.put("success", Boolean.TRUE);
+      }
+
+      if (request.getParameter("action").equals("change_log_level")) {
+        ch.qos.logback.classic.Logger levelSet =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Const.PACKAGE);
+
+        String targetLevel = request.getParameter("log_level");
+        if (targetLevel != null) {
+          levelSet.setLevel(Level.toLevel(targetLevel, Level.INFO));
+        }
+      }
+    }
+
     render(response, context);
   }
 
