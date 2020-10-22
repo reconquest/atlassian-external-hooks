@@ -4,6 +4,7 @@
     <head>
         <meta name="decorator" content="atl.admin">
         $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
+        $webResourceManager.requireResource("com.atlassian.auiplugin:aui-select")
     </head>
     <body>
         <h2>External Hooks: Diagnostics</h2>
@@ -15,6 +16,27 @@
             </p>
         </div>
         #end
+        <div class="aui-message aui-message-primary">
+            <p>Change the log level to DEBUG mode to see more detailed messages in Bitbucket Server's logs.</p>
+            <p>Default level: <i>INFO</i></p>
+
+            <form class="aui" method="POST">
+                <input type="hidden" name="action" value="change_log_level" />
+
+                <aui-label for="log_level">Log Level</aui-level>
+
+                <aui-select name="log_level" id="log_level" placeholder="Select log level">
+                    <aui-option value="ERROR" #if ($log_level == "ERROR") selected #end>ERROR</aui-option>
+                    <aui-option value="WARNING" #if ($log_level == "WARNING") selected #end>WARNING</aui-option>
+                    <aui-option value="INFO" #if ($log_level == "INFO") selected #end>INFO</aui-option>
+                    <aui-option value="DEBUG" #if ($log_level == "DEBUG") selected #end>DEBUG</aui-option>
+                </aui-select>
+
+                <div style="margin-top: 10px">
+                    <button class="aui-button aui-button-warning" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
         <div class="aui-message aui-message-primary">
             <p>Current number of HookScripts installed: $hook_scripts_total</p>
 
