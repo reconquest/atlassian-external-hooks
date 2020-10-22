@@ -218,7 +218,7 @@ func (suite *Suite) DisableHook(hook interface{ Disable() error }) {
 	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
 		switch {
 		case regexp.MustCompile(
-			`ExternalHookScript deleting .* hook script`,
+			`ExternalHookScript\W+deleting .* hook script`,
 		).MatchString(line):
 			return true
 		default:
@@ -239,7 +239,7 @@ func (suite *Suite) EnableHook(hook interface{ Enable() error }) {
 	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
 		switch {
 		case regexp.MustCompile(
-			`ExternalHookScript created .* hook script`,
+			`ExternalHookScript\W+created .* hook script`,
 		).MatchString(line):
 			return true
 		default:
