@@ -1,5 +1,14 @@
 ## Bitbucket 6.2.0 and higher
 
+### 11.0.0 (2020-10-22)
+
+The Diagnostics page in the admin panel added.
+
+This page provides a few specific features:
+* Change the logging level of the add-on.
+* Download dump of HookScripts usable for debugging purposes.
+* Remove all existing hooks from the add-on. This button is not going to be used very often, it's useful for emergency cases only.
+
 ### 10.2.2 (2020-10-20)
 
 Fix error when the user without project admin access but with repository admin
@@ -156,7 +165,7 @@ required.
 * `STASH_PROJECT_KEY` → `BB_PROJECT_KEY`
 * `STASH_BASE_URL` → `BB_BASE_URL`
 * `STASH_REPO_CLONE_SSH` → `BB_REPO_CLONE_SSH`
-* `STASH_REPO_CLONE_HTTP` → `BB_REPO_CLONE_HTTP` 
+* `STASH_REPO_CLONE_HTTP` → `BB_REPO_CLONE_HTTP`
 
 Following environment variables were removed without replacement due
 limitations in Bitbucket Server starting from 6.2.0.
