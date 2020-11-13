@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # STASH_ variables are deprecated and will be removed in further releases
-export STASH_USER_NAME="$BB_USER_DISPLAY_NAME"
-export STASH_USER_NAME="$BB_USER_DISPLAY_NAME"
+export STASH_USER_NAME="$BB_USER_NAME"
+export STASH_USER_DISPLAY_NAME="$BB_USER_DISPLAY_NAME"
 export STASH_USER_EMAIL="$BB_USER_EMAIL"
 export STASH_REPO_NAME="$BB_REPO_SLUG"
 export STASH_REPO_IS_FORK="$BB_REPO_IS_FORK"

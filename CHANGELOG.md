@@ -1,5 +1,12 @@
 ## Bitbucket 6.2.0 and higher
 
+## 11.1.0 (2020-11-13)
+
+Fix back-compatibility of STASH_USER_NAME. It was equal to BB_USER_DISPLAY_NAME by a mistake.
+
+* STASH_USER_NAME is now equal to BB_USER_NAME.
+* STASH_USER_DISPLAY_NAME is now equal to BB_USER_DISPLAY_NAME.
+
 ### 11.0.0 (2020-10-22)
 
 The Diagnostics page in the admin panel added.
@@ -157,7 +164,6 @@ Following environment variables are now marked as deprecated and their
 alternatives should be considered to be used instead. No immediate change
 required.
 
-* `STASH_USER_NAME` → `BB_USER_DISPLAY_NAME`
 * `STASH_USER_NAME` → `BB_USER_DISPLAY_NAME`
 * `STASH_USER_EMAIL` → `BB_USER_EMAIL`
 * `STASH_REPO_NAME` → `BB_REPO_SLUG`
