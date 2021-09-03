@@ -115,7 +115,7 @@ public class Diagnostics extends HttpServlet {
 
         total++;
 
-        JSONObject object = new JSONObject();
+        HashMap<String, Object> object = new HashMap<>();
 
         object.put("id", script.getId());
         object.put("name", script.getName());
@@ -125,7 +125,7 @@ public class Diagnostics extends HttpServlet {
         object.put("updated_date", script.getUpdatedDate().getTime() / 1000);
         object.put("plugin_key", script.getPluginKey());
 
-        output.write(object.toJSONString().getBytes());
+        output.write(new JSONObject(object).toJSONString().getBytes());
       }
 
       page = scripts.getNextPageRequest();

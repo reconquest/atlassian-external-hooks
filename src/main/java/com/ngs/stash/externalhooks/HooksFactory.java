@@ -34,7 +34,7 @@ public class HooksFactory {
    *
    * @param scope
    */
-  public void install(Scope scope) {
+  public void install(Scope scope, GlobalHooks globalHooks) {
     log.debug("creating hook scripts on {}", ScopeUtil.toString(scope));
 
     RepositoryHookSearchRequest.Builder searchBuilder =
@@ -50,20 +50,24 @@ public class HooksFactory {
         continue;
       }
 
-      if (!hook.isEnabled() || !hook.isConfigured()) {
-        continue;
-      }
+      if (!globalHooks.isEnabled(hookKey)) {
+        if (!hook.isEnabled() || !hook.isConfigured()) {
+          continue;
+        }
 
-      if (ScopeUtil.isInheritedEnabled(hook, scope)) {
-        log.info(
-            "hook {} is enabled & configured (inherited of {})",
-            hookKey,
-            ScopeUtil.toString(hook.getScope()));
-        continue;
+        // if this is a repository and we have a project's hook but don't have
+        // if we don't have a global hook
+        if (ScopeUtil.isInheritedEnabled(hook, scope)) {
+          log.info(
+              "hook {} is enabled & configured (inherited of {})",
+              hookKey,
+              ScopeUtil.toString(hook.getScope()));
+          continue;
+        }
       }
 
       try {
-        hooksCoordinator.enable(scope, hookKey);
+        hooksCoordinator.enable(scope, hookKey, globalHooks);
 
         created++;
       } catch (Exception e) {

@@ -37,6 +37,7 @@ import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
+import com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
 import com.ngs.stash.externalhooks.util.Walker;
@@ -47,8 +48,10 @@ public class HooksCoordinator {
   private Map<String, ExternalHookScript> scripts = new HashMap<>();
   private Walker walker;
   private SecurityService securityService;
+  private GlobalHookSettingsDao globalHookSettingsDao;
 
   public HooksCoordinator(
+      @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
       @ComponentImport UserService userService,
       @ComponentImport ProjectService projectService,
       @ComponentImport RepositoryService repositoryService,
@@ -62,6 +65,7 @@ public class HooksCoordinator {
       @ComponentImport PluginSettingsFactory pluginSettingsFactory,
       @ComponentImport SecurityService securityService)
       throws IOException {
+    this.globalHookSettingsDao = globalHookSettingsDao;
     this.repositoryHookService = repositoryHookService;
     this.securityService = securityService;
 
@@ -109,10 +113,10 @@ public class HooksCoordinator {
             HookScriptType.PRE,
             () -> settingsDao.getMergeCheckHookTriggers()));
 
-    this.walker = new Walker(securityService, userService, projectService, repositoryService);
+    this.walker = new Walker(userService, projectService, repositoryService);
   }
 
-  private ExternalHookScript getScript(String idOrKey) {
+  public ExternalHookScript getScript(String idOrKey) {
     if (idOrKey.startsWith(Const.PLUGIN_KEY)) {
       // +1 stands for : after plugin key
       return scripts.get(idOrKey.substring(Const.PLUGIN_KEY.length() + 1));
@@ -124,16 +128,20 @@ public class HooksCoordinator {
   @EventListener
   public void onHookEnabled(RepositoryHookEnabledEvent event) {
     ExternalHookScript script = getScript(event.getRepositoryHookKey());
+    // this will be null if there is no such hook (it's not ours hook)
     if (script == null) {
       return;
     }
 
-    enable(event.getScope(), script);
+    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
+
+    enable(event.getScope(), script, globalHooks);
   }
 
   @EventListener
   public void onHookDisabled(RepositoryHookDisabledEvent event) {
     ExternalHookScript script = getScript(event.getRepositoryHookKey());
+    // this will be null if there is no such hook (it's not ours hook)
     if (script == null) {
       return;
     }
@@ -185,37 +193,44 @@ public class HooksCoordinator {
     script.validate(settings, errors, scope);
   }
 
-  public void enable(Scope scope, String hookKey) {
+  public void enable(Scope scope, String hookKey, GlobalHooks globalHooks) {
     ExternalHookScript script = getScript(hookKey);
     if (script == null) {
       return;
     }
 
-    enable(scope, script);
+    enable(scope, script, globalHooks);
   }
 
-  public void enable(Scope scope, ExternalHookScript script) {
+  public void enable(Scope scope, ExternalHookScript script, GlobalHooks globalHooks) {
     if (scope.getType().equals(ScopeType.REPOSITORY)) {
-      enable((RepositoryScope) scope, script);
+      enable((RepositoryScope) scope, script, globalHooks);
     } else if (scope.getType().equals(ScopeType.PROJECT)) {
-      enable((ProjectScope) scope, script);
+      enable((ProjectScope) scope, script, globalHooks);
     } else {
       // Do nothing with ScopeType.GLOBAL
+      //
+      // ScopeType.GLOBAL shall not be here since there are no global hooks
+      // actually
     }
   }
 
-  public void enable(ProjectScope projectScope, ExternalHookScript script) {
+  public void enable(
+      ProjectScope projectScope, ExternalHookScript script, GlobalHooks globalHooks) {
     // cover legacy hook scripts created only on project level
     script.uninstallLegacy(projectScope);
 
     GetRepositoryHookSettingsRequest request =
         (new GetRepositoryHookSettingsRequest.Builder(projectScope, script.getHookKey())).build();
 
-    RepositoryHookSettings projectSettings = repositoryHookService.getSettings(request);
-    if (projectSettings == null) {
+    RepositoryHookSettings repositoryHookSettings = repositoryHookService.getSettings(
+        (new GetRepositoryHookSettingsRequest.Builder(projectScope, script.getHookKey())).build());
+    if (repositoryHookSettings == null) {
       return;
     }
 
+    boolean globalEnabled = globalHooks.isEnabled(script.getHookKey());
+    Settings globalSettings = globalHooks.getSettings(script.getHookKey());
     walker.walk(projectScope.getProject(), (repository) -> {
       RepositoryScope repositoryScope = new RepositoryScope(repository);
       // repositoryHookService.getByKey will return project wide's hook but with
@@ -229,6 +244,11 @@ public class HooksCoordinator {
         script.uninstall(repositoryScope);
 
         script.install(projectSettings.getSettings(), projectScope, repositoryScope);
+
+      }
+
+      if (globalEnabled) {
+        script.install(globalSettings, projectScope, repositoryScope);
       }
     });
   }

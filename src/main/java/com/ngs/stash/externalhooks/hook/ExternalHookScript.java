@@ -20,6 +20,7 @@ import com.atlassian.bitbucket.hook.script.HookScriptSetConfigurationRequest;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
 import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
+import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
@@ -241,6 +242,22 @@ public class ExternalHookScript {
         listTriggers(result.getRight()));
   }
 
+  public void install(
+      @Nonnull Settings settings,
+      @Nonnull GlobalScope globalParent,
+      @Nonnull RepositoryScope scope) {
+    String pluginSettingsPath = getPluginSettingsPath(globalParent, scope);
+    Pair<HookScript, List<RepositoryHookTrigger>> result =
+        install(pluginSettingsPath, settings, scope);
+
+    log.debug(
+        "created repository hook script of global configuration with id: {} on {}; triggers: {}",
+        hookId,
+        result.getLeft().getId(),
+        ScopeUtil.toString(scope),
+        listTriggers(result.getRight()));
+  }
+
   public void install(@Nonnull Settings settings, @Nonnull RepositoryScope scope) {
     String pluginSettingsPath = getPluginSettingsPath(scope);
     Pair<HookScript, List<RepositoryHookTrigger>> result =
@@ -388,6 +405,17 @@ public class ExternalHookScript {
     StringBuilder builder = new StringBuilder(this.hookKey);
     builder.append(":").append(ScopeType.PROJECT.getId());
     builder.append(":").append(parent.getResourceId().orElse(-1));
+
+    builder.append(":").append(ScopeType.REPOSITORY.getId());
+    builder.append(":").append(scope.getResourceId().orElse(-1));
+
+    return builder.toString();
+  }
+
+  private String getPluginSettingsPath(GlobalScope parent, RepositoryScope scope) {
+    StringBuilder builder = new StringBuilder(this.hookKey);
+    builder.append(":").append(ScopeType.GLOBAL.getId());
+    builder.append(":").append("global");
 
     builder.append(":").append(ScopeType.REPOSITORY.getId());
     builder.append(":").append(scope.getResourceId().orElse(-1));

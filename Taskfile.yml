@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 
 output: prefixed
 silent: true
@@ -12,3 +12,8 @@ includes:
   atlas: tasks/atlas.yml
   frontend: tasks/frontend.yml
   nginx: tasks/nginx.yml
+
+tasks:
+  i:
+    cmds:
+      - task: 'atlas:install'
