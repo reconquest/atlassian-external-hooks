@@ -3,6 +3,7 @@ package com.ngs.stash.externalhooks;
 import java.util.List;
 
 import com.atlassian.bitbucket.setting.Settings;
+import com.atlassian.bitbucket.setting.SettingsBuilder;
 import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
 
 public class GlobalHooks {
@@ -40,6 +41,22 @@ public class GlobalHooks {
     return false;
   }
 
+  private GlobalHookSettings getHook(String hookKey) {
+    if (hookKey == Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID) {
+      return this.preReceive;
+    }
+
+    if (hookKey == Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID) {
+      return this.postReceive;
+    }
+
+    if (hookKey == Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID) {
+      return this.mergeCheck;
+    }
+
+    return null;
+  }
+
   public boolean isPreReceiveEnabled() {
     return this.isEnabled(this.preReceive);
   }
@@ -57,7 +74,21 @@ public class GlobalHooks {
   }
 
   public Settings getSettings(String hookKey) {
-    // TODO
-    return null;
+    GlobalHookSettings hook = getHook(hookKey);
+    if (hook == null) {
+      return null;
+    }
+
+    SettingsBuilder settingsBuilder = new SimpleSettingsBuilder();
+    settingsBuilder.add("safe_path", hook.getSafePath());
+    settingsBuilder.add("async", hook.getAsync());
+    if (hook.getExe() != null) {
+      settingsBuilder.add("exe", hook.getExe());
+    }
+    if (hook.getParams() != null) {
+      settingsBuilder.add("params", hook.getParams());
+    }
+
+    return settingsBuilder.build();
   }
 }

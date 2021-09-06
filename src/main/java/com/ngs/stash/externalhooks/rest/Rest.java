@@ -25,7 +25,8 @@ import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.scope.GlobalScope;
-
+import com.atlassian.bitbucket.scope.ProjectScope;
+import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsBuilder;
 import com.atlassian.bitbucket.user.SecurityService;
@@ -44,8 +45,10 @@ import com.atlassian.scheduler.config.RunMode;
 import com.atlassian.scheduler.config.Schedule;
 import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
+import com.ngs.stash.externalhooks.GlobalHooks;
 import com.ngs.stash.externalhooks.HooksCoordinator;
 import com.ngs.stash.externalhooks.HooksFactory;
+import com.ngs.stash.externalhooks.SimpleSettingsBuilder;
 import com.ngs.stash.externalhooks.SimpleSettingsValidationErrors;
 import com.ngs.stash.externalhooks.ao.FactoryState;
 import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
@@ -74,6 +77,7 @@ public class Rest implements JobRunner {
   private GlobalHookSettingsDao globalHookSettingsDao;
   private RepositoryHookService repositoryHookService;
   private HooksCoordinator hooksCoordinator;
+  private HooksFactory hooksFactory;
 
   public Rest(
       @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
@@ -95,6 +99,7 @@ public class Rest implements JobRunner {
     this.securityService = securityService;
     this.repositoryHookService = repositoryHookService;
     this.hooksCoordinator = hooksCoordinator;
+    this.hooksFactory = hooksFactory;
 
     this.settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
@@ -183,27 +188,30 @@ public class Rest implements JobRunner {
       return Response.status(404).build();
     }
 
-    ExternalHookScript script = this.hooksCoordinator.getScript(hookKey);
-    if (script == null) {
-      return Response.status(404).build();
-    }
+    if (schema.enabled) {
+      ExternalHookScript script = this.hooksCoordinator.getScript(hookKey);
+      if (script == null) {
+        return Response.status(404).build();
+      }
 
-    SettingsBuilder builder = this.repositoryHookService.createSettingsBuilder();
-    builder.add("safe_path", schema.safePath);
-    builder.add("async", schema.async);
-    if (schema.exe != null) {
-      builder.add("exe", schema.exe);
-    }
-    if (schema.params != null) {
-      builder.add("params", schema.params);
-    }
-    Settings scriptSettings = builder.build();
+      SettingsBuilder settingsBuilder = new SimpleSettingsBuilder();
+      settingsBuilder.add("safe_path", schema.safePath);
+      settingsBuilder.add("async", schema.async);
+      if (schema.exe != null) {
+        settingsBuilder.add("exe", schema.exe);
+      }
+      if (schema.params != null) {
+        settingsBuilder.add("params", schema.params);
+      }
 
-    SimpleSettingsValidationErrors errors = new SimpleSettingsValidationErrors();
-    script.validate(scriptSettings, errors, new GlobalScope());
+      Settings scriptSettings = settingsBuilder.build();
 
-    if (!errors.isEmpty()) {
-      return Response.ok(new FormValidationErrors(errors)).build();
+      SimpleSettingsValidationErrors errors = new SimpleSettingsValidationErrors();
+      script.validate(scriptSettings, errors, new GlobalScope());
+
+      if (!errors.isEmpty()) {
+        return Response.ok(new FormValidationErrors(errors)).build();
+      }
     }
 
     GlobalHookSettings settings = this.globalHookSettingsDao.get(hookKey);
@@ -284,6 +292,7 @@ public class Rest implements JobRunner {
   }
 
   private void createHooks(FactoryState state) {
+    GlobalHooks globalHooks = new GlobalHooks(globalHookSettingsDao.find());
     state.setStarted(true);
     state.save();
 
@@ -312,8 +321,7 @@ public class Rest implements JobRunner {
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
-        // TODO
-        /*hooksFactory.install(new ProjectScope(project));*/
+        hooksFactory.install(new ProjectScope(project), globalHooks);
 
         state.setCurrent(current.incrementAndGet());
         state.save();
@@ -323,8 +331,7 @@ public class Rest implements JobRunner {
 
       @Override
       public void onRepository(Repository repository) {
-        // TODO
-        // hooksFactory.install(new RepositoryScope(repository));
+        hooksFactory.install(new RepositoryScope(repository), globalHooks);
 
         state.setCurrent(current.incrementAndGet());
         state.save();

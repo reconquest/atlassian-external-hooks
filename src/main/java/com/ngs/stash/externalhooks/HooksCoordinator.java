@@ -23,6 +23,7 @@ import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.project.ProjectType;
 import com.atlassian.bitbucket.repository.RepositoryService;
+import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
@@ -220,17 +221,15 @@ public class HooksCoordinator {
     // cover legacy hook scripts created only on project level
     script.uninstallLegacy(projectScope);
 
-    GetRepositoryHookSettingsRequest request =
-        (new GetRepositoryHookSettingsRequest.Builder(projectScope, script.getHookKey())).build();
-
-    RepositoryHookSettings repositoryHookSettings = repositoryHookService.getSettings(
+    RepositoryHookSettings projectSettings = repositoryHookService.getSettings(
         (new GetRepositoryHookSettingsRequest.Builder(projectScope, script.getHookKey())).build());
-    if (repositoryHookSettings == null) {
+    if (projectSettings == null) {
       return;
     }
 
     boolean globalEnabled = globalHooks.isEnabled(script.getHookKey());
-    Settings globalSettings = globalHooks.getSettings(script.getHookKey());
+    Settings globalSettings = globalEnabled ? globalHooks.getSettings(script.getHookKey()) : null;
+
     walker.walk(projectScope.getProject(), (repository) -> {
       RepositoryScope repositoryScope = new RepositoryScope(repository);
       // repositoryHookService.getByKey will return project wide's hook but with
@@ -240,20 +239,19 @@ public class HooksCoordinator {
       // isEnabled also covers 'inherited' case
       //
       if (ScopeUtil.isInheritedEnabled(hook, repositoryScope)) {
-        //  // uninstall on repository level
+        //  uninstall on repository level
         script.uninstall(repositoryScope);
 
         script.install(projectSettings.getSettings(), projectScope, repositoryScope);
-
       }
 
       if (globalEnabled) {
-        script.install(globalSettings, projectScope, repositoryScope);
+        script.install(globalSettings, new GlobalScope(), repositoryScope);
       }
     });
   }
 
-  public void enable(RepositoryScope scope, ExternalHookScript script) {
+  public void enable(RepositoryScope scope, ExternalHookScript script, GlobalHooks globalHooks) {
     GetRepositoryHookSettingsRequest request =
         (new GetRepositoryHookSettingsRequest.Builder(scope, script.getHookKey())).build();
 
@@ -273,6 +271,11 @@ public class HooksCoordinator {
 
           return null;
         });
+
+    boolean globalEnabled = globalHooks.isEnabled(script.getHookKey());
+    if (globalEnabled) {
+      script.install(globalHooks.getSettings(script.getHookKey()), new GlobalScope(), scope);
+    }
   }
 
   public void disable(ProjectScope scope, ExternalHookScript script) {
