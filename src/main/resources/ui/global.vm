@@ -1,0 +1,119 @@
+#set(
+    $tabs = [
+        {
+            'tab': 'Pre Receive',
+            'id': 'pre-receive',
+            'async': false
+        },
+        {
+            'tab': 'Post Reveice',
+            'id': 'post-receive',
+            'async': true
+        },
+        {
+            'tab': 'Merge Check',
+            'id': 'merge-check',
+            'async': false
+        }
+    ]
+)
+#disable_html_escaping()
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="decorator" content="atl.admin">
+        $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
+    </head>
+
+    <body>
+        <form class="aui rq_hooks_global_form" id="rq_hooks_global_hooks_form">
+            <h2>External Hooks: Global Hooks</h2>
+
+            <div class="aui-tabs horizontal-tabs">
+                <ul class="tabs-menu">
+                #foreach($tab in $tabs)
+                    <li class="menu-item#if($tab.id == 'pre-receive') active-tab#end">
+                        <a href="#hooks-$tab.id">$tab.tab</a>
+                    </li>
+                #end
+                </ul>
+                #foreach($tab in $tabs)
+                <div class="tabs-pane#if($tab.id == 'pre-receive') active-pane#end" id="hooks-${tab.id}">
+                    <div class="field-group">
+                        <label for="comment-${tab.id}-executable">Executable:
+                            <span class="aui-icon icon-required">(required)</span></label>
+                        <input class="text medium-field" type="text"
+                               id="comment-${tab.id}-executable" name="comment-${tab.id}-executable" placeholder="/bin/true">
+                        <div class="description">The path to an executable to run.</div>
+                    </div>
+
+                    <fieldset class="group">
+                        <legend><span>Safe mode</span></legend>
+                        <div class="checkbox">
+                            <input class="checkbox" type="checkbox" name="checkBoxOne" id="checkBoxOne">
+                            <label for="checkBoxOne">Look for hooks only in the safe dir</label>
+                        </div>
+                        <div class="description">
+                            <p>
+                            If Safe Mode is set, the path to an executable must be specified relative to:<br/>
+                            <ul>
+                                <li>Bitbucket Server: &lt;bitbucket-home-dir&gt;/external-hooks/
+                                <li>Bitbucket DataCenter: &lt;bitbucket-home-dir&gt;/shared/external-hooks/
+                            </ul>
+                            </p>
+                            <p>Non-Safe Mode is available only for Bitbucket Administrator.</p>
+                        </div>
+                    </fieldset>
+
+                    <div class="field-group">
+                        <label for="textarea-id">Positional parameters:</label>
+                        <textarea class="textarea" name="comment" id="${tab.id}-positional-params" rows="10"></textarea>
+                    </div>
+
+                    #if($tab.async)
+                    <fieldset class="group">
+                        <legend><span>Asynchronous</span></legend>
+                        <div class="checkbox">
+                            <input class="checkbox" type="checkbox" name="hook-asynchronous" id="hook-asynchronous">
+                            <label for="checkBoxOne">Start the executable asynchronously</label>
+                        </div>
+                        <div class="description">
+                            The hook will not delay push process and the user will not receive any output from the hook.
+                        </div>
+                    </fieldset>
+                    #end
+
+                    <div class="description">
+                        Learn more about these fields in <a href="https://external-hooks.reconquest.io/docs/how_to_configure_external_hooks/" target="_blank">the official documentation</a>.
+                    </div>
+                </div>
+                #end
+            </div>
+
+            <div class="aui-message aui-message-warning">
+                <p class="title">
+                <fieldset class="group">
+                    <legend><span>Personal repos</span></legend>
+                    <div class="radio">
+                        <input class="radio" type="radio" checked="checked"
+                               name="radiobuttons" id="radioButtonOne">
+                        <label for="radioButtonOne">Disable global hooks</label>
+                    </div>
+                    <div class="radio">
+                        <input class="radio" type="radio"
+                               name="radiobuttons" id="radioButtonTwo">
+                        <label for="radioButtonTwo">Enable global hooks</label>
+                    </div>
+                    <div class="radio">
+                        <input class="radio" type="radio"
+                               name="radiobuttons" id="radioButtonThree">
+                        <label for="radioButtonThree">Use global hooks <strong>only</strong> for personal repos</label>
+                    </div>
+                </fieldset>
+                </p>
+            </div>
+
+            <button class="aui-button aui-button-primary" id="rq_hooks_global_save">Save</button>
+        </form>
+    </body>
+</html>
