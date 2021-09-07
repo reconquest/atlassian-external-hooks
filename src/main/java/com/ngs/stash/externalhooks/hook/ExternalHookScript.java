@@ -276,6 +276,7 @@ public class ExternalHookScript {
 
   private DeletionResult deleteHookScript(String pluginSettingsPath) {
     Object id = pluginSettings.get(pluginSettingsPath);
+    log.debug("delete hook script: {}", id);
     if (id != null) {
       Optional<HookScript> maybeHookScript =
           hookScriptService.findById(Long.valueOf(id.toString()));

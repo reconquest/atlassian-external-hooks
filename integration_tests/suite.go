@@ -1,20 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
-	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 	"github.com/stretchr/testify/assert"
@@ -24,18 +25,25 @@ type Suite struct {
 	*runner.Runner
 	*assert.Assertions
 
+	baseBitbucket string
+	skipUpgrade   bool
+
 	hookScripts []string
 }
 
-type TestParams map[string]interface{}
+type (
+	TestParams map[string]interface{}
+	Addon      struct {
+		Version string
+		Path    string
+	}
+)
 
-type Addon struct {
-	Version string
-	Path    string
-}
-
-func NewSuite() *Suite {
-	return &Suite{}
+func NewSuite(baseBitbucket string, skipUpgrade bool) *Suite {
+	return &Suite{
+		baseBitbucket: baseBitbucket,
+		skipUpgrade:   skipUpgrade,
+	}
 }
 
 func (suite *Suite) WithParams(
@@ -51,21 +59,103 @@ func (suite *Suite) WithParams(
 			name = strings.TrimPrefix(name, "main.(*Suite).")
 			name = strings.TrimSuffix(name, "-fm")
 
+			if suite.skipUpgrade {
+				version, ok := params["bitbucket"]
+				if !ok {
+					version, _ = params["bitbucket_to"]
+				}
+
+				if version != suite.baseBitbucket {
+					log.Infof(
+						nil,
+						"{test} skip %s because --no-upgrade specified",
+						name,
+					)
+					continue
+				}
+			}
+
 			log.Infof(
 				karma.Describe("params", params),
 				"{test} running %s",
 				name,
 			)
 
+			var thrown chan bool
+			var stop func()
+
+			checkException := !strings.HasSuffix(name, "_Reproduced")
+
+			if checkException {
+				thrown, stop = suite.watchException()
+			}
+
 			test(params)
+
+			if checkException {
+				stop()
+
+				if <-thrown {
+					suite.FailNow(
+						"got a java exception in logs",
+						"testcase: %s",
+						name,
+					)
+					break
+				}
+			}
+
+			suite.Bitbucket().FlushLogs(suite.Bitbucket().GetStacktraceLogs())
+			suite.Bitbucket().FlushLogs(suite.Bitbucket().GetTestcaseLogs())
 		}
+
 	}
+}
+
+func (suite *Suite) watchException() (result chan bool, stop func()) {
+	ctx, stop := context.WithCancel(context.Background())
+
+	result = make(chan bool)
+
+	go func() {
+		bitbucket := suite.WaitBitbucket()
+
+		re := regexp.MustCompile(
+			`(at com.ngs.stash.externalhooks.|java.lang.RuntimeException)`,
+		)
+
+		found := false
+
+		bitbucket.WaitLogEntryContext(
+			ctx,
+			bitbucket.Instance.GetStacktraceLogs(),
+			func(line string) bool {
+				if re.MatchString(line) {
+					log.Errorf(nil, "got an exception: %s", line)
+					found = true
+					stop()
+					return true
+				}
+				return false
+			},
+		)
+
+		<-ctx.Done()
+		result <- found
+	}()
+
+	return result, stop
+}
+
+type HookOptions struct {
+	WaitHookScripts bool
 }
 
 func (suite *Suite) ConfigureHook(
 	hook *external_hooks.Hook,
 	settings *external_hooks.Settings,
 	script []byte,
+	options HookOptions,
 ) *external_hooks.Hook {
 	path :=
 		filepath.Join("shared", "external-hooks", settings.Executable)
@@ -82,7 +172,7 @@ func (suite *Suite) ConfigureHook(
 	err = hook.Configure(settings)
 	suite.NoError(err, "should be able to configure hook")
 
-	suite.EnableHook(hook)
+	suite.EnableHook(hook, options)
 
 	return hook
 }
@@ -104,7 +194,7 @@ func (suite *Suite) ExternalHooks(opts ...interface{}) *external_hooks.Addon {
 
 func (suite *Suite) CreateRandomProject() *stash.Project {
 	project, err := suite.Bitbucket().Projects().
-		Create(lojban.GetRandomID(4))
+		Create(lojban.GetRandomID(6))
 	suite.NoError(err, "unable to create project")
 
 	return project
@@ -114,7 +204,7 @@ func (suite *Suite) CreateRandomRepository(
 	project *stash.Project,
 ) *stash.Repository {
 	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(4))
+		Create(lojban.GetRandomID(6))
 	suite.NoError(err, "unable to create repository")
 
 	return repository
@@ -153,10 +243,12 @@ func (suite *Suite) CreateRandomPullRequest(
 
 func (suite *Suite) ConfigureSampleHook_FailWithMessage(
 	hook *external_hooks.Hook,
+	options HookOptions,
 	message string,
 ) *external_hooks.Hook {
 	return suite.ConfigureSampleHook(
 		hook,
+		options,
 		string(text(
 			fmt.Sprintf(`echo %s`, message),
 			`exit 1`,
@@ -164,8 +256,24 @@ func (suite *Suite) ConfigureSampleHook_FailWithMessage(
 	)
 }
 
+func (suite *Suite) ConfigureSampleHook_Message(
+	hook *external_hooks.Hook,
+	options HookOptions,
+	message string,
+) *external_hooks.Hook {
+	return suite.ConfigureSampleHook(
+		hook,
+		options,
+		string(text(
+			fmt.Sprintf(`echo %s`, message),
+			`exit 0`,
+		)),
+	)
+}
+
 func (suite *Suite) ConfigureSampleHook(
 	hook *external_hooks.Hook,
+	options HookOptions,
 	script string,
 	args ...string,
 ) *external_hooks.Hook {
@@ -181,6 +289,7 @@ func (suite *Suite) ConfigureSampleHook(
 			`#!/bin/bash`,
 			script,
 		),
+		options,
 	)
 }
 
@@ -213,46 +322,105 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 	return key
 }
 
-func (suite *Suite) DisableHook(hook interface{ Disable() error }) {
+var (
+	DefaultHookOptions = HookOptions{
+		WaitHookScripts: true,
+	}
+)
+
+func (suite *Suite) DisableHook(
+	hook interface{ Disable() error },
+	options ...HookOptions,
+) {
+	var opt HookOptions
+	if len(options) == 0 {
+		opt = DefaultHookOptions
+	} else {
+		opt = options[0]
+	}
+
 	// XXX: only for BB>6.2.0
-	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		switch {
-		case regexp.MustCompile(
-			`ExternalHookScript\W+deleting .* hook script`,
-		).MatchString(line):
-			return true
-		default:
-			return false
-		}
-	})
+	var waiter *sync.WaitGroup
+	if opt.WaitHookScripts {
+		waiter = suite.Bitbucket().WaitLogEntry(func(line string) bool {
+			switch {
+			case regexp.MustCompile(
+				`ExternalHookScript\W+deleting .* hook script`,
+			).MatchString(line):
+				return true
+			default:
+				return false
+			}
+		})
+	}
 
 	err := hook.Disable()
 	suite.NoError(err, "should be able to disable hook")
 
-	log.Debugf(nil, "{add-on} waiting for hook script to be deleted by bitbucket")
+	if opt.WaitHookScripts {
+		log.Debugf(
+			nil,
+			"{add-on} waiting for hook script to be deleted by bitbucket",
+		)
 
-	waiter.Wait()
+		suite.wait(
+			waiter,
+			time.Second*10,
+			"hook scripts are not deleted (no log message)",
+		)
+	}
 }
 
-func (suite *Suite) EnableHook(hook interface{ Enable() error }) {
+func (suite *Suite) wait(
+	waiter *sync.WaitGroup,
+	deadline time.Duration,
+	message string,
+) {
+	done := make(chan struct{})
+	go func() {
+		waiter.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-time.After(deadline):
+		suite.FailNow(message, "duration: %s", deadline)
+	case <-done:
+	}
+}
+
+func (suite *Suite) EnableHook(
+	hook interface{ Enable() error },
+	options HookOptions,
+) {
+	var waiter *sync.WaitGroup
 	// XXX: only for BB>6.2.0
-	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		switch {
-		case regexp.MustCompile(
-			`ExternalHookScript\W+created .* hook script`,
-		).MatchString(line):
-			return true
-		default:
-			return false
-		}
-	})
+	if options.WaitHookScripts {
+		re := regexp.MustCompile(
+			`(?i)ExternalHookScript\W+created.*hook\s*script`,
+		)
+		waiter = suite.Bitbucket().WaitLogEntry(
+			func(line string) bool {
+				return re.MatchString(line)
+			},
+		)
+	}
 
 	err := hook.Enable()
 	suite.NoError(err, "should be able to enable hook")
 
-	log.Debugf(nil, "{add-on} waiting for hook script to be created by bitbucket")
+	if options.WaitHookScripts {
+		log.Debugf(
+			nil,
+			"{add-on} waiting for hook script to be created by bitbucket",
+		)
 
-	waiter.Wait()
+		suite.wait(
+			waiter,
+			time.Second*10,
+			"hook scripts are not created (no log message)",
+		)
+	}
 }
 
 type InheritHookExpectedState string
@@ -285,45 +453,6 @@ func (suite *Suite) InheritHook(
 	)
 
 	waiter.Wait()
-}
-
-func (suite *Suite) enableAddonLogger(key string, level string) error {
-	request, err := http.NewRequest(
-		http.MethodPut,
-		fmt.Sprintf(
-			"%s/rest/api/latest/logs/logger/%s/%s",
-			suite.Bitbucket().GetConnectorURI(users.USER_ADMIN),
-			key,
-			level,
-		),
-		nil,
-	)
-	if err != nil {
-		karma.Format(
-			err,
-			"unable to construct request for logger endpoint",
-		)
-	}
-
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return karma.Format(
-			err,
-			"unable to send put request on logger endpoint",
-		)
-	}
-
-	if response.StatusCode != http.StatusNoContent {
-		return karma.
-			Describe("expected_code", http.StatusNoContent).
-			Describe("response_code", response.StatusCode).
-			Format(
-				err,
-				"unexpected status code from logger endpoint",
-			)
-	}
-
-	return nil
 }
 
 func (suite *Suite) RecordHookScripts() {

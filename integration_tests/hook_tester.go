@@ -46,6 +46,7 @@ func (tester *HookTester) TestStdin(
 
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
+		HookOptions{WaitHookScripts: true},
 		string(text(
 			append(preamble, `cat`, fmt.Sprintf("exit %d", tester.exit))...,
 		)),
@@ -61,6 +62,7 @@ func (tester *HookTester) TestArgs(
 
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
+		HookOptions{WaitHookScripts: true},
 		string(text(
 			`printf "[%s]\n" "$@"`,
 			fmt.Sprintf("exit %d", tester.exit),
@@ -87,7 +89,11 @@ func (tester *HookTester) TestEnableDisable(
 
 	const message = `XXX`
 
-	tester.suite.ConfigureSampleHook_FailWithMessage(tester.hook, message)
+	tester.suite.ConfigureSampleHook_FailWithMessage(
+		tester.hook,
+		HookOptions{WaitHookScripts: true},
+		message,
+	)
 
 	assertEnabled(tester.suite, tester.repository, message)
 
@@ -106,6 +112,7 @@ func (tester *HookTester) TestEnv(
 
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
+		HookOptions{WaitHookScripts: true},
 		string(text(
 			fmt.Sprintf(`echo [$%s]`, name),
 			fmt.Sprintf(`exit %d`, tester.exit),

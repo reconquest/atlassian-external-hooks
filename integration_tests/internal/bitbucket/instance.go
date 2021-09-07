@@ -3,6 +3,7 @@ package bitbucket
 import (
 	"archive/tar"
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,6 +36,12 @@ type AtlToken struct {
 	cookies []*http.Cookie
 }
 
+type Logs struct {
+	*sync.Cond
+
+	lines []string
+}
+
 type Instance struct {
 	version   string
 	container string
@@ -45,12 +52,8 @@ type Instance struct {
 		ConfigureOpts
 	}
 
-	logs struct {
-		sync.Cond
-
-		lines   []string
-		updated chan struct{}
-	}
+	stacktraceLogs *Logs
+	testcaseLogs   *Logs
 }
 
 func (instance *Instance) GetOpts() struct {
@@ -357,7 +360,27 @@ func (instance *Instance) GetVolume() string {
 	return instance.volume
 }
 
+func (instance *Instance) GetStacktraceLogs() *Logs {
+	return instance.stacktraceLogs
+}
+
+func (instance *Instance) GetTestcaseLogs() *Logs {
+	return instance.testcaseLogs
+}
+
 func (instance *Instance) WaitLogEntry(fn func(string) bool) *sync.WaitGroup {
+	return instance.WaitLogEntryContext(
+		context.Background(),
+		instance.testcaseLogs,
+		fn,
+	)
+}
+
+func (instance *Instance) WaitLogEntryContext(
+	ctx context.Context,
+	logs *Logs,
+	fn func(string) bool,
+) *sync.WaitGroup {
 	waiter := sync.WaitGroup{}
 	waiter.Add(1)
 
@@ -367,10 +390,14 @@ func (instance *Instance) WaitLogEntry(fn func(string) bool) *sync.WaitGroup {
 		defer waiter.Done()
 
 		for {
-			instance.logs.L.Lock()
-			instance.logs.Wait()
-			lines := instance.logs.lines[prev:]
-			instance.logs.L.Unlock()
+			logs.L.Lock()
+			logs.Wait()
+			// FlushLogs() was called before
+			if prev > len(logs.lines)-1 {
+				prev = 0
+			}
+			lines := logs.lines[prev:]
+			logs.L.Unlock()
 
 			prev += len(lines)
 
@@ -379,10 +406,25 @@ func (instance *Instance) WaitLogEntry(fn func(string) bool) *sync.WaitGroup {
 					return
 				}
 			}
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 		}
 	}()
 
 	return &waiter
+}
+
+func (instance *Instance) FlushLogs(logs *Logs) {
+	if instance == nil {
+		return
+	}
+	logs.L.Lock()
+	logs.lines = []string{}
+	logs.L.Unlock()
 }
 
 func (instance *Instance) getAtlToken(
@@ -662,7 +704,7 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 	return &status, nil
 }
 
-func (instance *Instance) startLogReader() error {
+func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 	log.Debugf(
 		nil,
 		"{bitbucket} starting log reader for container %q",
@@ -678,7 +720,7 @@ func (instance *Instance) startLogReader() error {
 
 	stdout, err := execution.StdoutPipe()
 	if err != nil {
-		return karma.Format(
+		return nil, karma.Format(
 			err,
 			"unable to get stdout pipe for docker logs",
 		)
@@ -686,32 +728,36 @@ func (instance *Instance) startLogReader() error {
 
 	err = execution.Start()
 	if err != nil {
-		return karma.Format(
+		return nil, karma.Format(
 			err,
 			"unable to start docker logs",
 		)
 	}
 
-	instance.logs.L = &sync.Mutex{}
+	logs := &Logs{
+		Cond: sync.NewCond(&sync.Mutex{}),
+	}
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 
 		for scanner.Scan() {
-			instance.logs.L.Lock()
-			instance.logs.lines = append(
-				instance.logs.lines,
+			logs.L.Lock()
+			logs.lines = append(
+				logs.lines,
 				scanner.Text(),
 			)
-			instance.logs.L.Unlock()
+			logs.L.Unlock()
 
-			instance.logs.Broadcast()
+			logs.Broadcast()
 
-			log.Tracef(
-				nil, "{bitbucket %s} log | %s",
-				instance.version,
-				scanner.Text(),
-			)
+			if output {
+				log.Tracef(
+					nil, "{bitbucket %s} log | %s",
+					instance.version,
+					scanner.Text(),
+				)
+			}
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -719,5 +765,5 @@ func (instance *Instance) startLogReader() error {
 		}
 	}()
 
-	return nil
+	return logs, nil
 }

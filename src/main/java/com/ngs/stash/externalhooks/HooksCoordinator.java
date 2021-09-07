@@ -204,26 +204,31 @@ public class HooksCoordinator {
     }
   }
 
-  public void enable(ProjectScope scope, ExternalHookScript script) {
+  public void enable(ProjectScope projectScope, ExternalHookScript script) {
     // cover legacy hook scripts created only on project level
-    script.uninstallLegacy(scope);
+    script.uninstallLegacy(projectScope);
 
     GetRepositoryHookSettingsRequest request =
-        (new GetRepositoryHookSettingsRequest.Builder(scope, script.getHookKey())).build();
+        (new GetRepositoryHookSettingsRequest.Builder(projectScope, script.getHookKey())).build();
 
     RepositoryHookSettings projectSettings = repositoryHookService.getSettings(request);
     if (projectSettings == null) {
       return;
     }
 
-    walker.walk(scope.getProject(), (repository) -> {
+    walker.walk(projectScope.getProject(), (repository) -> {
       RepositoryScope repositoryScope = new RepositoryScope(repository);
+      // repositoryHookService.getByKey will return project wide's hook but with
+      // projectScope.getType() = PROJECT
       RepositoryHook hook = repositoryHookService.getByKey(repositoryScope, script.getHookKey());
       //
       // isEnabled also covers 'inherited' case
       //
-      if (hook.isEnabled()) {
-        script.install(projectSettings.getSettings(), scope, repositoryScope);
+      if (ScopeUtil.isInheritedEnabled(hook, repositoryScope)) {
+        //  // uninstall on repository level
+        script.uninstall(repositoryScope);
+
+        script.install(projectSettings.getSettings(), projectScope, repositoryScope);
       }
     });
   }
@@ -235,10 +240,19 @@ public class HooksCoordinator {
     RepositoryHookSettings settings = repositoryHookService.getSettings(request);
     script.install(settings.getSettings(), scope);
 
-    // Disable project-wide hook on this specified repository because 'enabled'
-    // hook on Repository means that it's overwritten and two hooks at the same
-    // time is not obvious for customers
-    script.uninstall(new ProjectScope(scope.getProject()), scope);
+    securityService
+        .withPermission(
+            Permission.PROJECT_ADMIN,
+            scope.getProject(),
+            "atlassian-external-hooks: look for project hook")
+        .call(() -> {
+          // Disable project-wide hook on this specified repository because 'enabled'
+          // hook on Repository means that it's overwritten and two hooks at the same
+          // time is not obvious for customers
+          script.uninstall(new ProjectScope(scope.getProject()), scope);
+
+          return null;
+        });
   }
 
   public void disable(ProjectScope scope, ExternalHookScript script) {
@@ -285,6 +299,9 @@ public class HooksCoordinator {
     //    completely disabled and now only project scope hook should be turned
     //    on. The problem is that RepositoryHook.isEnabled() already returns
     //    true at this point.
+    if (scope.getProject().getType().equals(ProjectType.PERSONAL)) {
+      return;
+    }
 
     disable(scope, script);
 

@@ -24,7 +24,9 @@ func (suite *Suite) TestProjectHooks(params TestParams) {
 
 	context := suite.ExternalHooks().OnProject(project.Key)
 
-	log := log.NewChildWithPrefix(fmt.Sprintf("{test: project hooks} %s", project.Key))
+	log := log.NewChildWithPrefix(
+		fmt.Sprintf("{test: project hooks} %s", project.Key),
+	)
 
 	suite.testPreReceive(log, context, repository)
 	suite.testPostReceive(log, context, repository)
@@ -47,7 +49,11 @@ func (suite *Suite) TestRepositoryHooks(params TestParams) {
 		OnRepository(repository.Slug)
 
 	log := log.NewChildWithPrefix(
-		fmt.Sprintf("{test: repository hooks} %s / %s", project.Key, repository.Slug),
+		fmt.Sprintf(
+			"{test: repository hooks} %s / %s",
+			project.Key,
+			repository.Slug,
+		),
 	)
 
 	suite.testPreReceive(log, context, repository)
@@ -72,7 +78,11 @@ func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
 		OnRepository(repository.Slug)
 
 	log := log.NewChildWithPrefix(
-		fmt.Sprintf("{test: personal repositories hooks} %s / %s", project.Key, repository.Slug),
+		fmt.Sprintf(
+			"{test: personal repositories hooks} %s / %s",
+			project.Key,
+			repository.Slug,
+		),
 	)
 
 	suite.testPreReceive(log, context, repository)
@@ -118,7 +128,9 @@ func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 			OnRepository(cases.personal.repo.Slug)
 
 		cases.personal.pre, cases.personal.post = suite.testBitbucketUpgrade_Before(
-			project, cases.personal.repo, context,
+			project,
+			cases.personal.repo,
+			context,
 		)
 	}
 
@@ -141,6 +153,7 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 ) (*external_hooks.Hook, *external_hooks.Hook) {
 	pre := suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
+		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
@@ -152,6 +165,7 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 
 	post := suite.ConfigureSampleHook_FailWithMessage(
 		context.PostReceive(),
+		HookOptions{WaitHookScripts: true},
 		`YYY`,
 	)
 
@@ -204,6 +218,7 @@ func (suite *Suite) TestProjectHooks_DoNotCreateDisabledHooks(
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
+		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
@@ -212,13 +227,15 @@ func (suite *Suite) TestProjectHooks_DoNotCreateDisabledHooks(
 
 	postReceive := suite.ConfigureSampleHook_FailWithMessage(
 		context.PostReceive(),
+		HookOptions{WaitHookScripts: true},
 		`YYY`,
 	)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 	Assert_PushOutputsMessages(suite, repository, `YYY`)
 
-	postReceive.Disable()
+	err = postReceive.Disable()
+	suite.NoError(err)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -240,6 +257,7 @@ func (suite *Suite) TestHookScriptsLeak_NoLeakAfterRepositoryDelete(
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
+		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
@@ -315,6 +333,7 @@ func (suite *Suite) testPostReceiveHook_AfterMerge(
 	name := "/tmp/" + fmt.Sprint(time.Now().UnixNano())
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
+		HookOptions{WaitHookScripts: true},
 		string(text(
 			fmt.Sprintf(`echo 1 > `+name),
 		)),

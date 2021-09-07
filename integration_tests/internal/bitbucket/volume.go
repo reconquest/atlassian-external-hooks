@@ -74,12 +74,14 @@ func (volume Volume) Start(
 		)
 	}
 
-	err = instance.startLogReader()
+	instance.stacktraceLogs, err = instance.startLogReader(false)
 	if err != nil {
-		return nil, karma.Format(
-			err,
-			"unable to start log reader",
-		)
+		return nil, karma.Format(err, "unable to start log reader")
+	}
+
+	instance.testcaseLogs, err = instance.startLogReader(true)
+	if err != nil {
+		return nil, karma.Format(err, "unable to start log reader")
 	}
 
 	var message string
@@ -114,7 +116,7 @@ func (volume Volume) Start(
 			break
 		}
 
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 20)
 	}
 
 	return New(instance)

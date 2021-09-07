@@ -26,16 +26,18 @@ Usage:
   external-hooks-test -h | --help
 
 Options:
-  -h --help  Show this help.
-  --debug    Set debug log level.
-  --trace    Set trace log level.
-  --keep     Keep work dir & bitbucket instance.
+  -h --help     Show this help.
+  --debug       Set debug log level.
+  --trace       Set trace log level.
+  --keep        Keep work dir & bitbucket instance.
+  --no-upgrade  Do not run suites with upgrades.  
 `
 
 type Opts struct {
-	FlagKeep  bool `docopt:"--keep"`
-	FlagTrace bool `docopt:"--trace"`
-	FlagDebug bool `docopt:"--debug"`
+	FlagKeep      bool `docopt:"--keep"`
+	FlagTrace     bool `docopt:"--trace"`
+	FlagDebug     bool `docopt:"--debug"`
+	FlagNoUpgrade bool `docopt:"--no-upgrade"`
 
 	ValueContainer string `docopt:"--container"`
 }
@@ -74,7 +76,7 @@ func main() {
 
 	run := runner.New()
 
-	suite := NewSuite()
+	suite := NewSuite(baseBitbucket, opts.FlagNoUpgrade)
 
 	// TODO: add tests for different trigger configurations
 	// TODO: add tests for BB 5.x.x
@@ -87,7 +89,8 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks,
+			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced,
+			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed,
 		),
 	)
 
@@ -99,7 +102,8 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_ProjectHookCreatedBeforeRepository,
+			suite.TestBug_ProjectHookCreatedBeforeRepository_Reproduced,
+			suite.TestBug_ProjectHookCreatedBeforeRepository_Fixed,
 		),
 	)
 
@@ -111,7 +115,8 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
+			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced,
+			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed,
 		),
 	)
 
@@ -136,7 +141,21 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook,
+			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced,
+			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("11.1.0"),
+				"addon_fixed":      latestAddon,
+			},
+
+			suite.TestBug_RepositoryHookCreatedBeforeProject_Reproduced,
+			suite.TestBug_RepositoryHookCreatedBeforeProject_Fixed,
 		),
 	)
 
@@ -206,6 +225,7 @@ func main() {
 
 func getAddon(version string) Addon {
 	builds := map[string]string{
+		"11.1.0": "6642",
 		"10.2.2": "6592",
 		"10.2.1": "6572",
 		"10.1.0": "6532",
