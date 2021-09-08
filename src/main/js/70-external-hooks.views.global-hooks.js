@@ -9,6 +9,16 @@ var ViewGlobalHooks = function (context, api) {
     this.mount = function () {
         this._$.find('h2').append(this._$spinner);
 
+        this._$.find('[data-rq-hook-kind]').each(function () {
+            var $pane = $(this);
+            var kind = $pane.attr('data-rq-hook-kind');
+
+            $pane.find('[name$=".enabled"]').change(function () {
+                $pane.find('.rq-global-hook-settings').
+                    toggleClass('rq-hook-disabled', !$(this).prop('checked'));
+            })
+        });
+
         this._$.submit(function (e) {
             e.preventDefault();
 
@@ -25,10 +35,10 @@ var ViewGlobalHooks = function (context, api) {
 
     this._setLoading = function (loading) {
         if (loading) {
-            this._$.find('input, button').prop('disabled', true);
+            this._$.find('input, button, textarea').prop('disabled', true);
             this._$spinner.show();
         } else {
-            this._$.find('input, button').prop('disabled', false);
+            this._$.find('input, button, textarea').prop('disabled', false);
             this._$spinner.hide();
         }
     }
@@ -54,23 +64,43 @@ var ViewGlobalHooks = function (context, api) {
         return api.runHooksFactory();
     }
 
-    this._renderSettings = function (settings) {
-        this._$.find('input').prop('checked', false);
+    this._renderSettings = function (kind, settings) {
+        console.log(kind, settings);
+        //$.each(settings.triggers, function(hook, events) {
+        //    $.each(events, function (_, event) {
+        //        var name = 'triggers.' + hook + '.' + event;
 
-        $.each(settings.triggers, function(hook, events) {
-            $.each(events, function (_, event) {
-                var name = 'triggers.' + hook + '.' + event;
-
-                this._$
-                    .find('[name="' + name + '"]')
-                    .prop('checked', true);
-            }.bind(this))
-        }.bind(this))
+        //        this._$
+        //            .find('[name="' + name + '"]')
+        //            .prop('checked', true);
+        //    }.bind(this))
+        //}.bind(this))
     }
 
     this._loadSettings = function () {
-        return api.getSettings()
-            .done(this._renderSettings.bind(this));
+        var kinds = this._$.find('[data-rq-hook-kind]').
+            map(function (_, el) { return el.getAttribute('data-rq-hook-kind'); }).
+            get();
+
+        return $.when.apply(
+            $,
+            kinds.map(function(kind) {
+                return api.getGlobalHook(kind).then(function (settings) {
+                    return {
+                        kind: kind,
+                        settings: settings
+                    };
+                })
+            })
+        ).done(function() {
+            console.log(arguments);
+            $.each(arguments, function (_, hook) {
+                this._renderSettings(hook.kind, hook.settings);
+            }.bind(this))
+        }.bind(this));
+
+        //return api.getSettings()
+        //    .done(this._renderSettings.bind(this));
     }
 
     this._loadSettingsDefaults = function () {

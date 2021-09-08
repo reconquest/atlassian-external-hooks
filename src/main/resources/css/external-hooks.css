@@ -14,3 +14,11 @@
 .rq_hooks_global_form .aui-message::after {
     content: "";
 }
+
+.rq_hooks_global_form .rq-hook-disabled {
+    display: none;
+}
+
+.rq_hooks_global_form .aui-tabs {
+    margin-bottom: 10px;
+}

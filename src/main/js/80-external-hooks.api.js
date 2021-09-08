@@ -22,6 +22,10 @@ var API = function (baseURL) {
 
         factoryState: function (id) {
             return this.factory() + 'state/' + id;
+        },
+
+        globalHook: function(kind) {
+            return this.root() + '/global-hooks/com.ngs.stash.externalhooks.external-hooks:external-' + kind + '-hook';
         }
     });
 
@@ -74,6 +78,16 @@ var API = function (baseURL) {
     this.getHooksFactoryState = function (id) {
         return $.ajax(
             this.urls.factoryState(id),
+            {
+                method: "GET",
+                headers: this._headers
+            }
+        );
+    }
+
+    this.getGlobalHook = function (kind) {
+        return $.ajax(
+            this.urls.globalHook(kind),
             {
                 method: "GET",
                 headers: this._headers
