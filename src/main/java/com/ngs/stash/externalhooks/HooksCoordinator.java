@@ -12,6 +12,7 @@ import com.atlassian.bitbucket.event.hook.RepositoryHookDeletedEvent;
 import com.atlassian.bitbucket.event.hook.RepositoryHookDisabledEvent;
 import com.atlassian.bitbucket.event.hook.RepositoryHookEnabledEvent;
 import com.atlassian.bitbucket.event.repository.RepositoryCreatedEvent;
+import com.atlassian.bitbucket.event.repository.RepositoryDeletedEvent;
 import com.atlassian.bitbucket.hook.repository.GetRepositoryHookSettingsRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
@@ -178,6 +179,14 @@ public class HooksCoordinator {
     RepositoryScope scope = new RepositoryScope(event.getRepository());
     scripts.forEach((hookId, script) -> {
       inherit(scope, script);
+    });
+  }
+
+  @EventListener
+  public void onRepositoryDeleted(RepositoryDeletedEvent event) {
+    RepositoryScope scope = new RepositoryScope(event.getRepository());
+    scripts.forEach((hookId, script) -> {
+      script.uninstall(scope);
     });
   }
 

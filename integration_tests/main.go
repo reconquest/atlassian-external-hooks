@@ -26,18 +26,20 @@ Usage:
   external-hooks-test -h | --help
 
 Options:
-  -h --help     Show this help.
-  --debug       Set debug log level.
-  --trace       Set trace log level.
-  --keep        Keep work dir & bitbucket instance.
-  --no-upgrade  Do not run suites with upgrades.  
+  --keep          Keep work dir & bitbucket instance.
+  --no-upgrade    Do not run suites with upgrades.
+  --no-reproduce  Do not run suites with bug reproduces.
+  --debug         Set debug log level.
+  --trace         Set trace log level.
+  -h --help       Show this help.
 `
 
 type Opts struct {
-	FlagKeep      bool `docopt:"--keep"`
-	FlagTrace     bool `docopt:"--trace"`
-	FlagDebug     bool `docopt:"--debug"`
-	FlagNoUpgrade bool `docopt:"--no-upgrade"`
+	FlagKeep        bool `docopt:"--keep"`
+	FlagTrace       bool `docopt:"--trace"`
+	FlagDebug       bool `docopt:"--debug"`
+	FlagNoUpgrade   bool `docopt:"--no-upgrade"`
+	FlagNoReproduce bool `docopt:"--no-reproduce"`
 
 	ValueContainer string `docopt:"--container"`
 }
@@ -76,7 +78,13 @@ func main() {
 
 	run := runner.New()
 
-	suite := NewSuite(baseBitbucket, opts.FlagNoUpgrade)
+	suite := NewSuite(
+		baseBitbucket,
+		SkipParams{
+			upgrade:   opts.FlagNoUpgrade,
+			reproduce: opts.FlagNoReproduce,
+		},
+	)
 
 	// TODO: add tests for different trigger configurations
 	// TODO: add tests for BB 5.x.x
@@ -127,9 +135,7 @@ func main() {
 				"addon":     latestAddon,
 			},
 			suite.TestProjectHooks_DoNotCreateDisabledHooks,
-
-			// XXX: BB doesn't clean up hook scripts if repository was deleted.
-			// suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
+			suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
 		),
 	)
 

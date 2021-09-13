@@ -26,7 +26,7 @@ type Suite struct {
 	*assert.Assertions
 
 	baseBitbucket string
-	skipUpgrade   bool
+	skip          SkipParams
 
 	hookScripts []string
 }
@@ -39,10 +39,18 @@ type (
 	}
 )
 
-func NewSuite(baseBitbucket string, skipUpgrade bool) *Suite {
+type SkipParams struct {
+	upgrade   bool
+	reproduce bool
+}
+
+func NewSuite(
+	baseBitbucket string,
+	skip SkipParams,
+) *Suite {
 	return &Suite{
 		baseBitbucket: baseBitbucket,
-		skipUpgrade:   skipUpgrade,
+		skip:          skip,
 	}
 }
 
@@ -55,11 +63,13 @@ func (suite *Suite) WithParams(
 		suite.Assertions = assert
 
 		for _, test := range tests {
+			startedAt := time.Now()
+
 			name := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
 			name = strings.TrimPrefix(name, "main.(*Suite).")
 			name = strings.TrimSuffix(name, "-fm")
 
-			if suite.skipUpgrade {
+			if suite.skip.upgrade {
 				version, ok := params["bitbucket"]
 				if !ok {
 					version, _ = params["bitbucket_to"]
@@ -73,6 +83,15 @@ func (suite *Suite) WithParams(
 					)
 					continue
 				}
+			}
+
+			if suite.skip.reproduce && strings.HasSuffix(name, "_Reproduced") {
+				log.Infof(
+					nil,
+					"{test} skip %s because --no-reproduce specified",
+					name,
+				)
+				continue
 			}
 
 			log.Infof(
@@ -107,6 +126,15 @@ func (suite *Suite) WithParams(
 
 			suite.Bitbucket().FlushLogs(suite.Bitbucket().GetStacktraceLogs())
 			suite.Bitbucket().FlushLogs(suite.Bitbucket().GetTestcaseLogs())
+
+			finishedAt := time.Now()
+			took := finishedAt.Sub(startedAt)
+
+			log.Infof(
+				karma.Describe("took", took.Milliseconds()),
+				"{test} %s finished}",
+				name,
+			)
 		}
 
 	}
