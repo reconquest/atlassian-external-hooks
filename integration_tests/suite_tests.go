@@ -12,6 +12,29 @@ import (
 	"github.com/reconquest/pkg/log"
 )
 
+func (suite *Suite) TestGlobalHooks(params TestParams) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.InstallAddon(params["addon"].(Addon))
+	suite.RecordHookScripts()
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
+
+	context := suite.ExternalHooks().OnGlobal()
+
+	log := log.NewChildWithPrefix(
+		fmt.Sprintf("{test: project hooks} %s", project.Key),
+	)
+
+	suite.testPreReceive(log, context, repository)
+	suite.testPostReceive(log, context, repository)
+	suite.testMergeCheck(log, context, repository)
+
+	suite.DetectHookScriptsLeak()
+}
+
 func (suite *Suite) TestProjectHooks(params TestParams) {
 	suite.UseBitbucket(params["bitbucket"].(string))
 	suite.InstallAddon(params["addon"].(Addon))

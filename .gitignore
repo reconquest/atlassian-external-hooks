@@ -16,3 +16,4 @@ batch.js
 /taskutils/nginx.conf
 /.task
 /log
+/builds

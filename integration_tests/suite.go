@@ -21,12 +21,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type SuiteMode int
+
+const (
+	ModeRun  SuiteMode = 1
+	ModeList SuiteMode = 2
+)
+
 type Suite struct {
 	*runner.Runner
 	*assert.Assertions
 
+	mode          SuiteMode
 	baseBitbucket string
-	skip          SkipParams
+	filter        Filter
 
 	hookScripts []string
 }
@@ -39,19 +47,29 @@ type (
 	}
 )
 
-type SkipParams struct {
+type Filter struct {
 	upgrade   bool
 	reproduce bool
+	glob      string
 }
 
 func NewSuite(
 	baseBitbucket string,
-	skip SkipParams,
+	mode SuiteMode,
+	filter Filter,
 ) *Suite {
 	return &Suite{
+		mode:          mode,
 		baseBitbucket: baseBitbucket,
-		skip:          skip,
+		filter:        filter,
 	}
+}
+
+func getSuiteName(x interface{}) string {
+	name := runtime.FuncForPC(reflect.ValueOf(x).Pointer()).Name()
+	name = strings.TrimPrefix(name, "main.(*Suite).")
+	name = strings.TrimSuffix(name, "-fm")
+	return name
 }
 
 func (suite *Suite) WithParams(
@@ -65,18 +83,27 @@ func (suite *Suite) WithParams(
 		for _, test := range tests {
 			startedAt := time.Now()
 
-			name := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
-			name = strings.TrimPrefix(name, "main.(*Suite).")
-			name = strings.TrimSuffix(name, "-fm")
+			name := getSuiteName(test)
 
-			if suite.skip.upgrade {
+			if suite.filter.glob != "" {
+				matched, err := regexp.MatchString(suite.filter.glob, name)
+				if err != nil {
+					log.Fatalf(err, "invalid regexp: %s", suite.filter.glob)
+				}
+
+				if !matched {
+					continue
+				}
+			}
+
+			if !suite.filter.upgrade {
 				version, ok := params["bitbucket"]
 				if !ok {
 					version, _ = params["bitbucket_to"]
 				}
 
 				if version != suite.baseBitbucket {
-					log.Infof(
+					log.Debugf(
 						nil,
 						"{test} skip %s because --no-upgrade specified",
 						name,
@@ -85,12 +112,18 @@ func (suite *Suite) WithParams(
 				}
 			}
 
-			if suite.skip.reproduce && strings.HasSuffix(name, "_Reproduced") {
-				log.Infof(
+			if !suite.filter.reproduce &&
+				strings.HasSuffix(name, "_Reproduced") {
+				log.Debugf(
 					nil,
 					"{test} skip %s because --no-reproduce specified",
 					name,
 				)
+				continue
+			}
+
+			if suite.mode == ModeList {
+				fmt.Println(name)
 				continue
 			}
 
@@ -136,7 +169,6 @@ func (suite *Suite) WithParams(
 				name,
 			)
 		}
-
 	}
 }
 
@@ -149,7 +181,7 @@ func (suite *Suite) watchException() (result chan bool, stop func()) {
 		bitbucket := suite.WaitBitbucket()
 
 		re := regexp.MustCompile(
-			`(at com.ngs.stash.externalhooks.|java.lang.RuntimeException)`,
+			`(at com.ngs.stash.externalhooks.|java.lang.\w+Exception)`,
 		)
 
 		found := false
@@ -186,7 +218,7 @@ func (suite *Suite) ConfigureHook(
 	options HookOptions,
 ) *external_hooks.Hook {
 	path :=
-		filepath.Join("shared", "external-hooks", settings.Executable)
+		filepath.Join("shared", "external-hooks", settings.Exe)
 
 	log.Debugf(
 		karma.Describe("script", "\n"+string(script)),
@@ -307,8 +339,8 @@ func (suite *Suite) ConfigureSampleHook(
 ) *external_hooks.Hook {
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5)).
-		WithArgs(args...)
+		WithExe(`hook.` + lojban.GetRandomID(5)).
+		WithParams(args...)
 
 	return suite.ConfigureHook(
 		hook,
@@ -350,11 +382,7 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 	return key
 }
 
-var (
-	DefaultHookOptions = HookOptions{
-		WaitHookScripts: true,
-	}
-)
+var DefaultHookOptions = HookOptions{WaitHookScripts: true}
 
 func (suite *Suite) DisableHook(
 	hook interface{ Disable() error },
@@ -425,7 +453,7 @@ func (suite *Suite) EnableHook(
 	// XXX: only for BB>6.2.0
 	if options.WaitHookScripts {
 		re := regexp.MustCompile(
-			`(?i)ExternalHookScript\W+created.*hook\s*script`,
+			`(?i)(ExternalHookScript|HooksFactory)\W+created.*hook\s*script`,
 		)
 		waiter = suite.Bitbucket().WaitLogEntry(
 			func(line string) bool {

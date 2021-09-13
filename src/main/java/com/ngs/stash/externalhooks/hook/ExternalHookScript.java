@@ -211,6 +211,22 @@ public class ExternalHookScript {
     }
   }
 
+  public void uninstall(GlobalScope parentScope, RepositoryScope scope) {
+    String pluginSettingsPath = getPluginSettingsPath(parentScope,scope);
+
+    DeletionResult result = deleteHookScript(pluginSettingsPath);
+
+    log.debug(
+        "deleting global hook script {} on repository {}: {}",
+        hookId,
+        ScopeUtil.toString(scope),
+        result.getMessage());
+
+    if (result != DeletionResult.MISSING_ID) {
+      pluginSettings.remove(pluginSettingsPath);
+    }
+  }
+
   public void uninstall(RepositoryScope scope) {
     String pluginSettingsPath = getPluginSettingsPath(scope);
 
@@ -254,7 +270,6 @@ public class ExternalHookScript {
         "created repository hook script of global configuration with id: {} on {}; triggers: {}",
         hookId,
         result.getLeft().getId(),
-        ScopeUtil.toString(scope),
         listTriggers(result.getRight()));
   }
 
@@ -293,9 +308,8 @@ public class ExternalHookScript {
 
   private DeletionResult deleteHookScript(String pluginSettingsPath) {
     Object id = pluginSettings.get(pluginSettingsPath);
-    log.debug("delete hook script: {}", id);
     if (id != null) {
-    log.debug("delete hook script: {}",id);
+      log.debug("delete hook script: {}", id);
 
       Optional<HookScript> maybeHookScript =
           hookScriptService.findById(Long.valueOf(id.toString()));

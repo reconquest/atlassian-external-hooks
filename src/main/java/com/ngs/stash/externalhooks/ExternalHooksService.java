@@ -154,12 +154,12 @@ public class ExternalHooksService implements JobRunner {
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
-        hooksFactory.install(new ProjectScope(project), globalHooks);
+        hooksFactory.apply(new ProjectScope(project), globalHooks);
       }
 
       @Override
       public void onRepository(Repository repository) {
-        hooksFactory.install(new RepositoryScope(repository), globalHooks);
+        hooksFactory.apply(new RepositoryScope(repository), globalHooks);
       }
     });
 

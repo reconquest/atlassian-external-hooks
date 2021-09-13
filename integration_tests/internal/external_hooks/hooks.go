@@ -1,6 +1,15 @@
 package external_hooks
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
@@ -12,8 +21,91 @@ const (
 	HOOK_KEY_MERGE_CHECK  = "com.ngs.stash.externalhooks.external-hooks:external-merge-check-hook"
 )
 
+type RequestGlobalHooks struct {
+	Safe    bool   `json:"safe_path"`
+	Exe     string `json:"exe"`
+	Params  string `json:"params"`
+	Enabled bool   `json:"enabled"`
+}
+
+type ResponseGlobalHooksSetup struct {
+	ErrorsForm   []string            `json:"errors_form"`
+	ErrorsFields map[string][]string `json:"errors_fields"`
+}
+
+type ResponseFactoryHooks struct {
+	ID       int64 `json:"id"`
+	Started  bool  `json:"started"`
+	Finished bool  `json:"finished"`
+	Current  int64 `json:"current"`
+	Total    int64 `json:"total"`
+}
+
 type Addon struct {
 	BitbucketURI string
+}
+
+func (addon *Addon) call(
+	method string,
+	path string,
+	payload interface{},
+	response interface{},
+) error {
+	var encoded []byte
+	var err error
+	if payload != nil {
+		encoded, err = json.Marshal(payload)
+		if err != nil {
+			return karma.Format(err, "json marshal")
+		}
+	}
+
+	buffer := bytes.NewReader(encoded)
+
+	log.Tracef(
+		karma.Describe("payload", string(encoded)),
+		"{http request} %s %s", method, path,
+	)
+
+	request, err := http.NewRequest(
+		method,
+		addon.BitbucketURI+path,
+		buffer,
+	)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Add("Content-Type", "application/json")
+
+	reply, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(reply.Body)
+	if err != nil {
+		return karma.Format(err, "read response body")
+	}
+
+	defer reply.Body.Close()
+
+	log.Tracef(
+		karma.
+			Describe("status", reply.StatusCode).
+			Describe("body", string(body)),
+		"{http response} %s %s", method, path,
+	)
+
+	err = json.Unmarshal(body, response)
+	if err != nil {
+		return karma.
+			Describe("body", string(body)).
+			Describe("status", reply.StatusCode).
+			Format(err, "json unmarshal")
+	}
+
+	return nil
 }
 
 func (addon *Addon) Register(
@@ -21,30 +113,135 @@ func (addon *Addon) Register(
 	context *Context,
 	settings *Settings,
 ) error {
-	args := []string{
-		key,
-		"-e", settings.Executable,
+	if !context.Global() {
+		args := []string{
+			key,
+			"-e", settings.Exe,
+		}
+
+		if settings.Safe {
+			args = append(args, "-s")
+		}
+
+		args = append(args, settings.Params...)
+
+		return addon.command(context, "set", args...)
 	}
 
-	if settings.Safe {
-		args = append(args, "-s")
+	var reply ResponseGlobalHooksSetup
+	err := addon.call(
+		"PUT",
+		"/rest/external-hooks/1.0/global-hooks/"+key,
+		RequestGlobalHooks{
+			Safe:    settings.Safe,
+			Exe:     settings.Exe,
+			Params:  strings.Join(settings.Params, "\r\n"),
+			Enabled: true,
+		},
+		&reply,
+	)
+	if err != nil {
+		return err
 	}
 
-	args = append(args, settings.Args...)
+	return addon.getReplyError(reply)
+}
 
-	return addon.command(context, "set", args...)
+func (addon *Addon) getReplyError(reply ResponseGlobalHooksSetup) error {
+	if len(reply.ErrorsFields) > 0 || len(reply.ErrorsForm) > 0 {
+		return karma.
+			Describe("errors_form", reply.ErrorsForm).
+			Describe("erros_fields", reply.ErrorsFields).
+			Reason("the add-on returned errors")
+	}
+
+	return nil
 }
 
 func (addon *Addon) Enable(key string, context *Context) error {
-	return addon.command(context, "enable", key)
+	if !context.Global() {
+		return addon.command(context, "enable", key)
+	}
+
+	return addon.factoryApply()
+}
+
+func (addon *Addon) factoryApply() error {
+	var reply ResponseFactoryHooks
+	err := addon.call(
+		"POST",
+		"/rest/external-hooks/1.0/factory/hooks",
+		nil,
+		&reply,
+	)
+	if err != nil {
+		return err
+	}
+
+	for !reply.Finished {
+		err := addon.call(
+			"GET",
+			"/rest/external-hooks/1.0/factory/state/"+fmt.Sprint(reply.ID),
+			nil,
+			&reply,
+		)
+		if err != nil {
+			return err
+		}
+
+		log.Debugf(
+			karma.Describe(
+				"current",
+				reply.Current,
+			).Describe(
+				"total",
+				reply.Total,
+			),
+			"waiting for factory, state id: %d",
+			reply.ID,
+		)
+
+		time.Sleep(time.Millisecond * 50)
+	}
+
+	return nil
 }
 
 func (addon *Addon) Disable(key string, context *Context) error {
-	return addon.command(context, "disable", key)
+	if !context.Global() {
+		return addon.command(context, "disable", key)
+	}
+
+	var reply ResponseGlobalHooksSetup
+	err := addon.call(
+		"PUT",
+		"/rest/external-hooks/1.0/global-hooks/"+key,
+		RequestGlobalHooks{
+			Enabled: false,
+		},
+		&reply,
+	)
+	if err != nil {
+		return err
+	}
+
+	return addon.factoryApply()
 }
 
 func (addon *Addon) Inherit(key string, context *Context) error {
+	if !context.Global() {
+		return errors.New(
+			"global hooks can't inherit hook settings (it's already global)",
+		)
+	}
+
 	return addon.command(context, "inherit", key)
+}
+
+func (addon *Addon) OnGlobal() *Context {
+	return &Context{
+		Addon: addon,
+	}
 }
 
 func (addon *Addon) OnProject(project string) *Context {
@@ -76,9 +273,9 @@ func (addon *Addon) command(
 }
 
 type Settings struct {
-	Safe       bool
-	Executable string
-	Args       []string
+	Safe   bool
+	Exe    string
+	Params []string
 }
 
 func NewSettings() *Settings {
@@ -91,14 +288,14 @@ func (settings *Settings) UseSafePath(enabled bool) *Settings {
 	return settings
 }
 
-func (settings *Settings) WithExecutable(executable string) *Settings {
-	settings.Executable = executable
+func (settings *Settings) WithExe(exe string) *Settings {
+	settings.Exe = exe
 
 	return settings
 }
 
-func (settings *Settings) WithArgs(args ...string) *Settings {
-	settings.Args = args
+func (settings *Settings) WithParams(args ...string) *Settings {
+	settings.Params = args
 
 	return settings
 }
@@ -114,6 +311,10 @@ type Context struct {
 
 	Project    string
 	Repository string
+}
+
+func (context *Context) Global() bool {
+	return context.Project == ""
 }
 
 func (context Context) OnRepository(repository string) *Context {

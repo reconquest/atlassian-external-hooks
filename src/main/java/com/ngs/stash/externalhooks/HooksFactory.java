@@ -34,7 +34,7 @@ public class HooksFactory {
    *
    * @param scope
    */
-  public void install(Scope scope, GlobalHooks globalHooks) {
+  public void apply(Scope scope, GlobalHooks globalHooks) {
     log.debug("creating hook scripts on {}", ScopeUtil.toString(scope));
 
     RepositoryHookSearchRequest.Builder searchBuilder =
@@ -50,24 +50,29 @@ public class HooksFactory {
         continue;
       }
 
+      boolean skipEnable = false;
       if (!globalHooks.isEnabled(hookKey)) {
         if (!hook.isEnabled() || !hook.isConfigured()) {
-          continue;
-        }
-
+          skipEnable=true;
+        } else if (ScopeUtil.isInheritedEnabled(hook, scope)) {
         // if this is a repository and we have a project's hook but don't have
         // if we don't have a global hook
-        if (ScopeUtil.isInheritedEnabled(hook, scope)) {
           log.info(
               "hook {} is enabled & configured (inherited of {})",
               hookKey,
               ScopeUtil.toString(hook.getScope()));
-          continue;
+          skipEnable = true;
         }
       }
 
       try {
-        hooksCoordinator.enable(scope, hookKey, globalHooks);
+        if (!skipEnable) {
+          hooksCoordinator.enable(scope, hookKey, globalHooks);
+        }
+
+        if (!globalHooks.isEnabled(hookKey)) {
+          hooksCoordinator.disable(scope, hookKey, globalHooks);
+        }
 
         created++;
       } catch (Exception e) {

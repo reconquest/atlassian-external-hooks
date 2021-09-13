@@ -17,9 +17,7 @@ public class Walker {
   private UserService userService;
 
   public Walker(
-      UserService userService,
-      ProjectService projectService,
-      RepositoryService repositoryService) {
+      UserService userService, ProjectService projectService, RepositoryService repositoryService) {
     this.userService = userService;
     this.projectService = projectService;
     this.repositoryService = repositoryService;

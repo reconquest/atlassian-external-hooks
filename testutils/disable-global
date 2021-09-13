@@ -1,0 +1,8 @@
+#!/bin/bash
+
+http --auth admin:admin PUT \
+   https://bitbucket.local/rest/external-hooks/1.0/global-hooks/com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook \
+   Content-Type:application/json \
+   <<< "{\"enabled\":false}\"}"
+
+$(dirname $0)/factory-apply

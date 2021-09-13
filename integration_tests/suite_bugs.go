@@ -260,7 +260,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5))
+		WithExe(`hook.` + lojban.GetRandomID(5))
 
 	log.Infof(
 		nil,
@@ -276,7 +276,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -289,7 +289,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -315,7 +315,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5))
+		WithExe(`hook.` + lojban.GetRandomID(5))
 
 	log.Infof(
 		nil,
@@ -331,7 +331,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -344,7 +344,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -370,7 +370,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5))
+		WithExe(`hook.` + lojban.GetRandomID(5))
 
 	log.Infof(
 		nil,
@@ -386,7 +386,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -407,7 +407,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -438,7 +438,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 
 	settings := external_hooks.NewSettings().
 		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5))
+		WithExe(`hook.` + lojban.GetRandomID(5))
 
 	log.Infof(
 		nil,
@@ -454,7 +454,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
@@ -475,7 +475,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,

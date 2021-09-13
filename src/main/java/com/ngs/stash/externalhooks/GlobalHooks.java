@@ -13,28 +13,28 @@ public class GlobalHooks {
 
   public GlobalHooks(List<GlobalHookSettings> settings) {
     settings.stream().forEach((setting) -> {
-      if (setting.getHook() == Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID) {
+      if (setting.getHook().equals(Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID)) {
         this.preReceive = setting;
       }
-      if (setting.getHook() == Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID) {
+      if (setting.getHook().equals(Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID)) {
         this.postReceive = setting;
       }
-      if (setting.getHook() == Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID) {
+      if (setting.getHook().equals(Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID)) {
         this.mergeCheck = setting;
       }
     });
   }
 
   public boolean isEnabled(String hookKey) {
-    if (hookKey == Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID) {
+    if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID)) {
       return this.isPreReceiveEnabled();
     }
 
-    if (hookKey == Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID) {
+    if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID)) {
       return this.isPostReceiveEnabled();
     }
 
-    if (hookKey == Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID) {
+    if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID)) {
       return this.isMergeCheckEnabled();
     }
 
@@ -42,15 +42,15 @@ public class GlobalHooks {
   }
 
   private GlobalHookSettings getHook(String hookKey) {
-    if (hookKey == Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID) {
+    if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID)) {
       return this.preReceive;
     }
 
-    if (hookKey == Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID) {
+    if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.POST_RECEIVE_HOOK_ID)) {
       return this.postReceive;
     }
 
-    if (hookKey == Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID) {
+    if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID)) {
       return this.mergeCheck;
     }
 
@@ -70,7 +70,7 @@ public class GlobalHooks {
   }
 
   private boolean isEnabled(GlobalHookSettings hook) {
-    return hook == null || hook.getEnabled();
+    return hook != null && hook.getEnabled();
   }
 
   public Settings getSettings(String hookKey) {

@@ -75,7 +75,7 @@ public class Rest implements JobRunner {
   private ExternalHooksSettingsDao settingsDao;
   private Walker walker;
   private GlobalHookSettingsDao globalHookSettingsDao;
-  private RepositoryHookService repositoryHookService;
+  //private RepositoryHookService repositoryHookService;
   private HooksCoordinator hooksCoordinator;
   private HooksFactory hooksFactory;
 
@@ -97,7 +97,7 @@ public class Rest implements JobRunner {
     this.permissionService = permissionService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
-    this.repositoryHookService = repositoryHookService;
+    //this.repositoryHookService = repositoryHookService;
     this.hooksCoordinator = hooksCoordinator;
     this.hooksFactory = hooksFactory;
 
@@ -228,7 +228,7 @@ public class Rest implements JobRunner {
     settings.setEnabled(schema.enabled);
     settings.save();
 
-    return Response.ok().build();
+    return Response.ok(new HashMap<String, String>()).build();
   }
 
   @GET
@@ -321,7 +321,7 @@ public class Rest implements JobRunner {
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
-        hooksFactory.install(new ProjectScope(project), globalHooks);
+        hooksFactory.apply(new ProjectScope(project), globalHooks);
 
         state.setCurrent(current.incrementAndGet());
         state.save();
@@ -331,7 +331,7 @@ public class Rest implements JobRunner {
 
       @Override
       public void onRepository(Repository repository) {
-        hooksFactory.install(new RepositoryScope(repository), globalHooks);
+        hooksFactory.apply(new RepositoryScope(repository), globalHooks);
 
         state.setCurrent(current.incrementAndGet());
         state.save();

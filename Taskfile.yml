@@ -17,3 +17,6 @@ tasks:
   i:
     cmds:
       - task: 'atlas:install'
+  a:
+    cmds:
+      - task: 'atlas:package'

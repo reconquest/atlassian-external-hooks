@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/docopt/docopt-go"
@@ -26,12 +27,14 @@ Usage:
   external-hooks-test -h | --help
 
 Options:
-  --keep          Keep work dir & bitbucket instance.
-  --no-upgrade    Do not run suites with upgrades.
-  --no-reproduce  Do not run suites with bug reproduces.
-  --debug         Set debug log level.
-  --trace         Set trace log level.
-  -h --help       Show this help.
+  -l --list        List testcases.
+  --keep           Keep work dir & bitbucket instance.
+  --no-upgrade     Do not run suites with upgrades.
+  --no-reproduce   Do not run suites with bug reproduces.
+  -r --run <name>  Run only specified testcases.
+  --debug          Set debug log level.
+  --trace          Set trace log level.
+  -h --help        Show this help.
 `
 
 type Opts struct {
@@ -40,8 +43,10 @@ type Opts struct {
 	FlagDebug       bool `docopt:"--debug"`
 	FlagNoUpgrade   bool `docopt:"--no-upgrade"`
 	FlagNoReproduce bool `docopt:"--no-reproduce"`
+	FlagList        bool `docopt:"--list"`
 
 	ValueContainer string `docopt:"--container"`
+	ValueRun       string `docopt:"--run"`
 }
 
 func main() {
@@ -71,6 +76,8 @@ func main() {
 		log.Fatalf(err, "unable to create work dir")
 	}
 
+	ensureAddons()
+
 	var (
 		baseBitbucket = "6.2.0"
 		latestAddon   = getAddon(getLatestVersionXML())
@@ -78,11 +85,18 @@ func main() {
 
 	run := runner.New()
 
+	mode := ModeRun
+	if opts.FlagList {
+		mode = ModeList
+	}
+
 	suite := NewSuite(
 		baseBitbucket,
-		SkipParams{
-			upgrade:   opts.FlagNoUpgrade,
-			reproduce: opts.FlagNoReproduce,
+		mode,
+		Filter{
+			upgrade:   !opts.FlagNoUpgrade,
+			reproduce: !opts.FlagNoReproduce,
+			glob:      opts.ValueRun,
 		},
 	)
 
@@ -135,6 +149,7 @@ func main() {
 				"addon":     latestAddon,
 			},
 			suite.TestProjectHooks_DoNotCreateDisabledHooks,
+
 			suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
 		),
 	)
@@ -171,6 +186,7 @@ func main() {
 				"bitbucket": baseBitbucket,
 				"addon":     latestAddon,
 			},
+			suite.TestGlobalHooks,
 			suite.TestProjectHooks,
 			suite.TestRepositoryHooks,
 			suite.TestPersonalRepositoriesHooks,
@@ -206,7 +222,9 @@ func main() {
 		Container: opts.ValueContainer,
 	})
 
-	log.Infof(nil, "{run} all tests passed")
+	if !opts.FlagList {
+		log.Infof(nil, "{run} all tests passed")
+	}
 
 	log.Debugf(nil, "{run} removing work dir: %s", dir)
 	err = os.RemoveAll(dir)
@@ -220,63 +238,97 @@ func main() {
 			log.Fatalf(err, "unable to cleanup runner")
 		}
 	} else {
-		log.Infof(
-			karma.
-				Describe("container", run.Bitbucket().GetContainerID()).
-				Describe("volume", run.Bitbucket().GetVolume()),
-			"{run} following resources can be reused",
-		)
+		if run.Bitbucket() != nil {
+			log.Infof(
+				karma.
+					Describe("container", run.Bitbucket().GetContainerID()).
+					Describe("volume", run.Bitbucket().GetVolume()),
+				"{run} following resources can be reused",
+			)
+		}
 	}
 }
 
-func getAddon(version string) Addon {
-	builds := map[string]string{
-		"11.1.0": "6642",
-		"10.2.2": "6592",
-		"10.2.1": "6572",
-		"10.1.0": "6532",
-		"10.0.0": "6512",
-		"9.1.0":  "6492",
+var builds = map[string]string{
+	"11.1.0": "6642",
+	"10.2.2": "6592",
+	"10.2.1": "6572",
+	"10.1.0": "6532",
+	"10.0.0": "6512",
+	"9.1.0":  "6492",
+}
+
+func ensureAddons() {
+	err := os.MkdirAll("builds", 0755)
+	if err != nil {
+		log.Fatalf(err, "mkdir builds")
 	}
 
-	path := fmt.Sprintf("target/external-hooks-%s.jar", version)
+	getters := &sync.WaitGroup{}
+	for version := range builds {
+		getters.Add(1)
+		go func(version string) {
+			defer getters.Done()
+			getAddon(version)
+		}(version)
+	}
 
-	_, err := os.Stat(path)
-	if err != nil {
-		if build, ok := builds[version]; ok {
-			log.Infof(
-				karma.Describe("build", build).Describe("version", version),
-				"downloading add-on from Marketplace",
-			)
+	getters.Wait()
+}
 
-			cmd := exec.New(
-				"wget", "-O", path,
-				fmt.Sprintf(
-					"https://marketplace.atlassian.com/download/apps/1211631/version/%v",
-					build,
-				),
-			)
+func getAddon(version string) Addon {
+	buildsPath := fmt.Sprintf("builds/external-hooks-%s.jar", version)
 
-			err := cmd.Run()
-			if err != nil {
-				log.Fatalf(
-					karma.Describe("build", build).Reason(err),
-					"unable to download add-on %s from Marketplace to %q",
-					version, path,
-				)
-			}
-		} else {
+	_, err := os.Stat(buildsPath)
+	if err == nil {
+		return Addon{
+			Version: version,
+			Path:    buildsPath,
+		}
+	}
+
+	if build, ok := builds[version]; ok {
+		log.Infof(
+			karma.Describe("build", build).Describe("version", version),
+			"downloading add-on from Marketplace",
+		)
+
+		cmd := exec.New(
+			"wget", "-O", buildsPath,
+			fmt.Sprintf(
+				"https://marketplace.atlassian.com/download/apps/1211631/version/%v",
+				build,
+			),
+		)
+
+		err := cmd.Run()
+		if err != nil {
 			log.Fatalf(
-				err,
-				"unable to find add-on version %s at path %q",
-				version, path,
+				karma.Describe("build", build).Reason(err),
+				"unable to download add-on %s from Marketplace to %q",
+				version, buildsPath,
 			)
 		}
+
+		return Addon{
+			Version: version,
+			Path:    buildsPath,
+		}
+	}
+
+	targetPath := fmt.Sprintf("target/external-hooks-%s.jar", version)
+	_, err = os.Stat(targetPath)
+	if err != nil {
+		log.Fatalf(
+			err,
+			"unable to find add-on version %s at path %q and %q",
+			version, buildsPath, targetPath,
+		)
 	}
 
 	return Addon{
 		Version: version,
-		Path:    path,
+		Path:    targetPath,
 	}
 }
 
