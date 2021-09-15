@@ -229,7 +229,7 @@ func (addon *Addon) Disable(key string, context *Context) error {
 }
 
 func (addon *Addon) Inherit(key string, context *Context) error {
-	if !context.Global() {
+	if context.Global() {
 		return errors.New(
 			"global hooks can't inherit hook settings (it's already global)",
 		)

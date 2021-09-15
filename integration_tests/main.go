@@ -32,6 +32,7 @@ Options:
   --no-upgrade     Do not run suites with upgrades.
   --no-reproduce   Do not run suites with bug reproduces.
   -r --run <name>  Run only specified testcases.
+  --no-randomize   Do not randomize tests order.
   --debug          Set debug log level.
   --trace          Set trace log level.
   -h --help        Show this help.
@@ -44,9 +45,14 @@ type Opts struct {
 	FlagNoUpgrade   bool `docopt:"--no-upgrade"`
 	FlagNoReproduce bool `docopt:"--no-reproduce"`
 	FlagList        bool `docopt:"--list"`
+	FlagNoRandomize bool `docopt:"--no-randomize"`
 
 	ValueContainer string `docopt:"--container"`
 	ValueRun       string `docopt:"--run"`
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
@@ -92,6 +98,7 @@ func main() {
 
 	suite := NewSuite(
 		baseBitbucket,
+		mode == ModeRun && !opts.FlagNoRandomize,
 		mode,
 		Filter{
 			upgrade:   !opts.FlagNoUpgrade,
@@ -219,6 +226,7 @@ func main() {
 	)
 
 	run.Run(dir, runner.RunOpts{
+		Randomize: mode == ModeRun && !opts.FlagNoRandomize,
 		Container: opts.ValueContainer,
 	})
 

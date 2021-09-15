@@ -135,9 +135,12 @@ public class HooksCoordinator {
       return;
     }
 
-    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
+    enable(event.getScope(), script);
 
-    enable(event.getScope(), script, globalHooks);
+    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
+    if (globalHooks.isEnabled(script.getHookKey())) {
+      enable(event.getScope(), script, globalHooks.getSettings(script.getHookKey()));
+    }
   }
 
   @EventListener
@@ -187,6 +190,7 @@ public class HooksCoordinator {
     RepositoryScope scope = new RepositoryScope(event.getRepository());
     scripts.forEach((hookId, script) -> {
       script.uninstall(scope);
+      script.uninstall(new GlobalScope(), scope);
     });
   }
 
@@ -203,33 +207,42 @@ public class HooksCoordinator {
     script.validate(settings, errors, scope);
   }
 
-  public void enable(Scope scope, String hookKey, GlobalHooks globalHooks) {
+  public void enable(Scope scope, String hookKey) {
     ExternalHookScript script = getScript(hookKey);
     if (script == null) {
       return;
     }
 
-    enable(scope, script, globalHooks);
+    enable(scope, script);
   }
 
-  public void disable(Scope scope, String hookKey, GlobalHooks globalHooks) {
+  public void enable(Scope scope, String hookKey, Settings globalSettings) {
+    ExternalHookScript script = getScript(hookKey);
+    if (script == null) {
+      return;
+    }
+
+    enable(scope, script, globalSettings);
+  }
+
+  public void disable(Scope scope, String hookKey, GlobalScope globalScope) {
     ExternalHookScript script = getScript(hookKey);
     if (script == null) {
       return;
     }
 
     if (scope.getType().equals(ScopeType.REPOSITORY)) {
-      disable((RepositoryScope) scope, script, globalHooks);
+      disable((RepositoryScope) scope, script, globalScope);
     } else if (scope.getType().equals(ScopeType.PROJECT)) {
-      disable((ProjectScope) scope, script, globalHooks);
-    } 
+      disable((ProjectScope) scope, script, globalScope);
+    }
   }
 
-  public void enable(Scope scope, ExternalHookScript script, GlobalHooks globalHooks) {
+  public void enable(Scope scope, ExternalHookScript script) {
     if (scope.getType().equals(ScopeType.REPOSITORY)) {
-      enable((RepositoryScope) scope, script, globalHooks);
+      enable((RepositoryScope) scope, script);
     } else if (scope.getType().equals(ScopeType.PROJECT)) {
-      enable((ProjectScope) scope, script, globalHooks);
+      enable((ProjectScope) scope, script);
     } else {
       // Do nothing with ScopeType.GLOBAL
       //
@@ -238,8 +251,20 @@ public class HooksCoordinator {
     }
   }
 
-  public void enable(
-      ProjectScope projectScope, ExternalHookScript script, GlobalHooks globalHooks) {
+  public void enable(Scope scope, ExternalHookScript script, Settings globalSettings) {
+    if (scope.getType().equals(ScopeType.REPOSITORY)) {
+      enable((RepositoryScope) scope, script, globalSettings);
+    } else if (scope.getType().equals(ScopeType.PROJECT)) {
+      enable((ProjectScope) scope, script, globalSettings);
+    } else {
+      // Do nothing with ScopeType.GLOBAL
+      //
+      // ScopeType.GLOBAL shall not be here since there are no global hooks
+      // actually
+    }
+  }
+
+  public void enable(ProjectScope projectScope, ExternalHookScript script) {
     // cover legacy hook scripts created only on project level
     script.uninstallLegacy(projectScope);
 
@@ -248,9 +273,6 @@ public class HooksCoordinator {
     if (projectSettings == null) {
       return;
     }
-
-    boolean globalEnabled = globalHooks.isEnabled(script.getHookKey());
-    Settings globalSettings = globalEnabled ? globalHooks.getSettings(script.getHookKey()) : null;
 
     walker.walk(projectScope.getProject(), (repository) -> {
       RepositoryScope repositoryScope = new RepositoryScope(repository);
@@ -266,47 +288,55 @@ public class HooksCoordinator {
 
         script.install(projectSettings.getSettings(), projectScope, repositoryScope);
       }
-
-      if (globalEnabled) {
-        script.install(globalSettings, new GlobalScope(), repositoryScope);
-      }
     });
   }
 
-  public void enable(RepositoryScope scope, ExternalHookScript script, GlobalHooks globalHooks) {
+  public void enable(
+      ProjectScope projectScope, ExternalHookScript script, Settings globalSettings) {
+    if (globalSettings == null) {
+      throw new RuntimeException("empty settings for " + script.getHookKey());
+    }
+
+    // cover legacy hook scripts created only on project level
+    script.uninstallLegacy(projectScope);
+
+    walker.walk(projectScope.getProject(), (repository) -> {
+      RepositoryScope repositoryScope = new RepositoryScope(repository);
+      script.install(globalSettings, new GlobalScope(), repositoryScope);
+    });
+  }
+
+  public void enable(RepositoryScope scope, ExternalHookScript script) {
     GetRepositoryHookSettingsRequest request =
         (new GetRepositoryHookSettingsRequest.Builder(scope, script.getHookKey())).build();
 
     RepositoryHookSettings settings = repositoryHookService.getSettings(request);
-    if (settings != null) {
-      script.install(settings.getSettings(), scope);
+    script.install(settings.getSettings(), scope);
 
-      securityService
-          .withPermission(
-              Permission.PROJECT_ADMIN,
-              scope.getProject(),
-              "atlassian-external-hooks: look for project hook")
-          .call(() -> {
-            // Disable project-wide hook on this specified repository because 'enabled'
-            // hook on Repository means that it's overwritten and two hooks at the same
-            // time is not obvious for customers
-            script.uninstall(new ProjectScope(scope.getProject()), scope);
+    securityService
+        .withPermission(
+            Permission.PROJECT_ADMIN,
+            scope.getProject(),
+            "atlassian-external-hooks: look for project hook")
+        .call(() -> {
+          // Disable project-wide hook on this specified repository because 'enabled'
+          // hook on Repository means that it's overwritten and two hooks at the same
+          // time is not obvious for customers
+          script.uninstall(new ProjectScope(scope.getProject()), scope);
 
-            return null;
-          });
-    }
-
-    boolean globalEnabled = globalHooks.isEnabled(script.getHookKey());
-    if (globalEnabled) {
-      Settings globalSettings = globalHooks.getSettings(script.getHookKey());
-      if (globalSettings == null) {
-        throw new RuntimeException("empty settings for "+script.getHookKey());
-      }
-      script.install(globalSettings, new GlobalScope(), scope);
-    }
+          return null;
+        });
   }
 
-  public void disable(ProjectScope _projetScope, ExternalHookScript _script, GlobalHooks _hooks) {
+  public void enable(RepositoryScope scope, ExternalHookScript script, Settings globalSettings) {
+    if (globalSettings == null) {
+      throw new RuntimeException("empty settings for " + script.getHookKey());
+    }
+
+    script.install(globalSettings, new GlobalScope(), scope);
+  }
+
+  public void disable(ProjectScope _projetScope, ExternalHookScript _script, GlobalScope _hooks) {
     // this is kind of a dirty hack but we don't really need to uninstall hooks
     // like we do it in enable() method since we know that this method is called
     // by Walker which will also call HooksCoordinator with RepositoryScope (for
@@ -315,7 +345,7 @@ public class HooksCoordinator {
     return;
   }
 
-  public void disable(RepositoryScope scope, ExternalHookScript script, GlobalHooks _hooks) {
+  public void disable(RepositoryScope scope, ExternalHookScript script, GlobalScope _hooks) {
     script.uninstall(new GlobalScope(), scope);
     return;
   }
@@ -329,7 +359,6 @@ public class HooksCoordinator {
       script.uninstall(scope, new RepositoryScope(repository));
     });
   }
-
 
   public void disable(RepositoryScope scope, ExternalHookScript script) {
     script.uninstall(scope);

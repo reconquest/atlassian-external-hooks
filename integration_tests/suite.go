@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -32,6 +33,8 @@ type Suite struct {
 	*runner.Runner
 	*assert.Assertions
 
+	randomize bool
+
 	mode          SuiteMode
 	baseBitbucket string
 	filter        Filter
@@ -55,10 +58,12 @@ type Filter struct {
 
 func NewSuite(
 	baseBitbucket string,
+	randomize bool,
 	mode SuiteMode,
 	filter Filter,
 ) *Suite {
 	return &Suite{
+		randomize:     randomize,
 		mode:          mode,
 		baseBitbucket: baseBitbucket,
 		filter:        filter,
@@ -79,6 +84,13 @@ func (suite *Suite) WithParams(
 	return func(run *runner.Runner, assert *assert.Assertions) {
 		suite.Runner = run
 		suite.Assertions = assert
+
+		if suite.randomize {
+			rand.Shuffle(
+				len(tests),
+				func(i, j int) { tests[i], tests[j] = tests[j], tests[i] },
+			)
+		}
 
 		for _, test := range tests {
 			startedAt := time.Now()
