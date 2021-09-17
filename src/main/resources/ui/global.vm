@@ -15,7 +15,7 @@
         {
             'tab': 'Merge Check',
             'id': 'merge-check',
-            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-mesge-check-hook',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-merge-check-hook',
             'async': false
         }
     ]
