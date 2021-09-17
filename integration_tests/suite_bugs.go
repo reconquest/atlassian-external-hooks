@@ -68,9 +68,17 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 	suite.InstallAddon(params["addon_fixed"].(Addon))
 	suite.RecordHookScripts()
 
+	suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
+		HookOptions{WaitHookScripts: true},
+		`XXX`,
+	)
+
+	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
+
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 
-	suite.DisableHook(context.PreReceive())
+	suite.DisableHook(context.PreReceive(), HookOptions{WaitHookScripts: false})
 
 	suite.DetectHookScriptsLeak()
 }
@@ -244,7 +252,7 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Fixed(
 	Assert_PushOutputsMessages(suite, repository, `XXX_REPOSITORY_XXX`)
 
 	suite.DisableHook(repositoryPreReceive)
-	suite.DisableHook(projectPreReceive)
+	suite.DisableHook(projectPreReceive, HookOptions{WaitHookScripts: false})
 
 	suite.DetectHookScriptsLeak()
 }

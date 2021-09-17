@@ -21,18 +21,20 @@ type Runner struct {
 	suites []Suite
 
 	run struct {
-		dir          string
-		container    string
-		bitbucket    *bitbucket.Bitbucket
-		gotBitbucket chan struct{}
+		dir            string
+		container      string
+		bitbucket      *bitbucket.Bitbucket
+		cleanupPrepare func()
+		gotBitbucket   chan struct{}
 	}
 }
 
-func New() *Runner {
+func New(cleanupPrepare func()) *Runner {
 	var runner Runner
 
 	runner.assert = assert.New(&runner)
 	runner.run.gotBitbucket = make(chan struct{})
+	runner.run.cleanupPrepare = cleanupPrepare
 
 	return &runner
 }
@@ -109,6 +111,8 @@ func (runner *Runner) UseBitbucket(version string) {
 		default:
 		}
 	}
+
+	runner.run.cleanupPrepare()
 
 	runner.assert.NoError(err, "unable configure bitbucket")
 }
@@ -190,12 +194,19 @@ func (runner *Runner) Cleanup() error {
 }
 
 func (runner *Runner) Errorf(format string, args ...interface{}) {
-	fn := ""
 	err := errors.New("{testify} assertion failed")
 	for i := 1; i < 10; i++ {
-		fn = getFrame(i).Function
+		fn := getFrame(i).Function
 		if strings.Contains(fn, ".Test") || strings.Contains(fn, ".test") {
 			err = karma.Describe("testcase", fn).Reason(err)
+			break
+		}
+	}
+
+	for i := 1; i < 10; i++ {
+		fn := getFrame(i).Function
+		if strings.Contains(fn, "(*Suite).Test") {
+			err = karma.Describe("suite", fn).Reason(err)
 			break
 		}
 	}

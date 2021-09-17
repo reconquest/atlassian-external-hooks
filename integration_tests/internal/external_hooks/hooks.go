@@ -163,6 +163,14 @@ func (addon *Addon) Enable(key string, context *Context) error {
 		return addon.command(context, "enable", key)
 	}
 
+	return nil
+}
+
+func (addon *Addon) Wait(context *Context) error {
+	if !context.Global() {
+		return nil
+	}
+
 	return addon.factoryApply()
 }
 
@@ -225,7 +233,7 @@ func (addon *Addon) Disable(key string, context *Context) error {
 		return err
 	}
 
-	return addon.factoryApply()
+	return nil
 }
 
 func (addon *Addon) Inherit(key string, context *Context) error {
@@ -374,6 +382,10 @@ func (hook *Hook) Disable() error {
 	)
 
 	return hook.Context.Disable(hook.key, hook.Context)
+}
+
+func (hook *Hook) Wait() error {
+	return hook.Context.Wait(hook.Context)
 }
 
 func (hook *Hook) Inherit() error {

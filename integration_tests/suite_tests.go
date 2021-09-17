@@ -28,6 +28,8 @@ func (suite *Suite) TestGlobalHooks(params TestParams) {
 		fmt.Sprintf("{test: project hooks} %s", project.Key),
 	)
 
+	suite.testGlobalHooks(log, context)
+
 	suite.testPreReceive(log, context, repository)
 	suite.testPostReceive(log, context, repository)
 	suite.testMergeCheck(log, context, repository)
@@ -294,7 +296,7 @@ func (suite *Suite) TestHookScriptsLeak_NoLeakAfterRepositoryDelete(
 	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
 	suite.NoError(err, "unable to remove repository")
 
-	waiter.Wait()
+	waiter.Wait(suite.FailNow, "repository", "deleted")
 
 	suite.DetectHookScriptsLeak()
 }
@@ -313,7 +315,10 @@ func (suite *Suite) testPreReceive(
 	suite.testPreReceiveHook_Input(tester)
 	suite.testPreReceiveHook_Veto(tester)
 
-	suite.DisableHook(hook)
+	suite.DisableHook(hook, HookOptions{
+		// should be already disabled at this moment
+		WaitHookScripts: false,
+	})
 }
 
 func (suite *Suite) testPostReceive(
@@ -331,7 +336,10 @@ func (suite *Suite) testPostReceive(
 	suite.testPostReceiveHook_Output(tester)
 	suite.testPostReceiveHook_AfterMerge(tester)
 
-	suite.DisableHook(hook)
+	suite.DisableHook(hook, HookOptions{
+		// should be already disabled at this moment
+		WaitHookScripts: false,
+	})
 }
 
 func (suite *Suite) testPreReceiveHook_Veto(tester *HookTester) {
@@ -393,7 +401,107 @@ func (suite *Suite) testMergeCheck(
 	suite.testMergeCheck_Input(tester, pullRequest)
 	suite.testMergeCheck_Veto(tester, pullRequest)
 
+	suite.DisableHook(hook, HookOptions{
+		// should be already disabled at this moment
+		WaitHookScripts: false,
+	})
+}
+
+func (suite *Suite) testGlobalHooks(
+	log *cog.Logger,
+	context *external_hooks.Context,
+) {
+	suite.testGlobalHooks_RepositoryDeleted(log, context)
+	suite.testGlobalHooks_DoubleEnable(log, context)
+	suite.testGlobalHooks_RepositoryCreatedAfterEnabling(log, context)
+}
+
+func (suite *Suite) testGlobalHooks_RepositoryCreatedAfterEnabling(
+	log *cog.Logger,
+	context *external_hooks.Context,
+) {
+	hook := context.PreReceive()
+
+	const message = `XXX`
+	suite.ConfigureSampleHook_FailWithMessage(
+		hook,
+		HookOptions{WaitHookScripts: true},
+		message,
+	)
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
+
+	Assert_PushRejected(suite, repository, message)
+
 	suite.DisableHook(hook)
+
+	Assert_PushDoesNotOutputMessages(suite, repository, message)
+}
+
+func (suite *Suite) testGlobalHooks_DoubleEnable(
+	log *cog.Logger,
+	context *external_hooks.Context,
+) {
+	suite.RecordHookScripts()
+
+	hook := context.PreReceive()
+
+	suite.ConfigureSampleHook_FailWithMessage(
+		hook,
+		HookOptions{WaitHookScripts: true},
+		`XXX`,
+	)
+
+	suite.CreateRandomRepository(suite.CreateRandomProject())
+
+	suite.EnableHook(hook, HookOptions{})
+
+	suite.CreateRandomRepository(suite.CreateRandomProject())
+
+	suite.EnableHook(hook, HookOptions{})
+
+	suite.CreateRandomRepository(suite.CreateRandomProject())
+
+	suite.DisableHook(hook, HookOptions{})
+
+	suite.DetectHookScriptsLeak()
+}
+
+func (suite *Suite) testGlobalHooks_RepositoryDeleted(
+	log *cog.Logger,
+	context *external_hooks.Context,
+) {
+	hook := context.PreReceive()
+
+	suite.ConfigureSampleHook_FailWithMessage(
+		hook,
+		HookOptions{WaitHookScripts: true},
+		`XXX`,
+	)
+
+	suite.RecordHookScripts()
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
+
+	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
+		return strings.Contains(
+			line,
+			"deleted global/repository hook script",
+		)
+	})
+
+	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
+	suite.NoError(err, "unable to remove repository")
+
+	waiter.Wait(suite.FailNow, "hook scripts", "deleted")
+
+	suite.DetectHookScriptsLeak()
 }
 
 func (suite *Suite) testMergeCheck_Veto(
@@ -532,4 +640,25 @@ func (suite *Suite) testMergeCheck_Input_Common(
 		tester,
 		AssertWithPullRequest(pullRequest, Assert_MergeCheckOutputsMessages),
 	)
+}
+
+func (suite *Suite) CleanupHooks() {
+	context := suite.ExternalHooks().OnGlobal()
+
+	if err := context.PreReceive().Disable(); err != nil {
+		log.Errorf(err, "{suite:cleanup} disable pre-receive")
+	}
+
+	if err := context.PostReceive().Disable(); err != nil {
+		log.Errorf(err, "{suite:cleanup} disable post-receive")
+	}
+
+	if err := context.MergeCheck().Disable(); err != nil {
+		log.Errorf(err, "{suite:cleanup} disable merge-check")
+	}
+
+	err := context.Addon.Wait(context)
+	if err != nil {
+		log.Errorf(err, "{suite:cleanup} apply hooks factory")
+	}
 }

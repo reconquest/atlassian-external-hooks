@@ -8,6 +8,7 @@ import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
+import com.atlassian.bitbucket.scope.ScopeType;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageRequestImpl;
@@ -76,10 +77,12 @@ public class HooksFactory {
         }
       }
 
-      if (globalHooks.isEnabled(hookKey)) {
-        hooksCoordinator.enable(scope, hookKey, globalHooks.getSettings(hookKey));
-      } else {
-        hooksCoordinator.disable(scope, hookKey, new GlobalScope());
+      if (scope.getType() == ScopeType.REPOSITORY) {
+        if (globalHooks.isEnabled(hookKey)) {
+          hooksCoordinator.enable(scope, hookKey, globalHooks.getSettings(hookKey));
+        } else {
+          hooksCoordinator.disable(scope, hookKey, new GlobalScope());
+        }
       }
     }
 

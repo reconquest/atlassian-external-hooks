@@ -8,12 +8,13 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
@@ -39,7 +40,12 @@ type Suite struct {
 	baseBitbucket string
 	filter        Filter
 
-	hookScripts []string
+	hookScripts []HookScript
+}
+
+type HookScript struct {
+	ID  string
+	Tag string
 }
 
 type (
@@ -177,7 +183,7 @@ func (suite *Suite) WithParams(
 
 			log.Infof(
 				karma.Describe("took", took.Milliseconds()),
-				"{test} %s finished}",
+				"{test} %s finished",
 				name,
 			)
 		}
@@ -389,7 +395,7 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 
 	log.Debugf(nil, "{add-on} waiting for add-on startup process to finish")
 
-	waiter.Wait()
+	waiter.Wait(suite.FailNow, "hook scripts", "created")
 
 	return key
 }
@@ -397,7 +403,10 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 var DefaultHookOptions = HookOptions{WaitHookScripts: true}
 
 func (suite *Suite) DisableHook(
-	hook interface{ Disable() error },
+	hook interface {
+		Disable() error
+		Wait() error
+	},
 	options ...HookOptions,
 ) {
 	var opt HookOptions
@@ -408,22 +417,22 @@ func (suite *Suite) DisableHook(
 	}
 
 	// XXX: only for BB>6.2.0
-	var waiter *sync.WaitGroup
+	var waiter *bitbucket.LogEntryWaiter
 	if opt.WaitHookScripts {
+		re := regexp.MustCompile(
+			`ExternalHookScript\W+deleted .* hook script`,
+		)
+
 		waiter = suite.Bitbucket().WaitLogEntry(func(line string) bool {
-			switch {
-			case regexp.MustCompile(
-				`ExternalHookScript\W+deleting .* hook script`,
-			).MatchString(line):
-				return true
-			default:
-				return false
-			}
+			return re.MatchString(line)
 		})
 	}
 
 	err := hook.Disable()
 	suite.NoError(err, "should be able to disable hook")
+
+	err = hook.Wait()
+	suite.NoError(err, "should be able to wait for disable hook")
 
 	if opt.WaitHookScripts {
 		log.Debugf(
@@ -431,37 +440,18 @@ func (suite *Suite) DisableHook(
 			"{add-on} waiting for hook script to be deleted by bitbucket",
 		)
 
-		suite.wait(
-			waiter,
-			time.Second*10,
-			"hook scripts are not deleted (no log message)",
-		)
-	}
-}
-
-func (suite *Suite) wait(
-	waiter *sync.WaitGroup,
-	deadline time.Duration,
-	message string,
-) {
-	done := make(chan struct{})
-	go func() {
-		waiter.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-time.After(deadline):
-		suite.FailNow(message, "duration: %s", deadline)
-	case <-done:
+		waiter.Wait(suite.FailNow, "hook scripts", "deleted")
 	}
 }
 
 func (suite *Suite) EnableHook(
-	hook interface{ Enable() error },
+	hook interface {
+		Enable() error
+		Wait() error
+	},
 	options HookOptions,
 ) {
-	var waiter *sync.WaitGroup
+	var waiter *bitbucket.LogEntryWaiter
 	// XXX: only for BB>6.2.0
 	if options.WaitHookScripts {
 		re := regexp.MustCompile(
@@ -477,24 +467,23 @@ func (suite *Suite) EnableHook(
 	err := hook.Enable()
 	suite.NoError(err, "should be able to enable hook")
 
+	err = hook.Wait()
+	suite.NoError(err, "should be able to wait for enable hook")
+
 	if options.WaitHookScripts {
 		log.Debugf(
 			nil,
 			"{add-on} waiting for hook script to be created by bitbucket",
 		)
 
-		suite.wait(
-			waiter,
-			time.Second*10,
-			"hook scripts are not created (no log message)",
-		)
+		waiter.Wait(suite.FailNow, "hook scripts", "created")
 	}
 }
 
 type InheritHookExpectedState string
 
 const (
-	InheritHookExpectedStateEnabledProject InheritHookExpectedState = "created project hook script"
+	InheritHookExpectedStateEnabledProject InheritHookExpectedState = "created project/repository hook script"
 )
 
 func (suite *Suite) InheritHook(
@@ -503,12 +492,10 @@ func (suite *Suite) InheritHook(
 ) {
 	// XXX: only for BB>6.2.0
 	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		switch {
-		case regexp.MustCompile(`ExternalHookScript`).MatchString(line):
+		if strings.Contains(line, "ExternalHookScript") {
 			return strings.Contains(line, string(expectedState))
-		default:
-			return false
 		}
+		return false
 	})
 
 	err := hook.Inherit()
@@ -520,43 +507,79 @@ func (suite *Suite) InheritHook(
 		expectedState,
 	)
 
-	waiter.Wait()
+	waiter.Wait(suite.FailNow, "hook scripts", "inherited")
+}
+
+func (suite *Suite) getHookScripts() []HookScript {
+	const tagPrefix = "# com.ngs.stash.externalhooks tag: "
+
+	files, err := suite.Bitbucket().ReadFiles("shared/config/hook-scripts/")
+	suite.NoError(err, "should be able to list existing hook scripts")
+
+	scripts := []HookScript{}
+	for _, file := range files {
+		suite.NoError(err, "should be able to read hook script contents")
+
+		lines := strings.Split(file.Contents, "\n")
+
+		tag := ""
+		for _, line := range lines {
+			if line == "" {
+				continue
+			}
+
+			if strings.HasPrefix(line, tagPrefix) {
+				tag = strings.TrimPrefix(line, tagPrefix)
+				break
+			}
+		}
+
+		suite.NotEmpty(
+			tag,
+			"should be able to find the tag of hook script",
+		)
+
+		scripts = append(scripts, HookScript{
+			ID:  file.Name,
+			Tag: tag,
+		})
+	}
+
+	return scripts
 }
 
 func (suite *Suite) RecordHookScripts() {
-	var err error
-	suite.hookScripts, err = suite.Bitbucket().
-		ListFiles("shared/config/hook-scripts/")
-	suite.NoError(err, "should be able to list existing hook scripts")
+	suite.hookScripts = suite.getHookScripts()
 
 	log.Debugf(
-		karma.Describe("scripts", strings.Join(suite.hookScripts, ", ")),
+		karma.Describe(
+			"scripts (plugin paths)",
+			joinHookScripts(suite.hookScripts),
+		),
 		"{leak detector} found %d currently registered hook scripts",
 		len(suite.hookScripts),
 	)
 }
 
 func (suite *Suite) DetectHookScriptsLeak() {
-	current, err := suite.Bitbucket().
-		ListFiles("shared/config/hook-scripts/")
-	suite.NoError(err, "should be able to list current hook scripts")
+	current := suite.getHookScripts()
 
-	index := map[string]bool{}
+	index := map[string]struct{}{}
 
-	for _, name := range suite.hookScripts {
-		index[name] = true
+	for _, script := range suite.hookScripts {
+		index[script.Tag] = struct{}{}
 	}
 
-	leak := []string{}
+	leak := []HookScript{}
 
-	for _, name := range current {
-		if !index[name] {
-			leak = append(leak, name)
+	for _, script := range current {
+		if _, ok := index[script.Tag]; !ok {
+			leak = append(leak, script)
 		}
 	}
 
 	if len(leak) > 0 {
-		suite.Empty(leak, "found leaking hook scripts")
+		suite.Empty(joinHookScripts(leak), "found leaking hook scripts")
 	} else {
 		log.Debugf(
 			nil,
@@ -583,4 +606,13 @@ func (suite *Suite) CreateUser(name string) *stash.User {
 	}
 
 	return user
+}
+
+func joinHookScripts(scripts []HookScript) string {
+	list := []string{}
+	for _, script := range scripts {
+		list = append(list, script.ID+" ("+script.Tag+")")
+	}
+	sort.Strings(list)
+	return strings.Join(list, ", ")
 }

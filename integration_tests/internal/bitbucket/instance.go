@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
@@ -128,7 +129,15 @@ func (instance *Instance) ReadFile(path string) (string, error) {
 		"docker", "exec", instance.container, "cat", path,
 	)
 
-	err := execution.Start()
+	stdout, err := execution.StdoutPipe()
+	if err != nil {
+		return "", karma.Format(
+			err,
+			"unable to get stdout pipe for docker exec",
+		)
+	}
+
+	err = execution.Start()
 	if err != nil {
 		return "", karma.Format(
 			err,
@@ -136,12 +145,12 @@ func (instance *Instance) ReadFile(path string) (string, error) {
 		)
 	}
 
-	data, err := ioutil.ReadAll(execution.GetStdout())
+	data, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return "", err
 	}
 
-	return string(data), nil
+	return string(data), execution.Wait()
 }
 
 func (instance *Instance) ListFiles(path string) ([]string, error) {
@@ -150,7 +159,7 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 		"cp",
 		fmt.Sprintf("%s:%s",
 			instance.container,
-			filepath.Join(instance.getApplicationDataDir(), path),
+			filepath.Join(instance.GetApplicationDataDir(), path),
 		),
 		"-",
 	)
@@ -209,6 +218,89 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 	return files[1:], nil
 }
 
+type File struct {
+	Name     string
+	Contents string
+}
+
+func (instance *Instance) ReadFiles(path string) ([]File, error) {
+	execution := exec.New(
+		"docker",
+		"cp",
+		fmt.Sprintf("%s:%s",
+			instance.container,
+			filepath.Join(instance.GetApplicationDataDir(), path),
+		),
+		"-",
+	)
+
+	stdout, err := execution.StdoutPipe()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to get stdout pipe for docker cp",
+		)
+	}
+
+	err = execution.Start()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to start docker cp",
+		)
+	}
+
+	files := []File{}
+
+	reader := tar.NewReader(stdout)
+
+	for {
+		next, err := reader.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return nil, karma.Format(
+				err,
+				"unable to read next file from docker cp tar output",
+			)
+		}
+
+		name := strings.TrimPrefix(
+			next.Name,
+			filepath.Base(path)+"/",
+		)
+
+		contents, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return nil, karma.Format(
+				err,
+				"read next file contents from the docker cp tar output",
+			)
+		}
+
+		files = append(
+			files,
+			File{
+				Name:     name,
+				Contents: string(contents),
+			},
+		)
+	}
+
+	err = execution.Wait()
+	if err != nil {
+		return nil, karma.Format(
+			err,
+			"unable to finalize docker cp",
+		)
+	}
+
+	// First item is always directory itself.
+	return files[1:], nil
+}
+
 func (instance *Instance) WriteFile(
 	path string,
 	content []byte,
@@ -220,7 +312,7 @@ func (instance *Instance) WriteFile(
 		"-",
 		fmt.Sprintf("%s:%s",
 			instance.container,
-			instance.getApplicationDataDir(),
+			instance.GetApplicationDataDir(),
 		),
 	)
 
@@ -368,7 +460,34 @@ func (instance *Instance) GetTestcaseLogs() *Logs {
 	return instance.testcaseLogs
 }
 
-func (instance *Instance) WaitLogEntry(fn func(string) bool) *sync.WaitGroup {
+type LogEntryWaiter struct {
+	duration time.Duration
+	group    *sync.WaitGroup
+}
+
+func (waiter *LogEntryWaiter) Wait(
+	failer func(failureMessage string, msgAndArgs ...interface{}) bool,
+	resource string,
+	state string,
+) {
+	done := make(chan struct{})
+	go func() {
+		waiter.group.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-time.After(waiter.duration):
+		failer(
+			resource+" should be "+state+" but no such log message occurred",
+			"duration: %s",
+			waiter.duration,
+		)
+	case <-done:
+	}
+}
+
+func (instance *Instance) WaitLogEntry(fn func(string) bool) *LogEntryWaiter {
 	return instance.WaitLogEntryContext(
 		context.Background(),
 		instance.testcaseLogs,
@@ -380,10 +499,11 @@ func (instance *Instance) WaitLogEntryContext(
 	ctx context.Context,
 	logs *Logs,
 	fn func(string) bool,
-) *sync.WaitGroup {
+) *LogEntryWaiter {
 	waiter := sync.WaitGroup{}
 	waiter.Add(1)
 
+	cursor := 0
 	prev := 0
 
 	go func() {
@@ -391,15 +511,27 @@ func (instance *Instance) WaitLogEntryContext(
 
 		for {
 			logs.L.Lock()
-			logs.Wait()
-			// FlushLogs() was called before
-			if prev > len(logs.lines)-1 {
-				prev = 0
+
+			for {
+				now := len(logs.lines)
+				if now == prev {
+					logs.Wait()
+					continue
+				}
+
+				prev = now
+				break
 			}
-			lines := logs.lines[prev:]
+
+			// FlushLogs() was called before
+			if cursor > len(logs.lines)-1 {
+				cursor = 0
+			}
+
+			lines := logs.lines[cursor:]
 			logs.L.Unlock()
 
-			prev += len(lines)
+			cursor += len(lines)
 
 			for _, line := range lines {
 				if fn(line) {
@@ -415,7 +547,10 @@ func (instance *Instance) WaitLogEntryContext(
 		}
 	}()
 
-	return &waiter
+	return &LogEntryWaiter{
+		group:    &waiter,
+		duration: time.Second * 10,
+	}
 }
 
 func (instance *Instance) FlushLogs(logs *Logs) {
@@ -578,7 +713,7 @@ func (instance *Instance) configureAdministrator(token *AtlToken) error {
 	return instance.postSetupForm(form, token)
 }
 
-func (instance *Instance) getApplicationDataDir() string {
+func (instance *Instance) GetApplicationDataDir() string {
 	return BITBUCKET_DATA_DIR
 }
 
@@ -605,7 +740,7 @@ func (instance *Instance) start() error {
 		"-v", fmt.Sprintf(
 			"%s:%s",
 			instance.volume,
-			instance.getApplicationDataDir(),
+			instance.GetApplicationDataDir(),
 		),
 		fmt.Sprintf(BITBUCKET_IMAGE, instance.version),
 	)
@@ -743,13 +878,15 @@ func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 
 		for scanner.Scan() {
 			logs.L.Lock()
+
 			logs.lines = append(
 				logs.lines,
 				scanner.Text(),
 			)
-			logs.L.Unlock()
 
 			logs.Broadcast()
+
+			logs.L.Unlock()
 
 			if output {
 				log.Tracef(

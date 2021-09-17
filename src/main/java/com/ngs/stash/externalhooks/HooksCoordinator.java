@@ -180,8 +180,13 @@ public class HooksCoordinator {
   @EventListener
   public void onRepositoryCreated(RepositoryCreatedEvent event) {
     RepositoryScope scope = new RepositoryScope(event.getRepository());
+    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
     scripts.forEach((hookId, script) -> {
       inherit(scope, script);
+
+      if (globalHooks.isEnabled(script.getHookKey())) {
+        enable(scope, script, globalHooks.getSettings(script.getHookKey()));
+      }
     });
   }
 

@@ -27,15 +27,16 @@ Usage:
   external-hooks-test -h | --help
 
 Options:
-  -l --list        List testcases.
-  --keep           Keep work dir & bitbucket instance.
-  --no-upgrade     Do not run suites with upgrades.
-  --no-reproduce   Do not run suites with bug reproduces.
-  -r --run <name>  Run only specified testcases.
-  --no-randomize   Do not randomize tests order.
-  --debug          Set debug log level.
-  --trace          Set trace log level.
-  -h --help        Show this help.
+  -l --list                   List testcases.
+  -C --container <container>  Use specified container.  
+  -K --keep                   Keep work dir & bitbucket instance.
+  --no-upgrade                Do not run suites with upgrades.
+  --no-reproduce              Do not run suites with bug reproduces.
+  -r --run <name>             Run only specified testcases.
+  --no-randomize              Do not randomize tests order.
+  --debug                     Set debug log level.
+  --trace                     Set trace log level.
+  -h --help                   Show this help.
 `
 
 type Opts struct {
@@ -89,8 +90,6 @@ func main() {
 		latestAddon   = getAddon(getLatestVersionXML())
 	)
 
-	run := runner.New()
-
 	mode := ModeRun
 	if opts.FlagList {
 		mode = ModeList
@@ -109,6 +108,8 @@ func main() {
 
 	// TODO: add tests for different trigger configurations
 	// TODO: add tests for BB 5.x.x
+
+	run := runner.New(suite.CleanupHooks)
 
 	run.Suite(
 		suite.WithParams(
