@@ -1,5 +1,5 @@
 var ViewGlobalSettings = function (context, api) {
-    this._$ = $('#rq_hooks_global_settings_form');
+    this._$ = $('.rq_hooks_global_form');
     if (this._$.length == 0) {
         return new ViewNotApplicable();
     }
@@ -8,6 +8,10 @@ var ViewGlobalSettings = function (context, api) {
     this._$progress = new ProgressBarWithText();
 
     this.mount = function () {
+        if (!this._$.is('#rq_hooks_global_settings_form')) {
+            return;
+        }
+
         this._$.find('h2').append(this._$spinner);
 
         this._$.submit(function (e) {

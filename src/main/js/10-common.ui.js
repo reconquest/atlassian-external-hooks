@@ -408,5 +408,9 @@ var Flag = function (type, body) {
 }
 
 var FlagSuccess = function (body) {
-    return Flag('success', body);
+    return new Flag('success', body);
+}
+
+var FlagError = function (body) {
+    return new Flag('error', body);
 }

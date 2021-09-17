@@ -108,10 +108,11 @@ $mergeCheckConfiguration.add($preReceiveConfiguration.get(5))
 <html>
     <head>
         <meta name="decorator" content="atl.admin">
+        <meta name="activeTab" content="rq-hooks-admin-section-settings" />
         $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
     </head>
     <body>
-        <form class="aui" id="rq_hooks_global_settings_form">
+        <form class="aui rq_hooks_global_form" id="rq_hooks_global_settings_form">
             <h2>External Hooks: Settings</h2>
 
             #foreach($configuration in $triggerConfigurations)

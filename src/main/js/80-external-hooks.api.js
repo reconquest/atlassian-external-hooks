@@ -25,7 +25,7 @@ var API = function (baseURL) {
         },
 
         globalHook: function(kind) {
-            return this.root() + '/global-hooks/com.ngs.stash.externalhooks.external-hooks:external-' + kind + '-hook';
+            return this.root() + '/global-hooks/' + kind;
         }
     });
 
@@ -91,6 +91,18 @@ var API = function (baseURL) {
             {
                 method: "GET",
                 headers: this._headers
+            }
+        );
+    }
+
+    this.setGlobalHook = function (kind, settings) {
+        return $.ajax(
+            this.urls.globalHook(kind),
+            {
+                method: "PUT",
+                headers: this._headers,
+                data: JSON.stringify(settings),
+                contentType: "application/json; charset=UTF-8"
             }
         );
     }

@@ -3,16 +3,19 @@
         {
             'tab': 'Pre Receive',
             'id': 'pre-receive',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook',
             'async': false
         },
         {
             'tab': 'Post Receive',
             'id': 'post-receive',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-post-receive-hook',
             'async': true
         },
         {
             'tab': 'Merge Check',
             'id': 'merge-check',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-mesge-check-hook',
             'async': false
         }
     ]
@@ -22,6 +25,7 @@
 <html>
     <head>
         <meta name="decorator" content="atl.admin">
+        <meta name="activeTab" content="rq-hooks-admin-section-global" />
         $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
     </head>
 
@@ -29,7 +33,7 @@
         <form class="aui rq_hooks_global_form" id="rq_hooks_global_hooks_form">
             <h2>External Hooks: Global Hooks</h2>
 
-            <div class="aui-message aui-message-warning">
+            <div class="aui-message aui-message-info">
                 <p class="title">
                 <fieldset class="group" disabled="true">
                     <legend><span>Personal repos</span></legend>
@@ -55,13 +59,17 @@
             <div class="aui-tabs horizontal-tabs">
                 <ul class="tabs-menu">
                 #foreach($tab in $tabs)
-                    <li class="menu-item#if($tab.id == 'pre-receive') active-tab#end">
-                        <a href="#hooks-$tab.id">$tab.tab</a>
+                    <li class="rq-tab menu-item#if($tab.id == 'pre-receive') active-tab#end" id="hooks-${tab.id}-tab">
+                        <a href="#hooks-$tab.id">
+                            $tab.tab
+                            <span class="aui-icon aui-icon-small aui-iconfont-check rq-icon-ok">OK</span>
+                            <span class="aui-icon aui-icon-small aui-iconfont-error rq-icon-error">Error</span>
+                        </a>
                     </li>
                 #end
                 </ul>
                 #foreach($tab in $tabs)
-                <div class="tabs-pane#if($tab.id == 'pre-receive') active-pane#end" id="hooks-${tab.id}" data-rq-hook-kind="${tab.id}">
+                <div class="tabs-pane#if($tab.id == 'pre-receive') active-pane#end" id="hooks-${tab.id}" data-rq-hook-kind="${tab.kind}">
                     <fieldset class="group">
                         <legend><label for="hooks-${tab.id}-enabled">Enabled</label></legend>
                         <div class="checkbox">
@@ -73,20 +81,21 @@
 
                     <div class="rq-global-hook-settings rq-hook-disabled">
                         <div class="field-group">
-                            <label for="hooks-${tab.id}-executable">Executable
+                            <label for="hooks-${tab.id}-exe">Executable
                                 <span class="aui-icon icon-required">(required)</span></label>
                             <input class="text medium-field" type="text"
-                                   id="hooks-${tab.id}-executable" name="hooks.${tab.id}.executable"
+                                   id="hooks-${tab.id}-exe" name="hooks.${tab.id}.exe"
                                    disabled="true">
                             <div class="description">The path to an executable to run.</div>
+                            <div class="error" id="hooks-${tab.id}-exe-error"></div>
                         </div>
 
                         <fieldset class="group">
-                            <legend><label for="hooks-${tab.id}-safePath">Safe mode</label></legend>
+                            <legend><label for="hooks-${tab.id}-safe_path">Safe mode</label></legend>
                             <div class="checkbox">
-                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.safePath" id="hooks-${tab.id}-safePath"
+                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.safe_path" id="hooks-${tab.id}-safe_path"
                                     disabled="true"/>
-                                <label for="hooks-${tab.id}-safePath">Look for hooks only in the safe dir</label>
+                                <label for="hooks-${tab.id}-safe_path">Look for hooks only in the safe dir</label>
                             </div>
                             <div class="description">
                                 <p>
@@ -102,19 +111,21 @@
 
                         <div class="field-group">
                             <label for="${tab.id}-params">Positional parameters</label>
-                            <textarea class="textarea" name="comment" name="hooks.${tab.id}.safePath" id="${tab.id}-params" rows="10"
+                            <textarea class="textarea" name="hooks.${tab.id}.params" id="${tab.id}-params" rows="10"
                                 disabled="true"></textarea>
 
                             <div class="description">
                                 Learn more about these fields in <a href="https://external-hooks.reconquest.io/docs/how_to_configure_external_hooks/" target="_blank">the official documentation</a>.
                             </div>
+
+                            <div class="error" id="hooks-${tab.id}-params-error"></div>
                         </div>
 
                         #if($tab.async)
                         <fieldset class="group">
                             <legend><span>Asynchronous</span></legend>
                             <div class="checkbox">
-                                <input class="checkbox" type="checkbox" name="hooks-async" id="hooks-async" disabled="true">
+                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.async" id="hooks.${tab.id}.async" disabled="true">
                                 <label for="checkBoxOne">Start the executable asynchronously</label>
                             </div>
                             <div class="description">
@@ -125,6 +136,22 @@
                     </div>
                 </div>
                 #end
+            </div>
+
+            <div class="aui-message aui-message-warning">
+                <p class="title">
+                <span class="checkbox">
+                    <input
+                        class="checkbox"
+                        type="checkbox"
+                        name="apply-existing"
+                        id="rq_hooks_apply"
+                        />
+                    <label for="rq_hooks_apply">Apply to existing hooks</label>
+                </span>
+                </p>
+
+                <p>Settings will apply only to newly configured hooks if this checkbox is not set.</p>
             </div>
 
             <button class="aui-button aui-button-primary" id="rq_hooks_global_save">Save</button>

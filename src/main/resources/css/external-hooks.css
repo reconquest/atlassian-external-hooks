@@ -22,3 +22,23 @@
 .rq_hooks_global_form .aui-tabs {
     margin-bottom: 10px;
 }
+
+.rq_hooks_global_form .rq-icon-error {
+    color: red;
+}
+
+.rq_hooks_global_form .rq-icon-ok {
+    color: green;
+}
+
+.rq_hooks_global_form .rq-tab .aui-icon {
+    display: none;
+}
+
+.rq_hooks_global_form .rq-tab.rq-tab-ok .rq-icon-ok {
+    display: inline-block;
+}
+
+.rq_hooks_global_form .rq-tab.rq-tab-error .rq-icon-error {
+    display: inline-block;
+}
