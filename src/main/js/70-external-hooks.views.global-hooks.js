@@ -72,6 +72,7 @@ var ViewGlobalHooks = function (context, api) {
                         .removeClass('rq-tab-ok')
                         .addClass('rq-tab-error');
                 } else {
+                    tab.pane.find('.rq-hook-field-error').text('');
                     tab.tab
                         .removeClass('rq-tab-error')
                         .toggleClass('rq-tab-ok', data.settings.enabled);

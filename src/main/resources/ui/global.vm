@@ -87,7 +87,7 @@
                                    id="hooks-${tab.id}-exe" name="hooks.${tab.id}.exe"
                                    disabled="true">
                             <div class="description">The path to an executable to run.</div>
-                            <div class="error" id="hooks-${tab.id}-exe-error"></div>
+                            <div class="error rq-hook-field-error" id="hooks-${tab.id}-exe-error"></div>
                         </div>
 
                         <fieldset class="group">
