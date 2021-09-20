@@ -28,7 +28,7 @@ func (suite *Suite) TestGlobalHooks(params TestParams) {
 		fmt.Sprintf("{test: project hooks} %s", project.Key),
 	)
 
-	suite.testGlobalHooks(log, context)
+	suite.testGlobalHooks(log, context, project, repository)
 
 	suite.testPreReceive(log, context, repository)
 	suite.testPostReceive(log, context, repository)
@@ -410,7 +410,23 @@ func (suite *Suite) testMergeCheck(
 func (suite *Suite) testGlobalHooks(
 	log *cog.Logger,
 	context *external_hooks.Context,
+	project *stash.Project,
+	repo *stash.Repository,
 ) {
+	suite.testGlobalHooks_ProjectOrRepository_EnabledOrDisabled(
+		log, context, project, repo,
+		context.
+			OnProject(project.Key).
+			PreReceive(),
+	)
+	suite.testGlobalHooks_ProjectOrRepository_EnabledOrDisabled(
+		log, context, project, repo,
+		context.
+			OnProject(project.Key).
+			OnRepository(repo.Slug).
+			PreReceive(),
+	)
+
 	suite.testGlobalHooks_RepositoryDeleted(log, context)
 	suite.testGlobalHooks_DoubleEnable(log, context)
 	suite.testGlobalHooks_RepositoryCreatedAfterEnabling(log, context)
@@ -439,6 +455,47 @@ func (suite *Suite) testGlobalHooks_RepositoryCreatedAfterEnabling(
 	suite.DisableHook(hook)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, message)
+}
+
+func (suite *Suite) testGlobalHooks_ProjectOrRepository_EnabledOrDisabled(
+	log *cog.Logger,
+	context *external_hooks.Context,
+	project *stash.Project,
+	repo *stash.Repository,
+	resourceHook *external_hooks.Hook,
+) {
+	globalHook := context.PreReceive()
+
+	enableGlobal := func() {
+		suite.ConfigureSampleHook_Message(
+			globalHook,
+			HookOptions{WaitHookScripts: true},
+			`XXX_GLOBAL`,
+		)
+	}
+
+	enableGlobal()
+
+	suite.ConfigureSampleHook_Message(
+		resourceHook,
+		HookOptions{WaitHookScripts: true},
+		`XXX_RESOURCE`,
+	)
+
+	Assert_PushOutputsMessages(suite, repo, `XXX_GLOBAL`, `XXX_RESOURCE`)
+
+	suite.DisableHook(globalHook)
+
+	Assert_PushOutputsMessages(suite, repo, `XXX_RESOURCE`)
+	Assert_PushDoesNotOutputMessages(suite, repo, `XXX_GLOBAL`)
+
+	enableGlobal()
+	suite.DisableHook(resourceHook)
+
+	Assert_PushOutputsMessages(suite, repo, `XXX_GLOBAL`)
+	Assert_PushDoesNotOutputMessages(suite, repo, `XXX_RESOURCE`)
+
+	suite.DisableHook(globalHook)
 }
 
 func (suite *Suite) testGlobalHooks_DoubleEnable(
