@@ -1,5 +1,7 @@
 package com.ngs.stash.externalhooks.ao;
 
+import com.ngs.stash.externalhooks.FilterPersonalRepositories;
+
 import net.java.ao.Entity;
 import net.java.ao.schema.Table;
 
@@ -28,4 +30,8 @@ public interface GlobalHookSettings extends Entity {
   boolean getSafePath();
 
   void setSafePath(boolean value);
+
+  FilterPersonalRepositories getFilterPersonalRepositories();
+
+  void setFilterPersonalRepositories(FilterPersonalRepositories value);
 }

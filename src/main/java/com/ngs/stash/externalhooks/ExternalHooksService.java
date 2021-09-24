@@ -52,6 +52,11 @@ public class ExternalHooksService implements JobRunner {
   private ClusterService clusterService;
   private GlobalHookSettingsDao globalHookSettingsDao;
 
+  // We force ExternalHooksService to join to BitbucketEventListener because
+  // otherwise class BitbucketEventListener is not initialized
+  @SuppressWarnings("unused")
+  private BitbucketEventListener bitbucketEventListener;
+
   @Inject
   public ExternalHooksService(
       @ComponentImport UserService userService,
@@ -81,7 +86,6 @@ public class ExternalHooksService implements JobRunner {
     this.hooksFactory = new HooksFactory(
         repositoryHookService,
         new HooksCoordinator(
-            globalHookSettingsDao,
             userService,
             projectService,
             repositoryService,

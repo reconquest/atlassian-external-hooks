@@ -52,9 +52,9 @@ public class HooksFactory {
         continue;
       }
 
-      boolean skipScopeWide = false;
+      boolean scopeSkip = false;
       if (!hook.isEnabled() || !hook.isConfigured()) {
-        skipScopeWide = true;
+        scopeSkip = true;
       } else if (ScopeUtil.isInheritedEnabled(hook, scope)) {
         // if this is a repository and we have a project's hook but don't have
         // if we don't have a global hook
@@ -62,10 +62,10 @@ public class HooksFactory {
             "hook {} is enabled & configured (inherited of {})",
             hookKey,
             ScopeUtil.toString(hook.getScope()));
-        skipScopeWide = true;
+        scopeSkip = true;
       }
 
-      if (!skipScopeWide) {
+      if (!scopeSkip) {
         try {
           hooksCoordinator.enable(scope, hookKey);
 
@@ -78,10 +78,18 @@ public class HooksFactory {
       }
 
       if (scope.getType() == ScopeType.REPOSITORY) {
-        if (globalHooks.isEnabled(hookKey)) {
-          hooksCoordinator.enable(scope, hookKey, globalHooks.getSettings(hookKey));
-        } else {
-          hooksCoordinator.disable(scope, hookKey, new GlobalScope());
+        try {
+          if (globalHooks.isEnabled(hookKey)) {
+            if (hooksCoordinator.enable(scope, hookKey, globalHooks)) {
+              created++;
+            }
+          } else {
+            hooksCoordinator.disable(scope, hookKey, new GlobalScope());
+          }
+        } catch (Exception e) {
+          e.printStackTrace();
+
+          log.error("Unable to apply global hook script {}: {}", hookKey, e.toString());
         }
       }
     }

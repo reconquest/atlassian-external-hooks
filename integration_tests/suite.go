@@ -444,6 +444,19 @@ func (suite *Suite) DisableHook(
 	}
 }
 
+func (suite *Suite) WaitHookScriptsCreated() {
+	re := regexp.MustCompile(
+		`(?i)(ExternalHookScript|HooksFactory)\W+created.*hook\s*script`,
+	)
+	waiter := suite.Bitbucket().WaitLogEntry(
+		func(line string) bool {
+			return re.MatchString(line)
+		},
+	)
+
+	waiter.Wait(suite.FailNow, "hook scripts", "created")
+}
+
 func (suite *Suite) EnableHook(
 	hook interface {
 		Enable() error
@@ -451,19 +464,6 @@ func (suite *Suite) EnableHook(
 	},
 	options HookOptions,
 ) {
-	var waiter *bitbucket.LogEntryWaiter
-	// XXX: only for BB>6.2.0
-	if options.WaitHookScripts {
-		re := regexp.MustCompile(
-			`(?i)(ExternalHookScript|HooksFactory)\W+created.*hook\s*script`,
-		)
-		waiter = suite.Bitbucket().WaitLogEntry(
-			func(line string) bool {
-				return re.MatchString(line)
-			},
-		)
-	}
-
 	err := hook.Enable()
 	suite.NoError(err, "should be able to enable hook")
 
@@ -475,8 +475,7 @@ func (suite *Suite) EnableHook(
 			nil,
 			"{add-on} waiting for hook script to be created by bitbucket",
 		)
-
-		waiter.Wait(suite.FailNow, "hook scripts", "created")
+		suite.WaitHookScriptsCreated()
 	}
 }
 

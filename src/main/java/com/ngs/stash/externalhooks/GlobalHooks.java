@@ -41,7 +41,7 @@ public class GlobalHooks {
     return false;
   }
 
-  private GlobalHookSettings getHook(String hookKey) {
+  public GlobalHookSettings getHook(String hookKey) {
     if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.PRE_RECEIVE_HOOK_ID)) {
       return this.preReceive;
     }
@@ -73,8 +73,7 @@ public class GlobalHooks {
     return hook != null && hook.getEnabled();
   }
 
-  public Settings getSettings(String hookKey) {
-    GlobalHookSettings hook = getHook(hookKey);
+  public Settings getSettings(GlobalHookSettings hook) {
     if (hook == null) {
       return null;
     }
@@ -90,5 +89,9 @@ public class GlobalHooks {
     }
 
     return settingsBuilder.build();
+  }
+
+  public Settings getSettings(String hookKey) {
+    return getSettings(getHook(hookKey));
   }
 }

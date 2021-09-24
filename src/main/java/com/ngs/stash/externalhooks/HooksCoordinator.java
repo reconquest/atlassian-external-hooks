@@ -8,11 +8,6 @@ import javax.annotation.Nonnull;
 
 import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
-import com.atlassian.bitbucket.event.hook.RepositoryHookDeletedEvent;
-import com.atlassian.bitbucket.event.hook.RepositoryHookDisabledEvent;
-import com.atlassian.bitbucket.event.hook.RepositoryHookEnabledEvent;
-import com.atlassian.bitbucket.event.repository.RepositoryCreatedEvent;
-import com.atlassian.bitbucket.event.repository.RepositoryDeletedEvent;
 import com.atlassian.bitbucket.hook.repository.GetRepositoryHookSettingsRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
@@ -34,12 +29,11 @@ import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsValidationErrors;
 import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.bitbucket.user.UserService;
-import com.atlassian.event.api.EventListener;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
 import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
-import com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
 import com.ngs.stash.externalhooks.util.Walker;
@@ -50,10 +44,8 @@ public class HooksCoordinator {
   private Map<String, ExternalHookScript> scripts = new HashMap<>();
   private Walker walker;
   private SecurityService securityService;
-  private GlobalHookSettingsDao globalHookSettingsDao;
 
   public HooksCoordinator(
-      @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
       @ComponentImport UserService userService,
       @ComponentImport ProjectService projectService,
       @ComponentImport RepositoryService repositoryService,
@@ -67,7 +59,6 @@ public class HooksCoordinator {
       @ComponentImport PluginSettingsFactory pluginSettingsFactory,
       @ComponentImport SecurityService securityService)
       throws IOException {
-    this.globalHookSettingsDao = globalHookSettingsDao;
     this.repositoryHookService = repositoryHookService;
     this.securityService = securityService;
 
@@ -118,6 +109,10 @@ public class HooksCoordinator {
     this.walker = new Walker(userService, projectService, repositoryService);
   }
 
+  public Map<String, ExternalHookScript> getScripts() {
+    return this.scripts;
+  }
+
   public ExternalHookScript getScript(String idOrKey) {
     if (idOrKey.startsWith(Const.PLUGIN_KEY)) {
       // +1 stands for : after plugin key
@@ -125,78 +120,6 @@ public class HooksCoordinator {
     }
 
     return scripts.get(idOrKey);
-  }
-
-  @EventListener
-  public void onHookEnabled(RepositoryHookEnabledEvent event) {
-    ExternalHookScript script = getScript(event.getRepositoryHookKey());
-    // this will be null if there is no such hook (it's not ours hook)
-    if (script == null) {
-      return;
-    }
-
-    enable(event.getScope(), script);
-
-    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
-    if (globalHooks.isEnabled(script.getHookKey())) {
-      enable(event.getScope(), script, globalHooks.getSettings(script.getHookKey()));
-    }
-  }
-
-  @EventListener
-  public void onHookDisabled(RepositoryHookDisabledEvent event) {
-    ExternalHookScript script = getScript(event.getRepositoryHookKey());
-    // this will be null if there is no such hook (it's not ours hook)
-    if (script == null) {
-      return;
-    }
-
-    Scope scope = event.getScope();
-    if (ScopeUtil.isRepository(scope)) {
-      disable((RepositoryScope) scope, script);
-    } else if (ScopeUtil.isProject(scope)) {
-      disable((ProjectScope) scope, script);
-    }
-  }
-
-  // This event is triggered when repository hook transfered from 'Enabled' to
-  // 'Inherited' state. It means that the repository doesn't have any its own
-  // hook, but might have project's hook.
-  //
-  // Also, triggered when the state changed from 'Disabled' to 'Inherited'
-  @EventListener
-  public void onHookInherited(RepositoryHookDeletedEvent event) {
-    ExternalHookScript script = getScript(event.getRepositoryHookKey());
-    if (script == null) {
-      return;
-    }
-
-    Scope scope = event.getScope();
-    if (ScopeUtil.isRepository(scope)) {
-      inherit((RepositoryScope) scope, script);
-    }
-  }
-
-  @EventListener
-  public void onRepositoryCreated(RepositoryCreatedEvent event) {
-    RepositoryScope scope = new RepositoryScope(event.getRepository());
-    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
-    scripts.forEach((hookId, script) -> {
-      inherit(scope, script);
-
-      if (globalHooks.isEnabled(script.getHookKey())) {
-        enable(scope, script, globalHooks.getSettings(script.getHookKey()));
-      }
-    });
-  }
-
-  @EventListener
-  public void onRepositoryDeleted(RepositoryDeletedEvent event) {
-    RepositoryScope scope = new RepositoryScope(event.getRepository());
-    scripts.forEach((hookId, script) -> {
-      script.uninstall(scope);
-      script.uninstall(new GlobalScope(), scope);
-    });
   }
 
   public void validate(
@@ -212,22 +135,22 @@ public class HooksCoordinator {
     script.validate(settings, errors, scope);
   }
 
-  public void enable(Scope scope, String hookKey) {
+  public boolean enable(Scope scope, String hookKey) {
     ExternalHookScript script = getScript(hookKey);
     if (script == null) {
-      return;
+      return false;
     }
 
-    enable(scope, script);
+    return enable(scope, script);
   }
 
-  public void enable(Scope scope, String hookKey, Settings globalSettings) {
+  public boolean enable(Scope scope, String hookKey, GlobalHooks globalHooks) {
     ExternalHookScript script = getScript(hookKey);
     if (script == null) {
-      return;
+      return false;
     }
 
-    enable(scope, script, globalSettings);
+    return enable(scope, script, globalHooks);
   }
 
   public void disable(Scope scope, String hookKey, GlobalScope globalScope) {
@@ -243,40 +166,42 @@ public class HooksCoordinator {
     }
   }
 
-  public void enable(Scope scope, ExternalHookScript script) {
+  public boolean enable(Scope scope, ExternalHookScript script) {
     if (scope.getType().equals(ScopeType.REPOSITORY)) {
-      enable((RepositoryScope) scope, script);
+      return enable((RepositoryScope) scope, script);
     } else if (scope.getType().equals(ScopeType.PROJECT)) {
-      enable((ProjectScope) scope, script);
+      return enable((ProjectScope) scope, script);
     } else {
       // Do nothing with ScopeType.GLOBAL
       //
       // ScopeType.GLOBAL shall not be here since there are no global hooks
       // actually
+      return false;
     }
   }
 
-  public void enable(Scope scope, ExternalHookScript script, Settings globalSettings) {
+  public boolean enable(Scope scope, ExternalHookScript script, GlobalHooks globalHooks) {
     if (scope.getType().equals(ScopeType.REPOSITORY)) {
-      enable((RepositoryScope) scope, script, globalSettings);
+      return enable((RepositoryScope) scope, script, globalHooks);
     } else if (scope.getType().equals(ScopeType.PROJECT)) {
-      enable((ProjectScope) scope, script, globalSettings);
+      return enable((ProjectScope) scope, script, globalHooks);
     } else {
       // Do nothing with ScopeType.GLOBAL
       //
       // ScopeType.GLOBAL shall not be here since there are no global hooks
       // actually
+      return false;
     }
   }
 
-  public void enable(ProjectScope projectScope, ExternalHookScript script) {
+  public boolean enable(ProjectScope projectScope, ExternalHookScript script) {
     // cover legacy hook scripts created only on project level
     script.uninstallLegacy(projectScope);
 
     RepositoryHookSettings projectSettings = repositoryHookService.getSettings(
         (new GetRepositoryHookSettingsRequest.Builder(projectScope, script.getHookKey())).build());
     if (projectSettings == null) {
-      return;
+      return false;
     }
 
     walker.walk(projectScope.getProject(), (repository) -> {
@@ -294,24 +219,24 @@ public class HooksCoordinator {
         script.install(projectSettings.getSettings(), projectScope, repositoryScope);
       }
     });
+
+    return true;
   }
 
-  public void enable(
-      ProjectScope projectScope, ExternalHookScript script, Settings globalSettings) {
-    if (globalSettings == null) {
-      throw new RuntimeException("empty settings for " + script.getHookKey());
-    }
-
+  public boolean enable(
+      ProjectScope projectScope, ExternalHookScript script, GlobalHooks globalHooks) {
     // cover legacy hook scripts created only on project level
     script.uninstallLegacy(projectScope);
 
     walker.walk(projectScope.getProject(), (repository) -> {
       RepositoryScope repositoryScope = new RepositoryScope(repository);
-      script.install(globalSettings, new GlobalScope(), repositoryScope);
+      enable(repositoryScope, script, globalHooks);
     });
+
+    return true;
   }
 
-  public void enable(RepositoryScope scope, ExternalHookScript script) {
+  public boolean enable(RepositoryScope scope, ExternalHookScript script) {
     GetRepositoryHookSettingsRequest request =
         (new GetRepositoryHookSettingsRequest.Builder(scope, script.getHookKey())).build();
 
@@ -331,14 +256,32 @@ public class HooksCoordinator {
 
           return null;
         });
+
+    return true;
   }
 
-  public void enable(RepositoryScope scope, ExternalHookScript script, Settings globalSettings) {
-    if (globalSettings == null) {
-      throw new RuntimeException("empty settings for " + script.getHookKey());
+  public boolean enable(RepositoryScope scope, ExternalHookScript script, GlobalHooks globalHooks) {
+    GlobalHookSettings globalHook = globalHooks.getHook(script.getHookKey());
+    FilterPersonalRepositories filter = globalHook.getFilterPersonalRepositories();
+    if (filter == null) {
+      filter = FilterPersonalRepositories.DISABLED;
     }
 
-    script.install(globalSettings, new GlobalScope(), scope);
+    boolean isPersonal = ((RepositoryScope) scope).getProject().getType() == ProjectType.PERSONAL;
+
+    if (filter == FilterPersonalRepositories.DISABLED
+        || (filter == FilterPersonalRepositories.ONLY_PERSONAL && isPersonal)) {
+
+      Settings globalSettings = globalHooks.getSettings(script.getHookKey());
+      if (globalSettings == null) {
+        throw new RuntimeException("empty settings for " + script.getHookKey());
+      }
+
+      script.install(globalSettings, new GlobalScope(), scope);
+      return true;
+    }
+
+    return false;
   }
 
   public void disable(ProjectScope _projetScope, ExternalHookScript _script, GlobalScope _hooks) {

@@ -17,7 +17,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
+import com.atlassian.bitbucket.auth.AuthenticationContext;
+import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
+import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.Project;
@@ -27,6 +30,7 @@ import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
+import com.atlassian.bitbucket.server.StorageService;
 import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsBuilder;
 import com.atlassian.bitbucket.user.SecurityService;
@@ -43,6 +47,7 @@ import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.RunMode;
 import com.atlassian.scheduler.config.Schedule;
+import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
 import com.ngs.stash.externalhooks.GlobalHooks;
@@ -75,13 +80,13 @@ public class Rest implements JobRunner {
   private ExternalHooksSettingsDao settingsDao;
   private Walker walker;
   private GlobalHookSettingsDao globalHookSettingsDao;
-  //private RepositoryHookService repositoryHookService;
+  // private RepositoryHookService repositoryHookService;
   private HooksCoordinator hooksCoordinator;
   private HooksFactory hooksFactory;
 
   public Rest(
+      @ComponentImport AuthenticationContext authenticationContext,
       @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
-      @ComponentImport HooksFactory hooksFactory,
       @ComponentImport HooksCoordinator hooksCoordinator,
       @ComponentImport UserService userService,
       @ComponentImport ActiveObjects ao,
@@ -90,16 +95,37 @@ public class Rest implements JobRunner {
       @ComponentImport RepositoryHookService repositoryHookService,
       @ComponentImport ProjectService projectService,
       @ComponentImport PluginSettingsFactory pluginSettingsFactory,
+      @ComponentImport HookScriptService hookScriptService,
+      @ComponentImport PluginLicenseManager pluginLicenseManager,
+      @ComponentImport ClusterService clusterService,
       @ComponentImport SecurityService securityService,
-      @ComponentImport("permissions") PermissionService permissionService)
+      @ComponentImport("permissions") PermissionService permissionService,
+      @ComponentImport StorageService storageService)
       throws IOException {
     this.globalHookSettingsDao = globalHookSettingsDao;
     this.permissionService = permissionService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
-    //this.repositoryHookService = repositoryHookService;
+    // this.repositoryHookService = repositoryHookService;
     this.hooksCoordinator = hooksCoordinator;
-    this.hooksFactory = hooksFactory;
+    //
+    // Unfortunately, no way to @ComponentImport it because Named() used here.
+    // Consider it to replace with lifecycle aware listener.
+    this.hooksFactory = new HooksFactory(
+        repositoryHookService,
+        new HooksCoordinator(
+            userService,
+            projectService,
+            repositoryService,
+            repositoryHookService,
+            authenticationContext,
+            permissionService,
+            pluginLicenseManager,
+            clusterService,
+            storageService,
+            hookScriptService,
+            pluginSettingsFactory,
+            securityService));
 
     this.settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 

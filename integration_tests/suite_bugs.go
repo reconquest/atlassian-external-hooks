@@ -127,8 +127,10 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 	project := suite.CreateRandomProject()
 
 	var (
-		context = suite.ExternalHooks().OnProject(project.Key)
-		log     = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+		projectContext = suite.ExternalHooks().OnProject(project.Key)
+		log            = log.NewChildWithPrefix(
+			fmt.Sprintf("{test} %s", project.Key),
+		)
 	)
 
 	log.Infof(
@@ -141,12 +143,14 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 	suite.RecordHookScripts()
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
-		context.PreReceive(),
+		projectContext.PreReceive(),
 		HookOptions{WaitHookScripts: false},
 		`XXX`,
 	)
 
 	repository := suite.CreateRandomRepository(project)
+
+	suite.WaitHookScriptsCreated()
 
 	Assert_PushRejected(suite, repository, `XXX`)
 
