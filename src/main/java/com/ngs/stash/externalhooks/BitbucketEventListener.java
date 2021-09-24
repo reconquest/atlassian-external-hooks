@@ -18,20 +18,20 @@ import com.ngs.stash.externalhooks.util.ScopeUtil;
 public class BitbucketEventListener {
   private GlobalHookSettingsDao globalHookSettingsDao;
   private HooksFactory hooksFactory;
-  private HooksCoordinator hooksCoordinator;
+  private HookInstaller hookInstaller;
 
   public BitbucketEventListener(
       @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
       @ComponentImport HooksFactory hooksFactory,
-      @ComponentImport HooksCoordinator hooksCoordinator) {
-    this.hooksCoordinator = hooksCoordinator;
+      @ComponentImport HookInstaller hookInstaller) {
+    this.hookInstaller = hookInstaller;
     this.hooksFactory = hooksFactory;
     this.globalHookSettingsDao = globalHookSettingsDao;
   }
 
   @EventListener
   public void onHookEnabled(RepositoryHookEnabledEvent event) {
-    ExternalHookScript script = hooksCoordinator.getScript(event.getRepositoryHookKey());
+    ExternalHookScript script = hookInstaller.getScript(event.getRepositoryHookKey());
     // this will be null if there is no such hook (it's not ours hook)
     if (script == null) {
       return;
@@ -42,7 +42,7 @@ public class BitbucketEventListener {
 
   @EventListener
   public void onHookDisabled(RepositoryHookDisabledEvent event) {
-    ExternalHookScript script = hooksCoordinator.getScript(event.getRepositoryHookKey());
+    ExternalHookScript script = hookInstaller.getScript(event.getRepositoryHookKey());
     // this will be null if there is no such hook (it's not ours hook)
     if (script == null) {
       return;
@@ -50,9 +50,9 @@ public class BitbucketEventListener {
 
     Scope scope = event.getScope();
     if (ScopeUtil.isRepository(scope)) {
-      hooksCoordinator.disable((RepositoryScope) scope, script);
+      hookInstaller.disable((RepositoryScope) scope, script);
     } else if (ScopeUtil.isProject(scope)) {
-      hooksCoordinator.disable((ProjectScope) scope, script);
+      hookInstaller.disable((ProjectScope) scope, script);
     }
   }
 
@@ -63,14 +63,14 @@ public class BitbucketEventListener {
   // Also, triggered when the state changed from 'Disabled' to 'Inherited'
   @EventListener
   public void onHookInherited(RepositoryHookDeletedEvent event) {
-    ExternalHookScript script = hooksCoordinator.getScript(event.getRepositoryHookKey());
+    ExternalHookScript script = hookInstaller.getScript(event.getRepositoryHookKey());
     if (script == null) {
       return;
     }
 
     Scope scope = event.getScope();
     if (ScopeUtil.isRepository(scope)) {
-      hooksCoordinator.inherit((RepositoryScope) scope, script);
+      hookInstaller.inherit((RepositoryScope) scope, script);
     }
   }
 
@@ -84,7 +84,7 @@ public class BitbucketEventListener {
   @EventListener
   public void onRepositoryDeleted(RepositoryDeletedEvent event) {
     RepositoryScope scope = new RepositoryScope(event.getRepository());
-    hooksCoordinator.getScripts().forEach((hookId, script) -> {
+    hookInstaller.getScripts().forEach((hookId, script) -> {
       script.uninstall(scope);
       script.uninstall(new GlobalScope(), scope);
     });

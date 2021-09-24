@@ -21,13 +21,13 @@ import org.slf4j.LoggerFactory;
 public class HooksFactory {
   private static Logger log = LoggerFactory.getLogger(HooksFactory.class);
   private RepositoryHookService repositoryHookService;
-  private HooksCoordinator hooksCoordinator;
+  private HookInstaller hookInstaller;
 
   public HooksFactory(
       @ComponentImport RepositoryHookService repositoryHookService,
-      @ComponentImport HooksCoordinator hooksCoordinator) {
+      @ComponentImport HookInstaller hookInstaller) {
     this.repositoryHookService = repositoryHookService;
-    this.hooksCoordinator = hooksCoordinator;
+    this.hookInstaller = hookInstaller;
   }
 
   /**
@@ -67,7 +67,7 @@ public class HooksFactory {
 
       if (!scopeSkip) {
         try {
-          hooksCoordinator.enable(scope, hookKey);
+          hookInstaller.enable(scope, hookKey);
 
           created++;
         } catch (Exception e) {
@@ -80,11 +80,11 @@ public class HooksFactory {
       if (scope.getType() == ScopeType.REPOSITORY) {
         try {
           if (globalHooks.isEnabled(hookKey)) {
-            if (hooksCoordinator.enable(scope, hookKey, globalHooks)) {
+            if (hookInstaller.enable(scope, hookKey, globalHooks)) {
               created++;
             }
           } else {
-            hooksCoordinator.disable(scope, hookKey, new GlobalScope());
+            hookInstaller.disable(scope, hookKey, new GlobalScope());
           }
         } catch (Exception e) {
           e.printStackTrace();

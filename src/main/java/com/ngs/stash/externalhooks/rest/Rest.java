@@ -51,7 +51,7 @@ import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
 import com.ngs.stash.externalhooks.GlobalHooks;
-import com.ngs.stash.externalhooks.HooksCoordinator;
+import com.ngs.stash.externalhooks.HookInstaller;
 import com.ngs.stash.externalhooks.HooksFactory;
 import com.ngs.stash.externalhooks.SimpleSettingsBuilder;
 import com.ngs.stash.externalhooks.SimpleSettingsValidationErrors;
@@ -81,13 +81,13 @@ public class Rest implements JobRunner {
   private Walker walker;
   private GlobalHookSettingsDao globalHookSettingsDao;
   // private RepositoryHookService repositoryHookService;
-  private HooksCoordinator hooksCoordinator;
+  private HookInstaller hookInstaller;
   private HooksFactory hooksFactory;
 
   public Rest(
       @ComponentImport AuthenticationContext authenticationContext,
       @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
-      @ComponentImport HooksCoordinator hooksCoordinator,
+      @ComponentImport HookInstaller hookInstaller,
       @ComponentImport UserService userService,
       @ComponentImport ActiveObjects ao,
       @ComponentImport RepositoryService repositoryService,
@@ -107,13 +107,13 @@ public class Rest implements JobRunner {
     this.schedulerService = schedulerService;
     this.securityService = securityService;
     // this.repositoryHookService = repositoryHookService;
-    this.hooksCoordinator = hooksCoordinator;
+    this.hookInstaller = hookInstaller;
     //
     // Unfortunately, no way to @ComponentImport it because Named() used here.
     // Consider it to replace with lifecycle aware listener.
     this.hooksFactory = new HooksFactory(
         repositoryHookService,
-        new HooksCoordinator(
+        new HookInstaller(
             userService,
             projectService,
             repositoryService,
@@ -215,7 +215,7 @@ public class Rest implements JobRunner {
     }
 
     if (schema.enabled) {
-      ExternalHookScript script = this.hooksCoordinator.getScript(hookKey);
+      ExternalHookScript script = this.hookInstaller.getScript(hookKey);
       if (script == null) {
         return Response.status(404).build();
       }

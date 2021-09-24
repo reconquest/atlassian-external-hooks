@@ -85,7 +85,7 @@ public class ExternalHooksService implements JobRunner {
     // Consider it to replace with lifecycle aware listener.
     this.hooksFactory = new HooksFactory(
         repositoryHookService,
-        new HooksCoordinator(
+        new HookInstaller(
             userService,
             projectService,
             repositoryService,

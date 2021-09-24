@@ -38,14 +38,14 @@ import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
 import com.ngs.stash.externalhooks.util.Walker;
 
-public class HooksCoordinator {
+public class HookInstaller {
   private RepositoryHookService repositoryHookService;
 
   private Map<String, ExternalHookScript> scripts = new HashMap<>();
   private Walker walker;
   private SecurityService securityService;
 
-  public HooksCoordinator(
+  public HookInstaller(
       @ComponentImport UserService userService,
       @ComponentImport ProjectService projectService,
       @ComponentImport RepositoryService repositoryService,
@@ -287,7 +287,7 @@ public class HooksCoordinator {
   public void disable(ProjectScope _projetScope, ExternalHookScript _script, GlobalScope _hooks) {
     // this is kind of a dirty hack but we don't really need to uninstall hooks
     // like we do it in enable() method since we know that this method is called
-    // by Walker which will also call HooksCoordinator with RepositoryScope (for
+    // by Walker which will also call HookInstaller with RepositoryScope (for
     // each repository) and we don't have project-wide hook scripts (they are
     // repository-wide).
     return;

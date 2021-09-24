@@ -208,8 +208,8 @@
             class="com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao" />
 
     <component
-            key="hooksCoordinator"
-            class="com.ngs.stash.externalhooks.HooksCoordinator" />
+            key="hookInstaller"
+            class="com.ngs.stash.externalhooks.HookInstaller" />
     <component
             key="licenseValidator"
             class="com.ngs.stash.externalhooks.LicenseValidator" />
