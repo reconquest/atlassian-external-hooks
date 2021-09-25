@@ -37,7 +37,12 @@ public class BitbucketEventListener {
       return;
     }
 
-    hooksFactory.apply(event.getScope(), new GlobalHooks(this.globalHookSettingsDao.find()));
+    hookInstaller.enable(event.getScope(), script);
+
+    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
+    if (globalHooks.isEnabled(script.getHookKey())) {
+      hookInstaller.enable(event.getScope(), script, globalHooks);
+    }
   }
 
   @EventListener
@@ -76,9 +81,15 @@ public class BitbucketEventListener {
 
   @EventListener
   public void onRepositoryCreated(RepositoryCreatedEvent event) {
-    hooksFactory.apply(
-        new RepositoryScope(event.getRepository()),
-        new GlobalHooks(this.globalHookSettingsDao.find()));
+    RepositoryScope scope = new RepositoryScope(event.getRepository());
+    GlobalHooks globalHooks = new GlobalHooks(this.globalHookSettingsDao.find());
+    hookInstaller.getScripts().forEach((hookId, script) -> {
+      hookInstaller.inherit(scope, script);
+
+      if (globalHooks.isEnabled(script.getHookKey())) {
+        hookInstaller.enable(scope, script, globalHooks);
+      }
+    });
   }
 
   @EventListener

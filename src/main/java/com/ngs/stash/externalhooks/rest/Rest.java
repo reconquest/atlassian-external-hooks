@@ -252,6 +252,8 @@ public class Rest implements JobRunner {
     settings.setAsync(schema.async);
 
     settings.setEnabled(schema.enabled);
+    settings.setFilterPersonalRepositories(schema.filterPersonalRepositories);
+
     settings.save();
 
     return Response.ok(new HashMap<String, String>()).build();
@@ -272,6 +274,7 @@ public class Rest implements JobRunner {
     schema.params = settings.getParams();
     schema.async = settings.getAsync();
     schema.enabled = settings.getEnabled();
+    schema.filterPersonalRepositories=settings.getFilterPersonalRepositories();
     return Response.ok(schema).build();
   }
 
