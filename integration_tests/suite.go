@@ -244,7 +244,7 @@ func (suite *Suite) ConfigureHook(
 		path,
 	)
 
-	err := suite.Bitbucket().WriteFile(path, append(script, '\n'), 0777)
+	err := suite.Bitbucket().WriteFile(path, append(script, '\n'), 0o777)
 	suite.NoError(err, "should be able to write hook script to container")
 
 	err = hook.Configure(settings)
@@ -605,6 +605,27 @@ func (suite *Suite) CreateUser(name string) *stash.User {
 	}
 
 	return user
+}
+
+func (suite *Suite) CleanupHooks() {
+	context := suite.ExternalHooks().OnGlobal()
+
+	if err := context.PreReceive().Disable(); err != nil {
+		log.Errorf(err, "{suite:cleanup} disable pre-receive")
+	}
+
+	if err := context.PostReceive().Disable(); err != nil {
+		log.Errorf(err, "{suite:cleanup} disable post-receive")
+	}
+
+	if err := context.MergeCheck().Disable(); err != nil {
+		log.Errorf(err, "{suite:cleanup} disable merge-check")
+	}
+
+	err := context.Addon.Wait(context)
+	if err != nil {
+		log.Errorf(err, "{suite:cleanup} apply hooks factory")
+	}
 }
 
 func joinHookScripts(scripts []HookScript) string {
