@@ -18,6 +18,7 @@ import (
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/status"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 	"github.com/stretchr/testify/assert"
@@ -87,106 +88,121 @@ func (suite *Suite) WithParams(
 	params TestParams,
 	tests ...func(TestParams),
 ) runner.Suite {
-	return func(run *runner.Runner, assert *assert.Assertions) {
-		suite.Runner = run
-		suite.Assertions = assert
+	toRun := []func(TestParams){}
+	for _, test := range tests {
+		name := getSuiteName(test)
 
-		if suite.randomize {
-			rand.Shuffle(
-				len(tests),
-				func(i, j int) { tests[i], tests[j] = tests[j], tests[i] },
-			)
+		if suite.filter.glob != "" {
+			matched, err := regexp.MatchString(suite.filter.glob, name)
+			if err != nil {
+				log.Fatalf(err, "invalid regexp: %s", suite.filter.glob)
+			}
+
+			if !matched {
+				continue
+			}
 		}
 
-		for _, test := range tests {
-			startedAt := time.Now()
-
-			name := getSuiteName(test)
-
-			if suite.filter.glob != "" {
-				matched, err := regexp.MatchString(suite.filter.glob, name)
-				if err != nil {
-					log.Fatalf(err, "invalid regexp: %s", suite.filter.glob)
-				}
-
-				if !matched {
-					continue
-				}
+		if !suite.filter.upgrade {
+			version, ok := params["bitbucket"]
+			if !ok {
+				version, _ = params["bitbucket_to"]
 			}
 
-			if !suite.filter.upgrade {
-				version, ok := params["bitbucket"]
-				if !ok {
-					version, _ = params["bitbucket_to"]
-				}
-
-				if version != suite.baseBitbucket {
-					log.Debugf(
-						nil,
-						"{test} skip %s because --no-upgrade specified",
-						name,
-					)
-					continue
-				}
-			}
-
-			if !suite.filter.reproduce &&
-				strings.HasSuffix(name, "_Reproduced") {
+			if version != suite.baseBitbucket {
 				log.Debugf(
 					nil,
-					"{test} skip %s because --no-reproduce specified",
+					"{test} skip %s because --no-upgrade specified",
 					name,
 				)
 				continue
 			}
-
-			if suite.mode == ModeList {
-				fmt.Println(name)
-				continue
-			}
-
-			log.Infof(
-				karma.Describe("params", params),
-				"{test} running %s",
-				name,
-			)
-
-			var thrown chan bool
-			var stop func()
-
-			checkException := !strings.HasSuffix(name, "_Reproduced")
-
-			if checkException {
-				thrown, stop = suite.watchException()
-			}
-
-			test(params)
-
-			if checkException {
-				stop()
-
-				if <-thrown {
-					suite.FailNow(
-						"got a java exception in logs",
-						"testcase: %s",
-						name,
-					)
-					break
-				}
-			}
-
-			suite.Bitbucket().FlushLogs(suite.Bitbucket().GetStacktraceLogs())
-			suite.Bitbucket().FlushLogs(suite.Bitbucket().GetTestcaseLogs())
-
-			finishedAt := time.Now()
-			took := finishedAt.Sub(startedAt)
-
-			log.Infof(
-				karma.Describe("took", took.Milliseconds()),
-				"{test} %s finished",
-				name,
-			)
 		}
+
+		if !suite.filter.reproduce &&
+			strings.HasSuffix(name, "_Reproduced") {
+			log.Debugf(
+				nil,
+				"{test} skip %s because --no-reproduce specified",
+				name,
+			)
+			continue
+		}
+
+		if suite.mode == ModeList {
+			fmt.Println(name)
+			continue
+		}
+
+		toRun = append(toRun, test)
+	}
+
+	return runner.Suite{
+		Size: len(toRun),
+		Run: func(run *runner.Runner, assert *assert.Assertions) {
+			suite.Runner = run
+			suite.Assertions = assert
+
+			if suite.randomize {
+				rand.Shuffle(
+					len(tests),
+					func(i, j int) { tests[i], tests[j] = tests[j], tests[i] },
+				)
+			}
+
+			for _, test := range toRun {
+				startedAt := time.Now()
+
+				name := getSuiteName(test)
+				status.SetCurrentTest(name)
+
+				log.Infof(
+					karma.Describe("params", params),
+					"{test} running %s",
+					name,
+				)
+
+				var thrown chan bool
+				var stop func()
+
+				checkException := !strings.HasSuffix(name, "_Reproduced")
+
+				if checkException {
+					thrown, stop = suite.watchException()
+				}
+
+				test(params)
+
+				if checkException {
+					stop()
+
+					if <-thrown {
+						suite.FailNow(
+							"got a java exception in logs",
+							"testcase: %s",
+							name,
+						)
+						break
+					}
+				}
+
+				suite.Bitbucket().FlushLogs(suite.Bitbucket().GetStacktraceLogs())
+				suite.Bitbucket().FlushLogs(suite.Bitbucket().GetTestcaseLogs())
+
+				finishedAt := time.Now()
+				took := finishedAt.Sub(startedAt)
+
+				log.Infof(
+					karma.Describe("took", took.Milliseconds()),
+					"{test} %s finished",
+					name,
+				)
+
+				status.AddDone()
+				status.SetLastTest(name)
+				status.SetLastDuration(took)
+			}
+		},
 	}
 }
 

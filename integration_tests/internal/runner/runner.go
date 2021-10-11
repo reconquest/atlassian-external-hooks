@@ -13,7 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type Suite func(*Runner, *assert.Assertions)
+type Suite struct {
+	Size int
+	Run  func(*Runner, *assert.Assertions)
+}
 
 type Runner struct {
 	assert *assert.Assertions

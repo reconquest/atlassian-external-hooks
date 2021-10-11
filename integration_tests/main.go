@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/status"
 )
 
 var version = "[manual build]"
@@ -68,6 +70,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	defer status.Destroy()
 
 	switch {
 	case opts.FlagDebug:
@@ -268,7 +272,7 @@ var builds = map[string]string{
 }
 
 func ensureAddons() {
-	err := os.MkdirAll("builds", 0755)
+	err := os.MkdirAll("builds", 0o755)
 	if err != nil {
 		log.Fatalf(err, "mkdir builds")
 	}
@@ -358,4 +362,8 @@ func getLatestVersionXML() string {
 	}
 
 	return version
+}
+
+func text(lines ...string) []byte {
+	return []byte(strings.Join(lines, "\n"))
 }

@@ -3,6 +3,7 @@ package runner
 import (
 	"math/rand"
 
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/status"
 	"github.com/reconquest/pkg/log"
 )
 
@@ -26,7 +27,14 @@ func (runner *Runner) Run(dir string, opts RunOpts) {
 		)
 	}
 
+	total := 0
 	for _, suite := range runner.suites {
-		suite(runner, runner.assert)
+		total += suite.Size
+	}
+
+	status.SetTotal(total)
+
+	for _, suite := range runner.suites {
+		suite.Run(runner, runner.assert)
 	}
 }
