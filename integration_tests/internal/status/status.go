@@ -2,7 +2,9 @@ package status
 
 import (
 	"os"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/kovetskiy/lorg"
@@ -11,6 +13,7 @@ import (
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/loreley"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/sign-go"
 )
 
 var (
@@ -76,14 +79,23 @@ func init() {
 
 	logger := log.GetLogger()
 
+	mutex := sync.Mutex{}
 	logger.SetDisplayer(func(level lorg.Level, hierarchy karma.Hierarchical) {
+		mutex.Lock()
 		bar.Clear(os.Stderr)
 		cog.Display(logger, level, hierarchy)
 	})
 	logger.SetSender(func(lorg.Level, karma.Hierarchical) error {
 		render()
+		mutex.Unlock()
 		return nil
 	})
+
+	go sign.Notify(func(os.Signal) bool {
+		Destroy()
+		os.Exit(1)
+		return false
+	}, syscall.SIGINT, syscall.SIGTERM)
 }
 
 func Destroy() {

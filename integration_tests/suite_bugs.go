@@ -189,7 +189,7 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 	// repository first and project second
 	repositoryPreReceive := suite.ConfigureSampleHook_Message(
 		repositoryContext.PreReceive(),
-		HookOptions{WaitHookScripts: true},
+		HookOptions{WaitHookScripts: false},
 		`XXX_REPOSITORY_XXX`,
 	)
 
@@ -270,7 +270,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 
 	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
-	settings := external_hooks.NewSettings().
+	settings := external_hooks.NewScopeSettings().
 		UseSafePath(true).
 		WithExe(`hook.` + lojban.GetRandomID(5))
 
@@ -325,7 +325,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 
 	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
-	settings := external_hooks.NewSettings().
+	settings := external_hooks.NewScopeSettings().
 		UseSafePath(true).
 		WithExe(`hook.` + lojban.GetRandomID(5))
 
@@ -380,7 +380,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 
 	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
-	settings := external_hooks.NewSettings().
+	settings := external_hooks.NewScopeSettings().
 		UseSafePath(true).
 		WithExe(`hook.` + lojban.GetRandomID(5))
 
@@ -448,7 +448,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 
 	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
-	settings := external_hooks.NewSettings().
+	settings := external_hooks.NewScopeSettings().
 		UseSafePath(true).
 		WithExe(`hook.` + lojban.GetRandomID(5))
 

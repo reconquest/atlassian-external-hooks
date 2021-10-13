@@ -22,10 +22,11 @@ const (
 )
 
 type RequestGlobalHooks struct {
-	Safe    bool   `json:"safe_path"`
-	Exe     string `json:"exe"`
-	Params  string `json:"params"`
-	Enabled bool   `json:"enabled"`
+	Safe                       bool                       `json:"safe_path"`
+	Exe                        string                     `json:"exe"`
+	Params                     string                     `json:"params"`
+	Enabled                    bool                       `json:"enabled"`
+	FilterPersonalRepositories FilterPersonalRepositories `json:"filter_personal_repositories"`
 }
 
 type ResponseGlobalHooksSetup struct {
@@ -111,21 +112,35 @@ func (addon *Addon) call(
 func (addon *Addon) Register(
 	key string,
 	context *Context,
-	settings *Settings,
+	settings Settings,
 ) error {
+	if settings.Exe() == "" {
+		return fmt.Errorf("the provided settings 'exe' can't be empty")
+	}
+
 	if !context.Global() {
 		args := []string{
 			key,
-			"-e", settings.Exe,
+			"-e", settings.Exe(),
 		}
 
-		if settings.Safe {
+		if settings.Safe() {
 			args = append(args, "-s")
 		}
 
-		args = append(args, settings.Params...)
+		args = append(args, settings.Params()...)
 
 		return addon.command(context, "set", args...)
+	}
+
+	filter := FILTER_PERSONAL_REPOSITORIES_DISABLED
+
+	if globalSettings, ok := settings.(*GlobalSettings); ok {
+		filter = globalSettings.FilterPersonalRepositories()
+	}
+
+	if settings.Exe() == "" {
+		return fmt.Errorf("the provided global settings 'exe' can't be empty")
 	}
 
 	var reply ResponseGlobalHooksSetup
@@ -133,10 +148,14 @@ func (addon *Addon) Register(
 		"PUT",
 		"/rest/external-hooks/1.0/global-hooks/"+key,
 		RequestGlobalHooks{
-			Safe:    settings.Safe,
-			Exe:     settings.Exe,
-			Params:  strings.Join(settings.Params, "\r\n"),
-			Enabled: true,
+			Safe: settings.Safe(),
+			Exe:  settings.Exe(),
+			Params: strings.Join(
+				settings.Params(),
+				"\r\n",
+			),
+			Enabled:                    true,
+			FilterPersonalRepositories: filter,
 		},
 		&reply,
 	)
@@ -280,34 +299,6 @@ func (addon *Addon) command(
 	return exec.New("bitbucket-external-hook", args...).Run()
 }
 
-type Settings struct {
-	Safe   bool
-	Exe    string
-	Params []string
-}
-
-func NewSettings() *Settings {
-	return &Settings{}
-}
-
-func (settings *Settings) UseSafePath(enabled bool) *Settings {
-	settings.Safe = enabled
-
-	return settings
-}
-
-func (settings *Settings) WithExe(exe string) *Settings {
-	settings.Exe = exe
-
-	return settings
-}
-
-func (settings *Settings) WithParams(args ...string) *Settings {
-	settings.Params = args
-
-	return settings
-}
-
 type Hook struct {
 	*Context
 
@@ -352,7 +343,7 @@ func (context *Context) MergeCheck() *Hook {
 	}
 }
 
-func (hook *Hook) Configure(settings *Settings) error {
+func (hook *Hook) Configure(settings Settings) error {
 	log.Debugf(
 		karma.
 			Describe("context", hook.Context).

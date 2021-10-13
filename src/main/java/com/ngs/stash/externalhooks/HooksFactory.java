@@ -37,7 +37,7 @@ public class HooksFactory {
    * @param scope
    */
   public void apply(Scope scope, GlobalHooks globalHooks) {
-    log.debug("creating hook scripts on {}", ScopeUtil.toString(scope));
+    log.debug("Applying hook scripts on {}", ScopeUtil.toString(scope));
 
     RepositoryHookSearchRequest.Builder searchBuilder =
         new RepositoryHookSearchRequest.Builder(scope);
@@ -46,6 +46,7 @@ public class HooksFactory {
         searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
 
     Integer created = 0;
+    Integer deleted = 0;
     for (RepositoryHook hook : page.getValues()) {
       String hookKey = hook.getDetails().getKey();
       if (!hookKey.startsWith(Const.PLUGIN_KEY)) {
@@ -59,7 +60,7 @@ public class HooksFactory {
         // if this is a repository and we have a project's hook but don't have
         // if we don't have a global hook
         log.info(
-            "hook {} is enabled & configured (inherited of {})",
+            "skip: hook {} is enabled & configured (inherited of {})",
             hookKey,
             ScopeUtil.toString(hook.getScope()));
         scopeSkip = true;
@@ -85,6 +86,7 @@ public class HooksFactory {
             }
           } else {
             hookInstaller.disable(scope, hookKey, new GlobalScope());
+              deleted++;
           }
         } catch (Exception e) {
           e.printStackTrace();
@@ -94,6 +96,6 @@ public class HooksFactory {
       }
     }
 
-    log.info("created {} hook scripts on scope {}", created, ScopeUtil.toString(scope));
+    log.info("Applied hook scripts on scope {}: created={} deleted={}", ScopeUtil.toString(scope), created, deleted);
   }
 }

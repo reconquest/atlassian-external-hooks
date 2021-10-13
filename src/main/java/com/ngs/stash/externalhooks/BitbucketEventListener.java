@@ -17,7 +17,6 @@ import com.ngs.stash.externalhooks.util.ScopeUtil;
 
 public class BitbucketEventListener {
   private GlobalHookSettingsDao globalHookSettingsDao;
-  private HooksFactory hooksFactory;
   private HookInstaller hookInstaller;
 
   public BitbucketEventListener(
@@ -25,7 +24,6 @@ public class BitbucketEventListener {
       @ComponentImport HooksFactory hooksFactory,
       @ComponentImport HookInstaller hookInstaller) {
     this.hookInstaller = hookInstaller;
-    this.hooksFactory = hooksFactory;
     this.globalHookSettingsDao = globalHookSettingsDao;
   }
 

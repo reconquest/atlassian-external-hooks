@@ -262,7 +262,7 @@ public class HookInstaller {
 
   public boolean enable(RepositoryScope scope, ExternalHookScript script, GlobalHooks globalHooks) {
     GlobalHookSettings globalHook = globalHooks.getHook(script.getHookKey());
-    FilterPersonalRepositories filter = globalHook.getFilterPersonalRepositories();
+    FilterPersonalRepositories filter = FilterPersonalRepositories.fromId(globalHook.getFilterPersonalRepositories());
     if (filter == null) {
       filter = FilterPersonalRepositories.DISABLED;
     }
@@ -270,8 +270,8 @@ public class HookInstaller {
     boolean isPersonal = ((RepositoryScope) scope).getProject().getType() == ProjectType.PERSONAL;
 
     if (filter == FilterPersonalRepositories.DISABLED
-        || (filter == FilterPersonalRepositories.ONLY_PERSONAL && isPersonal)) {
-
+        || (filter == FilterPersonalRepositories.ONLY_PERSONAL && isPersonal) 
+        || (filter == FilterPersonalRepositories.EXCLUDE_PERSONAL && !isPersonal)) {
       Settings globalSettings = globalHooks.getSettings(script.getHookKey());
       if (globalSettings == null) {
         throw new RuntimeException("empty settings for " + script.getHookKey());

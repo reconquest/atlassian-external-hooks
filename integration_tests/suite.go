@@ -247,12 +247,11 @@ type HookOptions struct {
 
 func (suite *Suite) ConfigureHook(
 	hook *external_hooks.Hook,
-	settings *external_hooks.Settings,
+	settings external_hooks.Settings,
 	script []byte,
 	options HookOptions,
 ) *external_hooks.Hook {
-	path :=
-		filepath.Join("shared", "external-hooks", settings.Exe)
+	path := filepath.Join("shared", "external-hooks", settings.Exe())
 
 	log.Debugf(
 		karma.Describe("script", "\n"+string(script)),
@@ -269,70 +268,6 @@ func (suite *Suite) ConfigureHook(
 	suite.EnableHook(hook, options)
 
 	return hook
-}
-
-func (suite *Suite) ExternalHooks(opts ...interface{}) *external_hooks.Addon {
-	var user *stash.User
-
-	for _, opt := range opts {
-		switch opt := opt.(type) {
-		case *stash.User:
-			user = opt
-		}
-	}
-
-	return &external_hooks.Addon{
-		BitbucketURI: suite.Bitbucket().GetConnectorURI(user),
-	}
-}
-
-func (suite *Suite) CreateRandomProject() *stash.Project {
-	project, err := suite.Bitbucket().Projects().
-		Create(lojban.GetRandomID(6))
-	suite.NoError(err, "unable to create project")
-
-	return project
-}
-
-func (suite *Suite) CreateRandomRepository(
-	project *stash.Project,
-) *stash.Repository {
-	repository, err := suite.Bitbucket().Repositories(project.Key).
-		Create(lojban.GetRandomID(6))
-	suite.NoError(err, "unable to create repository")
-
-	return repository
-}
-
-func (suite *Suite) CreateRandomPullRequest(
-	project *stash.Project,
-	repository *stash.Repository,
-) *stash.PullRequest {
-	git := suite.GitClone(repository)
-
-	suite.GitCommitRandomFile(git)
-
-	_, err := git.Push()
-	suite.NoError(err, "unable to git push into master")
-
-	branch := suite.GitCreateRandomBranch(git)
-
-	suite.GitCommitRandomFile(git)
-
-	_, err = git.Push("origin", branch)
-	suite.NoErrorf(err, "unable to git push into branch %s", branch)
-
-	pullRequest, err := suite.Bitbucket().Repositories(project.Key).
-		PullRequests(repository.Slug).
-		Create(
-			"pr."+lojban.GetRandomID(8),
-			lojban.GetRandomID(20),
-			branch,
-			"master",
-		)
-	suite.NoError(err, "unable to create pull request")
-
-	return pullRequest
 }
 
 func (suite *Suite) ConfigureSampleHook_FailWithMessage(
@@ -371,11 +306,29 @@ func (suite *Suite) ConfigureSampleHook(
 	script string,
 	args ...string,
 ) *external_hooks.Hook {
-	settings := external_hooks.NewSettings().
+	settings := external_hooks.NewScopeSettings().
 		UseSafePath(true).
 		WithExe(`hook.` + lojban.GetRandomID(5)).
 		WithParams(args...)
 
+	return suite.ConfigureHook(
+		hook,
+		settings,
+		text(
+			`#!/bin/bash`,
+			script,
+		),
+		options,
+	)
+}
+
+func (suite *Suite) ConfigureSettingsHook(
+	hook *external_hooks.Hook,
+	settings external_hooks.Settings,
+	options HookOptions,
+	script string,
+	args ...string,
+) *external_hooks.Hook {
 	return suite.ConfigureHook(
 		hook,
 		settings,
@@ -462,7 +415,7 @@ func (suite *Suite) DisableHook(
 
 func (suite *Suite) WaitHookScriptsCreated() {
 	re := regexp.MustCompile(
-		`(?i)(ExternalHookScript|HooksFactory)\W+created.*hook\s*script`,
+		`(?i)(ExternalHookScript|HooksFactory)\W+(applied|created).*hook\s*script`,
 	)
 	waiter := suite.Bitbucket().WaitLogEntry(
 		func(line string) bool {
@@ -651,4 +604,68 @@ func joinHookScripts(scripts []HookScript) string {
 	}
 	sort.Strings(list)
 	return strings.Join(list, ", ")
+}
+
+func (suite *Suite) ExternalHooks(opts ...interface{}) *external_hooks.Addon {
+	var user *stash.User
+
+	for _, opt := range opts {
+		switch opt := opt.(type) {
+		case *stash.User:
+			user = opt
+		}
+	}
+
+	return &external_hooks.Addon{
+		BitbucketURI: suite.Bitbucket().GetConnectorURI(user),
+	}
+}
+
+func (suite *Suite) CreateRandomProject() *stash.Project {
+	project, err := suite.Bitbucket().Projects().
+		Create(lojban.GetRandomID(6))
+	suite.NoError(err, "unable to create project")
+
+	return project
+}
+
+func (suite *Suite) CreateRandomRepository(
+	project *stash.Project,
+) *stash.Repository {
+	repository, err := suite.Bitbucket().Repositories(project.Key).
+		Create(lojban.GetRandomID(6))
+	suite.NoError(err, "unable to create repository")
+
+	return repository
+}
+
+func (suite *Suite) CreateRandomPullRequest(
+	project *stash.Project,
+	repository *stash.Repository,
+) *stash.PullRequest {
+	git := suite.GitClone(repository)
+
+	suite.GitCommitRandomFile(git)
+
+	_, err := git.Push()
+	suite.NoError(err, "unable to git push into master")
+
+	branch := suite.GitCreateRandomBranch(git)
+
+	suite.GitCommitRandomFile(git)
+
+	_, err = git.Push("origin", branch)
+	suite.NoErrorf(err, "unable to git push into branch %s", branch)
+
+	pullRequest, err := suite.Bitbucket().Repositories(project.Key).
+		PullRequests(repository.Slug).
+		Create(
+			"pr."+lojban.GetRandomID(8),
+			lojban.GetRandomID(20),
+			branch,
+			"master",
+		)
+	suite.NoError(err, "unable to create pull request")
+
+	return pullRequest
 }

@@ -199,6 +199,7 @@ func main() {
 				"addon":     latestAddon,
 			},
 			suite.TestGlobalHooks,
+			suite.TestGlobalHooks_PersonalRepositoriesFilter,
 			suite.TestProjectHooks,
 			suite.TestRepositoryHooks,
 			suite.TestPersonalRepositoriesHooks,

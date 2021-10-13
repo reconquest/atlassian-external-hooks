@@ -3,8 +3,6 @@ package com.ngs.stash.externalhooks.rest;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.ngs.stash.externalhooks.FilterPersonalRepositories;
-
 @XmlRootElement
 public class GlobalHookSettingsSchema {
   @XmlElement(name = "safe_path")
@@ -23,5 +21,5 @@ public class GlobalHookSettingsSchema {
   public boolean enabled;
 
   @XmlElement(name = "filter_personal_repositories")
-  public FilterPersonalRepositories filterPersonalRepositories;
+  public int filterPersonalRepositories;
 }
