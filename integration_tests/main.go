@@ -99,6 +99,10 @@ func main() {
 		mode = ModeList
 	}
 
+	if !opts.FlagNoReproduce {
+		opts.FlagNoRandomize = true
+	}
+
 	suite := NewSuite(
 		baseBitbucket,
 		mode == ModeRun && !opts.FlagNoRandomize,

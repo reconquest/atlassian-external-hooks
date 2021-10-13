@@ -389,7 +389,7 @@ func (suite *Suite) DisableHook(
 	var waiter *bitbucket.LogEntryWaiter
 	if opt.WaitHookScripts {
 		re := regexp.MustCompile(
-			`ExternalHookScript\W+deleted .* hook script`,
+			`ExternalHookScript\W+(deleted|deleting) .* hook script`,
 		)
 
 		waiter = suite.Bitbucket().WaitLogEntry(func(line string) bool {
@@ -457,14 +457,25 @@ const (
 func (suite *Suite) InheritHook(
 	hook interface{ Inherit() error },
 	expectedState InheritHookExpectedState,
+	options ...HookOptions,
 ) {
+	var opt HookOptions
+	if len(options) == 0 {
+		opt = DefaultHookOptions
+	} else {
+		opt = options[0]
+	}
+
 	// XXX: only for BB>6.2.0
-	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		if strings.Contains(line, "ExternalHookScript") {
-			return strings.Contains(line, string(expectedState))
-		}
-		return false
-	})
+	var waiter *bitbucket.LogEntryWaiter
+	if opt.WaitHookScripts {
+		waiter = suite.Bitbucket().WaitLogEntry(func(line string) bool {
+			if strings.Contains(line, "ExternalHookScript") {
+				return strings.Contains(line, string(expectedState))
+			}
+			return false
+		})
+	}
 
 	err := hook.Inherit()
 	suite.NoError(err, "should be able to disable hook")
@@ -475,7 +486,9 @@ func (suite *Suite) InheritHook(
 		expectedState,
 	)
 
-	waiter.Wait(suite.FailNow, "hook scripts", "inherited")
+	if opt.WaitHookScripts {
+		waiter.Wait(suite.FailNow, "hook scripts", "inherited")
+	}
 }
 
 func (suite *Suite) getHookScripts() []HookScript {
@@ -502,10 +515,10 @@ func (suite *Suite) getHookScripts() []HookScript {
 			}
 		}
 
-		suite.NotEmpty(
-			tag,
-			"should be able to find the tag of hook script",
-		)
+		// this can happen if we are reproducing a bug
+		if tag == "" {
+			tag = "legacy-" + filepath.Base(file.Name)
+		}
 
 		scripts = append(scripts, HookScript{
 			ID:  file.Name,

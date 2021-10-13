@@ -39,7 +39,10 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 
 	Assert_PushRejected(suite, repository, `XXX`)
 
-	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
+	suite.DisableHook(
+		context.OnRepository(repository.Slug).PreReceive(),
+		HookOptions{WaitHookScripts: false},
+	)
 
 	Assert_PushRejected(suite, repository, `XXX`)
 }
@@ -206,7 +209,7 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 		`XXX_REPOSITORY_XXX`,
 	)
 
-	suite.DisableHook(projectPreReceive)
+	suite.DisableHook(projectPreReceive, HookOptions{WaitHookScripts: false})
 	suite.DisableHook(repositoryPreReceive)
 
 	suite.DetectHookScriptsLeak()
@@ -313,7 +316,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
 	suite.DisableHook(preReceiveProject)
-	suite.DisableHook(preReceiveRepository)
+	suite.DisableHook(preReceiveRepository, HookOptions{WaitHookScripts: false})
 }
 
 func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
@@ -432,6 +435,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 	suite.InheritHook(
 		preReceiveRepository,
 		InheritHookExpectedStateEnabledProject,
+		HookOptions{WaitHookScripts: false},
 	)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
