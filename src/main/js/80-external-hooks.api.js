@@ -25,7 +25,7 @@ var API = function (baseURL) {
         },
 
         globalHook: function(kind) {
-            return this.root() + '/global-hooks/' + kind;
+            return this.root() + 'global-hooks/' + kind;
         }
     });
 
