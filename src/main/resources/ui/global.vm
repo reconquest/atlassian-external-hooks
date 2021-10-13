@@ -33,28 +33,6 @@
         <form class="aui rq_hooks_global_form" id="rq_hooks_global_hooks_form">
             <h2>External Hooks: Global Hooks</h2>
 
-            <div class="aui-message aui-message-info">
-                <p class="title">
-                <fieldset class="group" disabled="true">
-                    <legend><span>Personal repos</span></legend>
-                    <div class="radio">
-                        <input class="radio" type="radio" checked="checked"
-                               name="hooks-personal" id="hooks-personal-disable">
-                        <label for="radioButtonOne">Disable global hooks</label>
-                    </div>
-                    <div class="radio">
-                        <input class="radio" type="radio"
-                               name="hooks-personal" id="hooks-personal-enable">
-                        <label for="radioButtonTwo">Enable global hooks</label>
-                    </div>
-                    <div class="radio">
-                        <input class="radio" type="radio"
-                               name="hooks-personal" id="hooks-personal-only">
-                        <label for="radioButtonThree">Use global hooks <strong>only</strong> for personal repos</label>
-                    </div>
-                </fieldset>
-                </p>
-            </div>
 
             <div class="aui-tabs horizontal-tabs">
                 <ul class="tabs-menu">
@@ -105,7 +83,6 @@
                                     <li>Bitbucket DataCenter: &lt;bitbucket-home-dir&gt;/shared/external-hooks/
                                 </ul>
                                 </p>
-                                <p>Non-Safe Mode is available only for Bitbucket Administrator.</p>
                             </div>
                         </fieldset>
 
@@ -125,14 +102,39 @@
                         <fieldset class="group">
                             <legend><span>Asynchronous</span></legend>
                             <div class="checkbox">
-                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.async" id="hooks.${tab.id}.async" disabled="true">
-                                <label for="checkBoxOne">Start the executable asynchronously</label>
+                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.async" id="hooks-${tab.id}-async" disabled="true">
+                                <label for="hooks-${tab.id}-async">Start the executable asynchronously</label>
                             </div>
                             <div class="description">
                                 The hook will not delay push process and the user will not receive any output from the hook.
                             </div>
                         </fieldset>
                         #end
+
+                        <fieldset class="group">
+                            <legend><span>Personal repos</span></legend>
+                            <div class="radio">
+                                <input class="radio" type="radio"
+                                       name="hooks.${tab.id}.filter_personal_repositories"
+                                       id="hooks-${tab.id}-filter_personal_repositories-enable"
+                                       value="0">
+                                <label for="hooks-${tab.id}-filter_personal_repositories-enable">Enable global hook</label>
+                            </div>
+                            <div class="radio">
+                                <input class="radio" type="radio" checked="checked"
+                                       name="hooks.${tab.id}.filter_personal_repositories"
+                                       id="hooks-${tab.id}-filter_personal_repositories-disable"
+                                       value="2">
+                                <label for="hooks-${tab.id}-filter_personal_repositories-disable">Disable global hook</label>
+                            </div>
+                            <div class="radio">
+                                <input class="radio" type="radio"
+                                       name="hooks.${tab.id}.filter_personal_repositories"
+                                       id="hooks-${tab.id}-filter_personal_repositories-only"
+                                       value="1">
+                                <label for="hooks-${tab.id}-filter_personal_repositories-only">Use global hook <strong>only</strong> for personal repos</label>
+                            </div>
+                        </fieldset>
                     </div>
                 </div>
                 #end
@@ -147,11 +149,11 @@
                         name="apply-existing"
                         id="rq_hooks_apply"
                         />
-                    <label for="rq_hooks_apply">Apply to existing hooks</label>
+                    <label for="rq_hooks_apply">Apply to existing repositories</label>
                 </span>
                 </p>
 
-                <p>Settings will apply only to newly configured hooks if this checkbox is not set.</p>
+                <p>Settings will apply only to newly created repositories if this checkbox is not set.</p>
             </div>
 
             <button class="aui-button aui-button-primary" id="rq_hooks_global_save">Save</button>

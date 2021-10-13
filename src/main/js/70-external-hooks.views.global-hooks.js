@@ -133,9 +133,13 @@ var ViewGlobalHooks = function (context, api) {
         tab.tab.toggleClass('rq-tab-ok', settings.enabled);
 
         $.each(settings, function (k, v) {
-            var $input = tab.pane.find('#hooks-' + tab.id + '-' + k);
+            var $input = tab.pane.find('[name="hooks.' + tab.id + '.' + k + '"]');
             if ($input.is('[type="checkbox"]')) {
                 $input.attr('checked', v).trigger('change');
+            } else if ($input.is('[type="radio"]')) {
+              $input.filter('[value="' + v + '"]').
+                attr('checked', v).
+                trigger('change');
             } else {
                 $input.val(v);
             }
@@ -188,9 +192,19 @@ var ViewGlobalHooks = function (context, api) {
                         hooks[kind] = {}
                     }
 
-                    hooks[kind][matches[2]] = $(this).is('[type="checkbox"]')
-                        ? !!$(this).attr('checked')
-                        : $(this).val();
+                  var value;
+
+                  if ($(this).is('[type="checkbox"]')) {
+                    value = !!$(this).attr('checked');
+                  } else if ($(this).is('[type="radio"]')) {
+                    value = $(this).filter(':checked').val();
+                  } else {
+                    value = $(this).val();
+                  }
+
+                  if (value !== undefined) {
+                    hooks[kind][matches[2]] = value;
+                  }
                 }
             );
 
