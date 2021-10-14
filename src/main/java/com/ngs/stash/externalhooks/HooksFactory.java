@@ -80,13 +80,13 @@ public class HooksFactory {
 
       if (scope.getType() == ScopeType.REPOSITORY) {
         try {
-          if (globalHooks.isEnabled(hookKey)) {
+          if (globalHooks.isEnabled(hookKey) && globalHooks.isEligible(hookKey, (RepositoryScope)scope)) {
             if (hookInstaller.enable(scope, hookKey, globalHooks)) {
               created++;
             }
           } else {
             hookInstaller.disable(scope, hookKey, new GlobalScope());
-              deleted++;
+            deleted++;
           }
         } catch (Exception e) {
           e.printStackTrace();
@@ -96,6 +96,10 @@ public class HooksFactory {
       }
     }
 
-    log.info("Applied hook scripts on scope {}: created={} deleted={}", ScopeUtil.toString(scope), created, deleted);
+    log.info(
+        "Applied hook scripts on scope {}: created={} deleted={}",
+        ScopeUtil.toString(scope),
+        created,
+        deleted);
   }
 }

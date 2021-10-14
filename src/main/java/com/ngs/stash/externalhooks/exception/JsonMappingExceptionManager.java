@@ -16,8 +16,10 @@ public class JsonMappingExceptionManager implements ExceptionMapper<JsonMappingE
     exception.printStackTrace();
     return Response.status(Response.Status.BAD_REQUEST)
         .entity("This is an invalid request. The field '"
-            + exception.getPath().stream().map((x) -> x.getFieldName()).collect(Collectors.joining("."))
-            + "' is not recognized by the system: "+exception.getMessage())
+            + exception.getPath().stream()
+                .map((x) -> x.getFieldName())
+                .collect(Collectors.joining("."))
+            + "' is not recognized by the system: " + exception.getMessage())
         .type(MediaType.TEXT_PLAIN)
         .build();
   }

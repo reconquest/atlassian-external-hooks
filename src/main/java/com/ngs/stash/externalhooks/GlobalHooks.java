@@ -2,6 +2,8 @@ package com.ngs.stash.externalhooks;
 
 import java.util.List;
 
+import com.atlassian.bitbucket.project.ProjectType;
+import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsBuilder;
 import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
@@ -36,6 +38,25 @@ public class GlobalHooks {
 
     if (hookKey.equals(Const.PLUGIN_KEY + ":" + Const.MERGE_CHECK_HOOK_ID)) {
       return this.isMergeCheckEnabled();
+    }
+
+    return false;
+  }
+
+  public boolean isEligible(String hookKey, RepositoryScope scope) {
+    GlobalHookSettings globalHook = this.getHook(hookKey);
+    FilterPersonalRepositories filter =
+        FilterPersonalRepositories.fromId(globalHook.getFilterPersonalRepositories());
+    if (filter == null) {
+      filter = FilterPersonalRepositories.DISABLED;
+    }
+
+    boolean isPersonal = scope.getProject().getType() == ProjectType.PERSONAL;
+
+    if (filter == FilterPersonalRepositories.DISABLED
+        || (filter == FilterPersonalRepositories.ONLY_PERSONAL && isPersonal)
+        || (filter == FilterPersonalRepositories.EXCLUDE_PERSONAL && !isPersonal)) {
+      return true;
     }
 
     return false;

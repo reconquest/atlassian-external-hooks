@@ -32,7 +32,6 @@ import com.atlassian.bitbucket.user.UserService;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.atlassian.upm.api.license.PluginLicenseManager;
-import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
 import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
@@ -261,27 +260,16 @@ public class HookInstaller {
   }
 
   public boolean enable(RepositoryScope scope, ExternalHookScript script, GlobalHooks globalHooks) {
-    GlobalHookSettings globalHook = globalHooks.getHook(script.getHookKey());
-    FilterPersonalRepositories filter = FilterPersonalRepositories.fromId(globalHook.getFilterPersonalRepositories());
-    if (filter == null) {
-      filter = FilterPersonalRepositories.DISABLED;
+    if (!globalHooks.isEligible(script.getHookKey(), scope)) {
+      return false;
     }
 
-    boolean isPersonal = ((RepositoryScope) scope).getProject().getType() == ProjectType.PERSONAL;
-
-    if (filter == FilterPersonalRepositories.DISABLED
-        || (filter == FilterPersonalRepositories.ONLY_PERSONAL && isPersonal) 
-        || (filter == FilterPersonalRepositories.EXCLUDE_PERSONAL && !isPersonal)) {
-      Settings globalSettings = globalHooks.getSettings(script.getHookKey());
-      if (globalSettings == null) {
-        throw new RuntimeException("empty settings for " + script.getHookKey());
-      }
-
-      script.install(globalSettings, new GlobalScope(), scope);
-      return true;
+    Settings globalSettings = globalHooks.getSettings(script.getHookKey());
+    if (globalSettings == null) {
+      throw new RuntimeException("empty settings for " + script.getHookKey());
     }
-
-    return false;
+    script.install(globalSettings, new GlobalScope(), scope);
+    return true;
   }
 
   public void disable(ProjectScope _projetScope, ExternalHookScript _script, GlobalScope _hooks) {

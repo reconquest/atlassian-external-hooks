@@ -19,6 +19,8 @@ func (suite *Suite) TestGlobalHooks_PersonalRepositoriesFilter(
 
 	log := log.NewChildWithPrefix("{test: global hooks/personal repositories}")
 
+	suite.testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(log, context)
+
 	suite.testGlobalHooks_PersonalRepositoriesFilter_Settings(
 		log,
 		context,
@@ -110,6 +112,64 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_Settings(
 		userRepositoryAfter,
 		repositoryBefore,
 		repositoryAfter,
+	)
+
+	suite.DisableHook(hook, HookOptions{WaitHookScripts: true})
+}
+
+func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(
+	log *cog.Logger,
+	context *external_hooks.Context,
+) {
+	userProject := &stash.Project{
+		Key: "~admin",
+	}
+	userRepository := suite.CreateRandomRepository(userProject)
+
+	hook := suite.ConfigureSettingsHook(
+		context.PreReceive(),
+		external_hooks.NewGlobalSettings().
+			WithFilterPersonalRepositories(external_hooks.FILTER_PERSONAL_REPOSITORIES_DISABLED).
+			UseSafePath(true).
+			WithExe(`hook.`+lojban.GetRandomID(5)),
+		HookOptions{
+			WaitHookScripts: true,
+		},
+		`echo XXX_DISABLED; exit 1`,
+	)
+
+	Assert_PushRejected(suite, userRepository, "XXX_DISABLED")
+
+	hook = suite.ConfigureSettingsHook(
+		context.PreReceive(),
+		external_hooks.NewGlobalSettings().
+			WithFilterPersonalRepositories(external_hooks.FILTER_PERSONAL_REPOSITORIES_ONLY_PERSONAL).
+			UseSafePath(true).
+			WithExe(`hook.`+lojban.GetRandomID(5)),
+		HookOptions{
+			WaitHookScripts: true,
+		},
+		`echo XXX_ONLY_PERSONAL; exit 1`,
+	)
+
+	Assert_PushRejected(suite, userRepository, "XXX_ONLY_PERSONAL")
+
+	hook = suite.ConfigureSettingsHook(
+		context.PreReceive(),
+		external_hooks.NewGlobalSettings().
+			WithFilterPersonalRepositories(external_hooks.FILTER_PERSONAL_REPOSITORIES_EXCLUDE_PERSONAL).
+			UseSafePath(true).
+			WithExe(`hook.`+lojban.GetRandomID(5)),
+		HookOptions{
+			WaitHookScripts: true,
+		},
+		`echo XXX_EXCLUDE_PERSONAL; exit 1`,
+	)
+
+	Assert_PushDoesNotOutputMessages(
+		suite,
+		userRepository,
+		"XXX_EXCLUDE_PERSONAL",
 	)
 
 	suite.DisableHook(hook, HookOptions{WaitHookScripts: true})
