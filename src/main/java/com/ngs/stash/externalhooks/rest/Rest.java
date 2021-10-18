@@ -210,6 +210,10 @@ public class Rest implements JobRunner {
   @Consumes({MediaType.APPLICATION_JSON})
   public Response putGlobalHookSettings(
       @PathParam("hookKey") String hookKey, GlobalHookSettingsSchema schema) {
+    if (!isSystemAdmin()) {
+      return Response.status(401).build();
+    }
+
     if (!hookKey.startsWith(Const.PLUGIN_KEY)) {
       return Response.status(404).build();
     }
@@ -264,6 +268,10 @@ public class Rest implements JobRunner {
   @Produces({MediaType.APPLICATION_JSON})
   @Consumes({MediaType.APPLICATION_JSON})
   public Response getGlobalHookSettings(@PathParam("hookKey") String hookKey) {
+    if (!isSystemAdmin()) {
+      return Response.status(401).build();
+    }
+
     GlobalHookSettings settings = this.globalHookSettingsDao.get(hookKey);
     GlobalHookSettingsSchema schema = new GlobalHookSettingsSchema();
     if (settings == null) {
