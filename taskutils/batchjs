@@ -2,12 +2,12 @@
 
 sources   = "./src/main/js"
 resources = "./src/main/resources/js/"
-target    = "batch.js";
+target    = "batch.js"
 
 import os
 import os.path
 
-chunks = [];
+chunks = []
 for dirpath, dirnames, filenames in os.walk(sources):
     for filename in sorted(filenames):
         if filename == target or filename.endswith(".loader.js"):

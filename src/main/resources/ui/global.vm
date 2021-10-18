@@ -48,14 +48,10 @@
                 </ul>
                 #foreach($tab in $tabs)
                 <div class="tabs-pane#if($tab.id == 'pre-receive') active-pane#end" id="hooks-${tab.id}" data-rq-hook-kind="${tab.kind}">
-                    <fieldset class="group">
-                        <legend><label for="hooks-${tab.id}-enabled">Enabled</label></legend>
-                        <div class="checkbox">
-                            <input class="checkbox" type="checkbox" name="hooks.${tab.id}.enabled" id="hooks-${tab.id}-enabled"
-                                disabled="true"/>
-                            <label for="hooks-${tab.id}-enabled"></label>
-                        </div>
-                    </fieldset>
+                    <div class="field-group">
+                        <aui-label for="hooks-${tab.id}-enabled">Enable global hook</aui-label>
+                        <aui-toggle id="hooks.${tab.id}.enabled" name="hooks.${tab.id}.enabled" label="Enable global hook"></aui-toggle>
+                    </div>
 
                     <div class="rq-global-hook-settings rq-hook-disabled">
                         <div class="field-group">

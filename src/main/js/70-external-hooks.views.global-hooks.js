@@ -13,7 +13,6 @@ var ViewGlobalHooks = function (context, api) {
 
         this._$.find('[data-rq-hook-kind]').each(function () {
             var $pane = $(this);
-            var kind = $pane.attr('data-rq-hook-kind');
 
             $pane.find('[name$=".enabled"]').change(function () {
                 $pane.find('.rq-global-hook-settings').
