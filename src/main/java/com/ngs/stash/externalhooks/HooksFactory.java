@@ -4,9 +4,11 @@ import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSearchRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
 import com.atlassian.bitbucket.hook.script.HookScript;
+import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
+import com.atlassian.bitbucket.scope.ScopeType;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageRequestImpl;
@@ -19,13 +21,13 @@ import org.slf4j.LoggerFactory;
 public class HooksFactory {
   private static Logger log = LoggerFactory.getLogger(HooksFactory.class);
   private RepositoryHookService repositoryHookService;
-  private HooksCoordinator hooksCoordinator;
+  private HookInstaller hookInstaller;
 
   public HooksFactory(
       @ComponentImport RepositoryHookService repositoryHookService,
-      @ComponentImport HooksCoordinator hooksCoordinator) {
+      @ComponentImport HookInstaller hookInstaller) {
     this.repositoryHookService = repositoryHookService;
-    this.hooksCoordinator = hooksCoordinator;
+    this.hookInstaller = hookInstaller;
   }
 
   /**
@@ -34,8 +36,8 @@ public class HooksFactory {
    *
    * @param scope
    */
-  public void install(Scope scope) {
-    log.debug("creating hook scripts on {}", ScopeUtil.toString(scope));
+  public void apply(Scope scope, GlobalHooks globalHooks) {
+    log.debug("Applying hook scripts on {}", ScopeUtil.toString(scope));
 
     RepositoryHookSearchRequest.Builder searchBuilder =
         new RepositoryHookSearchRequest.Builder(scope);
@@ -44,35 +46,60 @@ public class HooksFactory {
         searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
 
     Integer created = 0;
+    Integer deleted = 0;
     for (RepositoryHook hook : page.getValues()) {
       String hookKey = hook.getDetails().getKey();
       if (!hookKey.startsWith(Const.PLUGIN_KEY)) {
         continue;
       }
 
+      boolean scopeSkip = false;
       if (!hook.isEnabled() || !hook.isConfigured()) {
-        continue;
-      }
-
-      if (ScopeUtil.isInheritedEnabled(hook, scope)) {
+        scopeSkip = true;
+      } else if (ScopeUtil.isInheritedEnabled(hook, scope)) {
+        // if this is a repository and we have a project's hook but don't have
+        // if we don't have a global hook
         log.info(
-            "hook {} is enabled & configured (inherited of {})",
+            "skip: hook {} is enabled & configured (inherited of {})",
             hookKey,
             ScopeUtil.toString(hook.getScope()));
-        continue;
+        scopeSkip = true;
       }
 
-      try {
-        hooksCoordinator.enable(scope, hookKey);
+      if (!scopeSkip) {
+        try {
+          hookInstaller.enable(scope, hookKey);
 
-        created++;
-      } catch (Exception e) {
-        e.printStackTrace();
+          created++;
+        } catch (Exception e) {
+          e.printStackTrace();
 
-        log.error("Unable to install hook script {}: {}", hookKey, e.toString());
+          log.error("Unable to install hook script {}: {}", hookKey, e.toString());
+        }
+      }
+
+      if (scope.getType() == ScopeType.REPOSITORY) {
+        try {
+          if (globalHooks.isEnabled(hookKey) && globalHooks.isEligible(hookKey, (RepositoryScope)scope)) {
+            if (hookInstaller.enable(scope, hookKey, globalHooks)) {
+              created++;
+            }
+          } else {
+            hookInstaller.disable(scope, hookKey, new GlobalScope());
+            deleted++;
+          }
+        } catch (Exception e) {
+          e.printStackTrace();
+
+          log.error("Unable to apply global hook script {}: {}", hookKey, e.toString());
+        }
       }
     }
 
-    log.info("created {} hook scripts on scope {}", created, ScopeUtil.toString(scope));
+    log.info(
+        "Applied hook scripts on scope {}: created={} deleted={}",
+        ScopeUtil.toString(scope),
+        created,
+        deleted);
   }
 }

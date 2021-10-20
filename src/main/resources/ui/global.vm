@@ -1,0 +1,158 @@
+#set(
+    $tabs = [
+        {
+            'tab': 'Pre Receive',
+            'id': 'pre-receive',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook',
+            'async': false
+        },
+        {
+            'tab': 'Post Receive',
+            'id': 'post-receive',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-post-receive-hook',
+            'async': true
+        },
+        {
+            'tab': 'Merge Check',
+            'id': 'merge-check',
+            'kind': 'com.ngs.stash.externalhooks.external-hooks:external-merge-check-hook',
+            'async': false
+        }
+    ]
+)
+#disable_html_escaping()
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="decorator" content="atl.admin">
+        <meta name="activeTab" content="rq-hooks-admin-section-global" />
+        $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
+    </head>
+
+    <body>
+        <form class="aui rq_hooks_global_form" id="rq_hooks_global_hooks_form">
+            <h2>External Hooks: Global Hooks</h2>
+
+
+            <div class="aui-tabs horizontal-tabs">
+                <ul class="tabs-menu">
+                #foreach($tab in $tabs)
+                    <li class="rq-tab menu-item#if($tab.id == 'pre-receive') active-tab#end" id="hooks-${tab.id}-tab">
+                        <a href="#hooks-$tab.id">
+                            $tab.tab
+                            <span class="aui-icon aui-icon-small aui-iconfont-check rq-icon-ok">OK</span>
+                            <span class="aui-icon aui-icon-small aui-iconfont-error rq-icon-error">Error</span>
+                        </a>
+                    </li>
+                #end
+                </ul>
+                #foreach($tab in $tabs)
+                <div class="tabs-pane#if($tab.id == 'pre-receive') active-pane#end" id="hooks-${tab.id}" data-rq-hook-kind="${tab.kind}">
+                    <div class="field-group">
+                        <aui-label for="hooks-${tab.id}-enabled">Enable global hook</aui-label>
+                        <aui-toggle id="hooks.${tab.id}.enabled" name="hooks.${tab.id}.enabled" label="Enable global hook"></aui-toggle>
+                    </div>
+
+                    <div class="rq-global-hook-settings rq-hook-disabled">
+                        <div class="field-group">
+                            <label for="hooks-${tab.id}-exe">Executable
+                                <span class="aui-icon icon-required">(required)</span></label>
+                            <input class="text medium-field" type="text"
+                                   id="hooks-${tab.id}-exe" name="hooks.${tab.id}.exe"
+                                   disabled="true">
+                            <div class="description">The path to an executable to run.</div>
+                            <div class="error rq-hook-field-error" id="hooks-${tab.id}-exe-error"></div>
+                        </div>
+
+                        <fieldset class="group">
+                            <legend><label for="hooks-${tab.id}-safe_path">Safe mode</label></legend>
+                            <div class="checkbox">
+                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.safe_path" id="hooks-${tab.id}-safe_path"
+                                    disabled="true"/>
+                                <label for="hooks-${tab.id}-safe_path">Look for hooks only in the safe dir</label>
+                            </div>
+                            <div class="description">
+                                <p>
+                                If Safe Mode is set, the path to an executable must be specified relative to:<br/>
+                                <ul>
+                                    <li>Bitbucket Server: &lt;bitbucket-home-dir&gt;/external-hooks/
+                                    <li>Bitbucket DataCenter: &lt;bitbucket-home-dir&gt;/shared/external-hooks/
+                                </ul>
+                                </p>
+                            </div>
+                        </fieldset>
+
+                        <div class="field-group">
+                            <label for="${tab.id}-params">Positional parameters</label>
+                            <textarea class="textarea" name="hooks.${tab.id}.params" id="${tab.id}-params" rows="10"
+                                disabled="true"></textarea>
+
+                            <div class="description">
+                                Learn more about these fields in <a href="https://external-hooks.reconquest.io/docs/how_to_configure_external_hooks/" target="_blank">the official documentation</a>.
+                            </div>
+
+                            <div class="error" id="hooks-${tab.id}-params-error"></div>
+                        </div>
+
+                        #if($tab.async)
+                        <fieldset class="group">
+                            <legend><span>Asynchronous</span></legend>
+                            <div class="checkbox">
+                                <input class="checkbox" type="checkbox" name="hooks.${tab.id}.async" id="hooks-${tab.id}-async" disabled="true">
+                                <label for="hooks-${tab.id}-async">Start the executable asynchronously</label>
+                            </div>
+                            <div class="description">
+                                The hook will not delay push process and the user will not receive any output from the hook.
+                            </div>
+                        </fieldset>
+                        #end
+
+                        <fieldset class="group">
+                            <legend><span>Personal repos</span></legend>
+                            <div class="radio">
+                                <input class="radio" type="radio"
+                                       name="hooks.${tab.id}.filter_personal_repositories"
+                                       id="hooks-${tab.id}-filter_personal_repositories-enable"
+                                       value="0">
+                                <label for="hooks-${tab.id}-filter_personal_repositories-enable">Enable global hook</label>
+                            </div>
+                            <div class="radio">
+                                <input class="radio" type="radio" checked="checked"
+                                       name="hooks.${tab.id}.filter_personal_repositories"
+                                       id="hooks-${tab.id}-filter_personal_repositories-disable"
+                                       value="2">
+                                <label for="hooks-${tab.id}-filter_personal_repositories-disable">Disable global hook</label>
+                            </div>
+                            <div class="radio">
+                                <input class="radio" type="radio"
+                                       name="hooks.${tab.id}.filter_personal_repositories"
+                                       id="hooks-${tab.id}-filter_personal_repositories-only"
+                                       value="1">
+                                <label for="hooks-${tab.id}-filter_personal_repositories-only">Use global hook <strong>only</strong> for personal repos</label>
+                            </div>
+                        </fieldset>
+                    </div>
+                </div>
+                #end
+            </div>
+
+            <div class="aui-message aui-message-warning">
+                <p class="title">
+                <span class="checkbox">
+                    <input
+                        class="checkbox"
+                        type="checkbox"
+                        name="apply-existing"
+                        id="rq_hooks_apply"
+                        />
+                    <label for="rq_hooks_apply">Apply to existing repositories</label>
+                </span>
+                </p>
+
+                <p>Settings will apply only to newly created repositories if this checkbox is not set.</p>
+            </div>
+
+            <button class="aui-button aui-button-primary" id="rq_hooks_global_save">Save</button>
+        </form>
+    </body>
+</html>

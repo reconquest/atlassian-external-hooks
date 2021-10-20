@@ -33,6 +33,7 @@ import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.RunMode;
 import com.atlassian.scheduler.config.Schedule;
 import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao;
 import com.ngs.stash.externalhooks.util.Walker;
 
 import org.slf4j.Logger;
@@ -49,7 +50,12 @@ public class ExternalHooksService implements JobRunner {
   private Walker walker;
   private HooksFactory hooksFactory;
   private ClusterService clusterService;
-  private HookScriptService hookScriptService;
+  private GlobalHookSettingsDao globalHookSettingsDao;
+
+  // We force ExternalHooksService to join to BitbucketEventListener because
+  // otherwise class BitbucketEventListener is not initialized
+  @SuppressWarnings("unused")
+  private BitbucketEventListener bitbucketEventListener;
 
   @Inject
   public ExternalHooksService(
@@ -65,20 +71,21 @@ public class ExternalHooksService implements JobRunner {
       @ComponentImport("permissions") PermissionService permissionService,
       @ComponentImport PluginLicenseManager pluginLicenseManager,
       @ComponentImport ClusterService clusterService,
+      @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
       @ComponentImport StorageService storageService)
       throws IOException {
-    this.hookScriptService = hookScriptService;
+    this.globalHookSettingsDao = globalHookSettingsDao;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
     this.clusterService = clusterService;
 
-    this.walker = new Walker(securityService, userService, projectService, repositoryService);
+    this.walker = new Walker(userService, projectService, repositoryService);
 
     // Unfortunately, no way to @ComponentImport it because Named() used here.
     // Consider it to replace with lifecycle aware listener.
     this.hooksFactory = new HooksFactory(
         repositoryHookService,
-        new HooksCoordinator(
+        new HookInstaller(
             userService,
             projectService,
             repositoryService,
@@ -146,15 +153,17 @@ public class ExternalHooksService implements JobRunner {
   }
 
   private void enableHookScripts() {
+    GlobalHooks globalHooks = new GlobalHooks(globalHookSettingsDao.find());
+
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
-        hooksFactory.install(new ProjectScope(project));
+        hooksFactory.apply(new ProjectScope(project), globalHooks);
       }
 
       @Override
       public void onRepository(Repository repository) {
-        hooksFactory.install(new RepositoryScope(repository));
+        hooksFactory.apply(new RepositoryScope(repository), globalHooks);
       }
     });
 

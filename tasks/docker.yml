@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 
 vars:
   version: 6.2.0

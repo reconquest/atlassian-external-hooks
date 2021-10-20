@@ -1,0 +1,21 @@
+#!/bin/bash
+
+exe="$1"
+shift
+
+params=""
+while [[ "$1" ]]; do
+    if [[ "$params" == "" ]]; then
+        params="$1"
+    else
+        params="$params"$'\n'"$1"
+    fi
+    shift
+done
+
+http --auth admin:admin PUT \
+   https://bitbucket.local/rest/external-hooks/1.0/global-hooks/com.ngs.stash.externalhooks.external-hooks:external-pre-receive-hook \
+   Content-Type:application/json \
+   <<< "{\"enabled\":true, \"exe\":\"$exe\", \"params\": \"${params}\"}"
+
+$(dirname $0)/factory-apply

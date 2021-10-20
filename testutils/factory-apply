@@ -1,0 +1,21 @@
+#!/bin/bash
+
+reply=$(http --auth admin:admin POST \
+    https://bitbucket.local/rest/external-hooks/1.0/factory/hooks)
+
+id=$(jq .id <<< "$reply")
+
+while :; do
+    reply=$(http --auth admin:admin GET \
+        https://bitbucket.local/rest/external-hooks/1.0/factory/state/$id)
+
+    echo "$reply"
+
+    finished=$(jq -r .finished <<< "$reply")
+    if [[ "$finished" != "true" ]]; then
+        sleep 0.05
+        continue
+    fi
+
+    break
+done

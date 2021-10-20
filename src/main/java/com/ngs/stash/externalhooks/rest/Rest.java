@@ -17,15 +17,22 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
+import com.atlassian.bitbucket.auth.AuthenticationContext;
+import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
+import com.atlassian.bitbucket.hook.script.HookScriptService;
 import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
 import com.atlassian.bitbucket.project.Project;
 import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.repository.RepositoryService;
+import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
+import com.atlassian.bitbucket.server.StorageService;
+import com.atlassian.bitbucket.setting.Settings;
+import com.atlassian.bitbucket.setting.SettingsBuilder;
 import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.bitbucket.user.UserService;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
@@ -40,12 +47,20 @@ import com.atlassian.scheduler.config.JobId;
 import com.atlassian.scheduler.config.JobRunnerKey;
 import com.atlassian.scheduler.config.RunMode;
 import com.atlassian.scheduler.config.Schedule;
+import com.atlassian.upm.api.license.PluginLicenseManager;
+import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.ExternalHooksSettings;
-import com.ngs.stash.externalhooks.HooksCoordinator;
+import com.ngs.stash.externalhooks.GlobalHooks;
+import com.ngs.stash.externalhooks.HookInstaller;
 import com.ngs.stash.externalhooks.HooksFactory;
+import com.ngs.stash.externalhooks.SimpleSettingsBuilder;
+import com.ngs.stash.externalhooks.SimpleSettingsValidationErrors;
 import com.ngs.stash.externalhooks.ao.FactoryState;
+import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
 import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.dao.FactoryStateDao;
+import com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao;
+import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.Walker;
 
 import org.slf4j.Logger;
@@ -63,12 +78,16 @@ public class Rest implements JobRunner {
 
   private FactoryStateDao factoryStateDao;
   private ExternalHooksSettingsDao settingsDao;
-  private HooksFactory hooksFactory;
   private Walker walker;
+  private GlobalHookSettingsDao globalHookSettingsDao;
+  // private RepositoryHookService repositoryHookService;
+  private HookInstaller hookInstaller;
+  private HooksFactory hooksFactory;
 
   public Rest(
-      @ComponentImport HooksFactory hooksFactory,
-      @ComponentImport HooksCoordinator hooksCoordinator,
+      @ComponentImport AuthenticationContext authenticationContext,
+      @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
+      @ComponentImport HookInstaller hookInstaller,
       @ComponentImport UserService userService,
       @ComponentImport ActiveObjects ao,
       @ComponentImport RepositoryService repositoryService,
@@ -76,19 +95,43 @@ public class Rest implements JobRunner {
       @ComponentImport RepositoryHookService repositoryHookService,
       @ComponentImport ProjectService projectService,
       @ComponentImport PluginSettingsFactory pluginSettingsFactory,
+      @ComponentImport HookScriptService hookScriptService,
+      @ComponentImport PluginLicenseManager pluginLicenseManager,
+      @ComponentImport ClusterService clusterService,
       @ComponentImport SecurityService securityService,
-      @ComponentImport("permissions") PermissionService permissionService)
+      @ComponentImport("permissions") PermissionService permissionService,
+      @ComponentImport StorageService storageService)
       throws IOException {
-    this.hooksFactory = hooksFactory;
+    this.globalHookSettingsDao = globalHookSettingsDao;
     this.permissionService = permissionService;
     this.schedulerService = schedulerService;
     this.securityService = securityService;
+    // this.repositoryHookService = repositoryHookService;
+    this.hookInstaller = hookInstaller;
+    //
+    // Unfortunately, no way to @ComponentImport it because Named() used here.
+    // Consider it to replace with lifecycle aware listener.
+    this.hooksFactory = new HooksFactory(
+        repositoryHookService,
+        new HookInstaller(
+            userService,
+            projectService,
+            repositoryService,
+            repositoryHookService,
+            authenticationContext,
+            permissionService,
+            pluginLicenseManager,
+            clusterService,
+            storageService,
+            hookScriptService,
+            pluginSettingsFactory,
+            securityService));
 
     this.settingsDao = new ExternalHooksSettingsDao(pluginSettingsFactory);
 
     this.factoryStateDao = new FactoryStateDao(ao);
 
-    this.walker = new Walker(securityService, userService, projectService, repositoryService);
+    this.walker = new Walker(userService, projectService, repositoryService);
   }
 
   private boolean isSystemAdmin() {
@@ -161,6 +204,88 @@ public class Rest implements JobRunner {
     return Response.ok(new FactoryStateResponse(state.getID())).build();
   }
 
+  @PUT
+  @Path("/global-hooks/{hookKey}")
+  @Produces({MediaType.APPLICATION_JSON})
+  @Consumes({MediaType.APPLICATION_JSON})
+  public Response putGlobalHookSettings(
+      @PathParam("hookKey") String hookKey, GlobalHookSettingsSchema schema) {
+    if (!isSystemAdmin()) {
+      return Response.status(401).build();
+    }
+
+    if (!hookKey.startsWith(Const.PLUGIN_KEY)) {
+      return Response.status(404).build();
+    }
+
+    if (schema.enabled) {
+      ExternalHookScript script = this.hookInstaller.getScript(hookKey);
+      if (script == null) {
+        return Response.status(404).build();
+      }
+
+      SettingsBuilder settingsBuilder = new SimpleSettingsBuilder();
+      settingsBuilder.add("safe_path", schema.safePath);
+      settingsBuilder.add("async", schema.async);
+      if (schema.exe != null) {
+        settingsBuilder.add("exe", schema.exe);
+      }
+      if (schema.params != null) {
+        settingsBuilder.add("params", schema.params);
+      }
+
+      Settings scriptSettings = settingsBuilder.build();
+
+      SimpleSettingsValidationErrors errors = new SimpleSettingsValidationErrors();
+      script.validate(scriptSettings, errors, new GlobalScope());
+
+      if (!errors.isEmpty()) {
+        return Response.ok(new FormValidationErrors(errors)).build();
+      }
+    }
+
+    GlobalHookSettings settings = this.globalHookSettingsDao.get(hookKey);
+    if (settings == null) {
+      settings = this.globalHookSettingsDao.create();
+      settings.setHook(hookKey);
+    }
+
+    settings.setExe(schema.exe);
+    settings.setParams(schema.params);
+    settings.setSafePath(schema.safePath);
+    settings.setAsync(schema.async);
+
+    settings.setEnabled(schema.enabled);
+    settings.setFilterPersonalRepositories(schema.filterPersonalRepositories);
+
+    settings.save();
+
+    return Response.ok(new HashMap<String, String>()).build();
+  }
+
+  @GET
+  @Path("/global-hooks/{hookKey}")
+  @Produces({MediaType.APPLICATION_JSON})
+  @Consumes({MediaType.APPLICATION_JSON})
+  public Response getGlobalHookSettings(@PathParam("hookKey") String hookKey) {
+    if (!isSystemAdmin()) {
+      return Response.status(401).build();
+    }
+
+    GlobalHookSettings settings = this.globalHookSettingsDao.get(hookKey);
+    GlobalHookSettingsSchema schema = new GlobalHookSettingsSchema();
+    if (settings == null) {
+      return Response.ok(schema).build();
+    }
+    schema.safePath = settings.getSafePath();
+    schema.exe = settings.getExe();
+    schema.params = settings.getParams();
+    schema.async = settings.getAsync();
+    schema.enabled = settings.getEnabled();
+    schema.filterPersonalRepositories = settings.getFilterPersonalRepositories();
+    return Response.ok(schema).build();
+  }
+
   private void scheduleCreatingHooks(int stateId) {
     JobRunnerKey runner = JobRunnerKey.of("external-hooks-factory-runner");
     JobId id = JobId.of("external-hooks-factory-job");
@@ -204,6 +329,7 @@ public class Rest implements JobRunner {
   }
 
   private void createHooks(FactoryState state) {
+    GlobalHooks globalHooks = new GlobalHooks(globalHookSettingsDao.find());
     state.setStarted(true);
     state.save();
 
@@ -232,7 +358,7 @@ public class Rest implements JobRunner {
     walker.walk(new Walker.Callback() {
       @Override
       public void onProject(Project project) {
-        hooksFactory.install(new ProjectScope(project));
+        hooksFactory.apply(new ProjectScope(project), globalHooks);
 
         state.setCurrent(current.incrementAndGet());
         state.save();
@@ -242,7 +368,7 @@ public class Rest implements JobRunner {
 
       @Override
       public void onRepository(Repository repository) {
-        hooksFactory.install(new RepositoryScope(repository));
+        hooksFactory.apply(new RepositoryScope(repository), globalHooks);
 
         state.setCurrent(current.incrementAndGet());
         state.save();

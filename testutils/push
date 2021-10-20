@@ -1,0 +1,15 @@
+#!/bin/bash
+set -euo pipefail
+
+URI="${URI:-http://admin:admin@localhost:7990}"
+
+if [[ ! -d /tmp/manrepo ]]; then
+    git clone "$URI"/scm/man/repo.git /tmp/manrepo
+fi
+
+cd /tmp/manrepo
+
+touch $RANDOM
+git add .
+git commit -m $RANDOM
+git push origin master

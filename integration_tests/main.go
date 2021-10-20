@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/docopt/docopt-go"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/status"
 )
 
 var version = "[manual build]"
@@ -26,18 +29,33 @@ Usage:
   external-hooks-test -h | --help
 
 Options:
-  -h --help  Show this help.
-  --debug    Set debug log level.
-  --trace    Set trace log level.
-  --keep     Keep work dir & bitbucket instance.
+  -l --list                   List testcases.
+  -C --container <container>  Use specified container.  
+  -K --keep                   Keep work dir & bitbucket instance.
+  --no-upgrade                Do not run suites with upgrades.
+  --no-reproduce              Do not run suites with bug reproduces.
+  -r --run <name>             Run only specified testcases.
+  --no-randomize              Do not randomize tests order.
+  --debug                     Set debug log level.
+  --trace                     Set trace log level.
+  -h --help                   Show this help.
 `
 
 type Opts struct {
-	FlagKeep  bool `docopt:"--keep"`
-	FlagTrace bool `docopt:"--trace"`
-	FlagDebug bool `docopt:"--debug"`
+	FlagKeep        bool `docopt:"--keep"`
+	FlagTrace       bool `docopt:"--trace"`
+	FlagDebug       bool `docopt:"--debug"`
+	FlagNoUpgrade   bool `docopt:"--no-upgrade"`
+	FlagNoReproduce bool `docopt:"--no-reproduce"`
+	FlagList        bool `docopt:"--list"`
+	FlagNoRandomize bool `docopt:"--no-randomize"`
 
 	ValueContainer string `docopt:"--container"`
+	ValueRun       string `docopt:"--run"`
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
@@ -53,6 +71,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	defer status.Destroy()
+
 	switch {
 	case opts.FlagDebug:
 		log.SetLevel(log.LevelDebug)
@@ -67,17 +87,37 @@ func main() {
 		log.Fatalf(err, "unable to create work dir")
 	}
 
+	ensureAddons()
+
 	var (
 		baseBitbucket = "6.2.0"
 		latestAddon   = getAddon(getLatestVersionXML())
 	)
 
-	run := runner.New()
+	mode := ModeRun
+	if opts.FlagList {
+		mode = ModeList
+	}
 
-	suite := NewSuite()
+	if !opts.FlagNoReproduce {
+		opts.FlagNoRandomize = true
+	}
+
+	suite := NewSuite(
+		baseBitbucket,
+		mode == ModeRun && !opts.FlagNoRandomize,
+		mode,
+		Filter{
+			upgrade:   !opts.FlagNoUpgrade,
+			reproduce: !opts.FlagNoReproduce,
+			glob:      opts.ValueRun,
+		},
+	)
 
 	// TODO: add tests for different trigger configurations
 	// TODO: add tests for BB 5.x.x
+
+	run := runner.New(suite.CleanupHooks)
 
 	run.Suite(
 		suite.WithParams(
@@ -87,7 +127,8 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks,
+			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced,
+			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed,
 		),
 	)
 
@@ -99,7 +140,8 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_ProjectHookCreatedBeforeRepository,
+			suite.TestBug_ProjectHookCreatedBeforeRepository_Reproduced,
+			suite.TestBug_ProjectHookCreatedBeforeRepository_Fixed,
 		),
 	)
 
@@ -111,7 +153,8 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_ProjectEnabledRepositoryDisabledHooks,
+			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced,
+			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed,
 		),
 	)
 
@@ -123,8 +166,7 @@ func main() {
 			},
 			suite.TestProjectHooks_DoNotCreateDisabledHooks,
 
-			// XXX: BB doesn't clean up hook scripts if repository was deleted.
-			// suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
+			suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
 		),
 	)
 
@@ -136,7 +178,21 @@ func main() {
 				"addon_fixed":      latestAddon,
 			},
 
-			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook,
+			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced,
+			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				"bitbucket":        baseBitbucket,
+				"addon_reproduced": getAddon("11.1.0"),
+				"addon_fixed":      latestAddon,
+			},
+
+			suite.TestBug_RepositoryHookCreatedBeforeProject_Reproduced,
+			suite.TestBug_RepositoryHookCreatedBeforeProject_Fixed,
 		),
 	)
 
@@ -146,6 +202,8 @@ func main() {
 				"bitbucket": baseBitbucket,
 				"addon":     latestAddon,
 			},
+			suite.TestGlobalHooks,
+			suite.TestGlobalHooks_PersonalRepositoriesFilter,
 			suite.TestProjectHooks,
 			suite.TestRepositoryHooks,
 			suite.TestPersonalRepositoriesHooks,
@@ -178,10 +236,13 @@ func main() {
 	)
 
 	run.Run(dir, runner.RunOpts{
+		Randomize: mode == ModeRun && !opts.FlagNoRandomize,
 		Container: opts.ValueContainer,
 	})
 
-	log.Infof(nil, "{run} all tests passed")
+	if !opts.FlagList {
+		log.Infof(nil, "{run} all tests passed")
+	}
 
 	log.Debugf(nil, "{run} removing work dir: %s", dir)
 	err = os.RemoveAll(dir)
@@ -195,62 +256,97 @@ func main() {
 			log.Fatalf(err, "unable to cleanup runner")
 		}
 	} else {
-		log.Infof(
-			karma.
-				Describe("container", run.Bitbucket().GetContainerID()).
-				Describe("volume", run.Bitbucket().GetVolume()),
-			"{run} following resources can be reused",
-		)
+		if run.Bitbucket() != nil {
+			log.Infof(
+				karma.
+					Describe("container", run.Bitbucket().GetContainerID()).
+					Describe("volume", run.Bitbucket().GetVolume()),
+				"{run} following resources can be reused",
+			)
+		}
 	}
 }
 
-func getAddon(version string) Addon {
-	builds := map[string]string{
-		"10.2.2": "6592",
-		"10.2.1": "6572",
-		"10.1.0": "6532",
-		"10.0.0": "6512",
-		"9.1.0":  "6492",
+var builds = map[string]string{
+	"11.1.0": "6642",
+	"10.2.2": "6592",
+	"10.2.1": "6572",
+	"10.1.0": "6532",
+	"10.0.0": "6512",
+	"9.1.0":  "6492",
+}
+
+func ensureAddons() {
+	err := os.MkdirAll("builds", 0o755)
+	if err != nil {
+		log.Fatalf(err, "mkdir builds")
 	}
 
-	path := fmt.Sprintf("target/external-hooks-%s.jar", version)
+	getters := &sync.WaitGroup{}
+	for version := range builds {
+		getters.Add(1)
+		go func(version string) {
+			defer getters.Done()
+			getAddon(version)
+		}(version)
+	}
 
-	_, err := os.Stat(path)
-	if err != nil {
-		if build, ok := builds[version]; ok {
-			log.Infof(
-				karma.Describe("build", build).Describe("version", version),
-				"downloading add-on from Marketplace",
-			)
+	getters.Wait()
+}
 
-			cmd := exec.New(
-				"wget", "-O", path,
-				fmt.Sprintf(
-					"https://marketplace.atlassian.com/download/apps/1211631/version/%v",
-					build,
-				),
-			)
+func getAddon(version string) Addon {
+	buildsPath := fmt.Sprintf("builds/external-hooks-%s.jar", version)
 
-			err := cmd.Run()
-			if err != nil {
-				log.Fatalf(
-					karma.Describe("build", build).Reason(err),
-					"unable to download add-on %s from Marketplace to %q",
-					version, path,
-				)
-			}
-		} else {
+	_, err := os.Stat(buildsPath)
+	if err == nil {
+		return Addon{
+			Version: version,
+			Path:    buildsPath,
+		}
+	}
+
+	if build, ok := builds[version]; ok {
+		log.Infof(
+			karma.Describe("build", build).Describe("version", version),
+			"downloading add-on from Marketplace",
+		)
+
+		cmd := exec.New(
+			"wget", "-O", buildsPath,
+			fmt.Sprintf(
+				"https://marketplace.atlassian.com/download/apps/1211631/version/%v",
+				build,
+			),
+		)
+
+		err := cmd.Run()
+		if err != nil {
 			log.Fatalf(
-				err,
-				"unable to find add-on version %s at path %q",
-				version, path,
+				karma.Describe("build", build).Reason(err),
+				"unable to download add-on %s from Marketplace to %q",
+				version, buildsPath,
 			)
 		}
+
+		return Addon{
+			Version: version,
+			Path:    buildsPath,
+		}
+	}
+
+	targetPath := fmt.Sprintf("target/external-hooks-%s.jar", version)
+	_, err = os.Stat(targetPath)
+	if err != nil {
+		log.Fatalf(
+			err,
+			"unable to find add-on version %s at path %q and %q",
+			version, buildsPath, targetPath,
+		)
 	}
 
 	return Addon{
 		Version: version,
-		Path:    path,
+		Path:    targetPath,
 	}
 }
 
@@ -271,4 +367,8 @@ func getLatestVersionXML() string {
 	}
 
 	return version
+}
+
+func text(lines ...string) []byte {
+	return []byte(strings.Join(lines, "\n"))
 }

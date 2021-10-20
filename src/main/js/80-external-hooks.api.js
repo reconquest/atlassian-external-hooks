@@ -22,6 +22,10 @@ var API = function (baseURL) {
 
         factoryState: function (id) {
             return this.factory() + 'state/' + id;
+        },
+
+        globalHook: function(kind) {
+            return this.root() + 'global-hooks/' + kind;
         }
     });
 
@@ -77,6 +81,28 @@ var API = function (baseURL) {
             {
                 method: "GET",
                 headers: this._headers
+            }
+        );
+    }
+
+    this.getGlobalHook = function (kind) {
+        return $.ajax(
+            this.urls.globalHook(kind),
+            {
+                method: "GET",
+                headers: this._headers
+            }
+        );
+    }
+
+    this.setGlobalHook = function (kind, settings) {
+        return $.ajax(
+            this.urls.globalHook(kind),
+            {
+                method: "PUT",
+                headers: this._headers,
+                data: JSON.stringify(settings),
+                contentType: "application/json; charset=UTF-8"
             }
         );
     }

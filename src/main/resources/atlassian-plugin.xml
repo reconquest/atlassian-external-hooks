@@ -117,6 +117,15 @@
     </web-section>
 
     <web-item
+            key="rq-hooks-admin-section-global"
+            name="Reconquest External Hooks Global Settings"
+            weight="10"
+            section="atl.admin/rq-hooks-admin-section">
+        <label>Global Hooks</label>
+        <link>${navBuilder.pluginServlets().path('external-hooks', 'global').buildRelNoContext()}</link>
+    </web-item>
+
+    <web-item
             key="rq-hooks-admin-section-settings"
             name="Reconquest External Hooks Trigger Settings"
             weight="10"
@@ -134,6 +143,15 @@
         <link>${navBuilder.pluginServlets().path('external-hooks', 'diagnostics').buildRelNoContext()}</link>
     </web-item>
 
+
+    <servlet
+            name="External Hooks Global"
+            i18n-name-key="external-hooks-global.name"
+            key="external-hooks-global"
+            class="com.ngs.stash.externalhooks.servlet.Global">
+        <description key="external-hooks-global.description">External Hooks Add-on Global Hooks</description>
+        <url-pattern>/external-hooks/global</url-pattern>
+    </servlet>
 
     <servlet
             name="External Hooks Settings"
@@ -164,8 +182,12 @@
     <ao key="ao-module">
         <description>The module configuring the Active Objects service used by this plugin</description>
         <entity>com.ngs.stash.externalhooks.ao.FactoryState</entity>
+        <entity>com.ngs.stash.externalhooks.ao.GlobalHookSettings</entity>
     </ao>
 
+    <component
+            key="bitbucketEventListener"
+            class="com.ngs.stash.externalhooks.BitbucketEventListener" />
     <component
             key="externalHooksService"
             class="com.ngs.stash.externalhooks.ExternalHooksService" />
@@ -181,10 +203,13 @@
     <component
             key="hooksFactory"
             class="com.ngs.stash.externalhooks.HooksFactory" />
+    <component
+            key="globalHookSettingsDao"
+            class="com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao" />
 
     <component
-            key="hooksCoordinator"
-            class="com.ngs.stash.externalhooks.HooksCoordinator" />
+            key="hookInstaller"
+            class="com.ngs.stash.externalhooks.HookInstaller" />
     <component
             key="licenseValidator"
             class="com.ngs.stash.externalhooks.LicenseValidator" />

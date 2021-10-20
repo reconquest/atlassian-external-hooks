@@ -20,6 +20,7 @@ import com.atlassian.bitbucket.hook.script.HookScriptSetConfigurationRequest;
 import com.atlassian.bitbucket.hook.script.HookScriptType;
 import com.atlassian.bitbucket.permission.Permission;
 import com.atlassian.bitbucket.permission.PermissionService;
+import com.atlassian.bitbucket.scope.GlobalScope;
 import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
@@ -177,52 +178,129 @@ public class ExternalHookScript {
 
   // Should be used only for uninstalling legacy ProjectScope scripts.
   public void uninstallLegacy(ProjectScope scope) {
-    String pluginSettingsPath = getLegacyPluginSettingsPath(scope);
+    delete(getLegacyPluginSettingsPath(scope), new CallbackLogDelete() {
+      @Override
+      public void onSuccess(String hookKey, Long id) {
+        log.debug(
+            "deleted legacy/project hook script {}: id={} {}",
+            hookKey,
+            id,
+            ScopeUtil.toString(scope));
+      }
 
-    DeletionResult result = deleteHookScript(pluginSettingsPath);
-    if (result != DeletionResult.MISSING_ID) {
-      // Unlike other methods we don't want to spam this message because this
-      // function will be called on every next plugin version, unfortunately.
-      log.debug(
-          "deleting legacy project hook script {} on {}: {}",
-          hookId,
-          ScopeUtil.toString(scope),
-          result.getMessage());
+      @Override
+      public void onMissingId(String hookKey) {
+        //
+      }
 
-      pluginSettings.remove(pluginSettingsPath);
-    }
+      @Override
+      public void onMissingScript(String hookKey, Long id) {
+        log.debug(
+            "did not delete legacy/project hook script {}: id={} {} because the script is"
+                + " already gone",
+            hookKey,
+            id,
+            ScopeUtil.toString(scope));
+      }
+    });
   }
 
   public void uninstall(ProjectScope parent, RepositoryScope scope) {
-    String pluginSettingsPath = getPluginSettingsPath(parent, scope);
+    delete(getPluginSettingsPath(parent, scope), new CallbackLogDelete() {
+      @Override
+      public void onSuccess(String hookKey, Long id) {
+        log.debug(
+            "deleted project/repository hook script {}: id={} {} {}",
+            hookKey,
+            id,
+            ScopeUtil.toString(parent),
+            ScopeUtil.toString(scope));
+      }
 
-    DeletionResult result = deleteHookScript(pluginSettingsPath);
+      @Override
+      public void onMissingId(String hookKey) {
+        //
+      }
 
-    log.debug(
-        "deleting project hook script {} of {} on {}: {}",
-        hookId,
-        ScopeUtil.toString(parent),
-        ScopeUtil.toString(scope),
-        result.getMessage());
+      @Override
+      public void onMissingScript(String hookKey, Long id) {
+        log.debug(
+            "did not delete project/repository hook script {}: id={} {} {}"
+                + " because the script is already gone",
+            hookKey,
+            id,
+            ScopeUtil.toString(parent),
+            ScopeUtil.toString(scope));
+      }
+    });
+  }
 
-    if (result != DeletionResult.MISSING_ID) {
-      pluginSettings.remove(pluginSettingsPath);
-    }
+  public void uninstall(GlobalScope parentScope, RepositoryScope scope) {
+    delete(getPluginSettingsPath(parentScope, scope), new CallbackLogDelete() {
+      @Override
+      public void onSuccess(String hookKey, Long id) {
+        log.debug(
+            "deleted global/repository hook script {}: id={} {}",
+            hookKey,
+            id,
+            ScopeUtil.toString(scope));
+      }
+
+      @Override
+      public void onMissingId(String hookKey) {
+        //
+      }
+
+      @Override
+      public void onMissingScript(String hookKey, Long id) {
+        log.debug(
+            "did not delete global/repository hook script {}: id={} {} because the"
+                + " script is already gone",
+            hookKey,
+            id,
+            ScopeUtil.toString(scope));
+      }
+    });
   }
 
   public void uninstall(RepositoryScope scope) {
-    String pluginSettingsPath = getPluginSettingsPath(scope);
+    delete(getPluginSettingsPath(scope), new CallbackLogDelete() {
+      @Override
+      public void onSuccess(String hookKey, Long id) {
+        log.debug(
+            "deleted repository hook script {}: id={} {}", hookKey, id, ScopeUtil.toString(scope));
+      }
 
-    DeletionResult result = deleteHookScript(pluginSettingsPath);
+      @Override
+      public void onMissingId(String hookKey) {
+        //
+      }
 
-    log.debug(
-        "deleting repository hook script {} on {}: {}",
-        hookId,
-        ScopeUtil.toString(scope),
-        result.getMessage());
+      @Override
+      public void onMissingScript(String hookKey, Long id) {
+        log.debug(
+            "did not delete repository hook script {}: id={} {} because the script is"
+                + " already gone",
+            hookKey,
+            id,
+            ScopeUtil.toString(scope));
+      }
+    });
+  }
 
-    if (result != DeletionResult.MISSING_ID) {
-      pluginSettings.remove(pluginSettingsPath);
+  private void delete(String path, CallbackLogDelete logger) {
+    Optional<Long> id = readHookScriptId(path);
+    if (id.isPresent()) {
+      boolean deleted = deleteHookScript(id.get());
+      if (deleted) {
+        logger.onSuccess(hookKey, id.get());
+      } else {
+        logger.onMissingScript(hookKey, id.get());
+      }
+
+      pluginSettings.remove(path);
+    } else {
+      logger.onMissingId(hookKey);
     }
   }
 
@@ -233,9 +311,25 @@ public class ExternalHookScript {
         install(pluginSettingsPath, settings, scope);
 
     log.debug(
-        "created project hook script {} of {} with id: {} on {}; triggers: {}",
+        "created project/repository hook script {}: id={} {} {} triggers={}",
         hookId,
+        result.getLeft().getId(),
         ScopeUtil.toString(parent),
+        ScopeUtil.toString(scope),
+        listTriggers(result.getRight()));
+  }
+
+  public void install(
+      @Nonnull Settings settings,
+      @Nonnull GlobalScope globalParent,
+      @Nonnull RepositoryScope scope) {
+    String pluginSettingsPath = getPluginSettingsPath(globalParent, scope);
+    Pair<HookScript, List<RepositoryHookTrigger>> result =
+        install(pluginSettingsPath, settings, scope);
+
+    log.debug(
+        "created global/repository hook script {}: id={} {} triggers={}",
+        hookId,
         result.getLeft().getId(),
         ScopeUtil.toString(scope),
         listTriggers(result.getRight()));
@@ -247,7 +341,7 @@ public class ExternalHookScript {
         install(pluginSettingsPath, settings, scope);
 
     log.debug(
-        "created repository hook script {} with id: {} on {}; triggers: {}",
+        "created repository hook script {}: id={} {} triggers={}",
         hookId,
         result.getLeft().getId(),
         ScopeUtil.toString(scope),
@@ -256,9 +350,12 @@ public class ExternalHookScript {
 
   private Pair<HookScript, List<RepositoryHookTrigger>> install(
       String pluginSettingsPath, @Nonnull Settings settings, @Nonnull RepositoryScope scope) {
-    deleteHookScript(pluginSettingsPath);
+    Optional<Long> hookScriptId = readHookScriptId(pluginSettingsPath);
+    if (hookScriptId.isPresent()) {
+      deleteHookScript(hookScriptId.get());
+    }
 
-    HookScript hookScript = create(settings);
+    HookScript hookScript = create(pluginSettingsPath, settings);
 
     pluginSettings.put(pluginSettingsPath, String.valueOf(hookScript.getId()));
 
@@ -274,28 +371,35 @@ public class ExternalHookScript {
     return Pair.of(hookScript, triggers);
   }
 
-  private DeletionResult deleteHookScript(String pluginSettingsPath) {
+  public Optional<Long> readHookScriptId(String pluginSettingsPath) {
     Object id = pluginSettings.get(pluginSettingsPath);
     if (id != null) {
-      Optional<HookScript> maybeHookScript =
-          hookScriptService.findById(Long.valueOf(id.toString()));
-      if (maybeHookScript.isPresent()) {
-        return securityService
-            .withPermission(Permission.SYS_ADMIN, "atlassian-external-hooks: delete hook script")
-            .call(() -> {
-              hookScriptService.delete(maybeHookScript.get());
-              return DeletionResult.OK;
-            });
-      } else {
-        return DeletionResult.MISSING_SCRIPT;
-      }
+      return Optional.of(Long.valueOf(id.toString()));
     }
 
-    return DeletionResult.MISSING_ID;
+    return Optional.empty();
   }
 
-  private HookScript create(Settings settings) {
-    String script = getScriptContents(settings);
+  private Optional<HookScript> getHookScript(Long id) {
+    return hookScriptService.findById(id);
+  }
+
+  private boolean deleteHookScript(Long id) {
+    Optional<HookScript> maybeHookScript = getHookScript(id);
+    if (maybeHookScript.isPresent()) {
+      return securityService
+          .withPermission(Permission.SYS_ADMIN, "atlassian-external-hooks: delete hook script")
+          .call(() -> {
+            hookScriptService.delete(maybeHookScript.get());
+            return true;
+          });
+    }
+
+    return false;
+  }
+
+  private HookScript create(String tag, Settings settings) {
+    String script = getScriptContents(tag, settings);
 
     HookScriptCreateRequest.Builder builder = new HookScriptCreateRequest.Builder(
             this.hookId, Const.PLUGIN_KEY, this.hookScriptType)
@@ -308,7 +412,7 @@ public class ExternalHookScript {
         .call(() -> hookScriptService.create(hookScriptCreateRequest));
   }
 
-  private String getScriptContents(Settings settings) {
+  private String getScriptContents(String tag, Settings settings) {
     File executable =
         this.getExecutable(settings.getString("exe", ""), settings.getBoolean("safe_path", false));
 
@@ -316,6 +420,8 @@ public class ExternalHookScript {
 
     StringBuilder scriptBuilder = new StringBuilder();
     scriptBuilder.append(this.hookScriptTemplate).append("\n\n");
+
+    scriptBuilder.append("# com.ngs.stash.externalhooks tag: " + tag + "\n\n");
 
     if (async) {
       // dumping stdin to a temporary file
@@ -394,6 +500,17 @@ public class ExternalHookScript {
     return builder.toString();
   }
 
+  private String getPluginSettingsPath(GlobalScope parent, RepositoryScope scope) {
+    StringBuilder builder = new StringBuilder(this.hookKey);
+    builder.append(":").append(ScopeType.GLOBAL.getId());
+    builder.append(":").append("global");
+
+    builder.append(":").append(ScopeType.REPOSITORY.getId());
+    builder.append(":").append(scope.getResourceId().orElse(-1));
+
+    return builder.toString();
+  }
+
   private String getPluginSettingsPath(RepositoryScope scope) {
     StringBuilder builder = new StringBuilder(this.hookKey);
     builder.append(":").append(ScopeType.REPOSITORY.getId());
@@ -415,21 +532,11 @@ public class ExternalHookScript {
     List<RepositoryHookTrigger> get();
   }
 
-  private enum DeletionResult {
-    MISSING_ID,
-    MISSING_SCRIPT,
-    OK;
+  public interface CallbackLogDelete {
+    void onSuccess(String hookKey, Long id);
 
-    public String getMessage() {
-      if (this == MISSING_ID) {
-        return "was not installed";
-      }
+    void onMissingId(String hookKey);
 
-      if (this == MISSING_SCRIPT) {
-        return "hook script already gone";
-      }
-
-      return "success";
-    }
+    void onMissingScript(String hookKey, Long id);
   }
 }

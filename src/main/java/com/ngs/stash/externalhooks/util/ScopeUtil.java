@@ -10,7 +10,7 @@ import com.atlassian.bitbucket.scope.ScopeType;
 
 public class ScopeUtil {
   public static boolean isInheritedEnabled(RepositoryHook hook, Scope scope) {
-    return hook.getScope().getType() != scope.getType();
+    return hook.isEnabled() && hook.getScope().getType() != scope.getType();
   }
 
   public static boolean isDirectEnabled(RepositoryHook hook, RepositoryScope scope) {

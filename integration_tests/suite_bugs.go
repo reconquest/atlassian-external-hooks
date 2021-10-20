@@ -3,64 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
-	"github.com/reconquest/cog"
 	"github.com/reconquest/pkg/log"
 )
 
-func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
-	log *cog.Logger,
-	params TestParams,
-	context *external_hooks.Context,
-	project *stash.Project,
-	repository *stash.Repository,
-) {
-	log.Infof(
-		nil,
-		"> reproducing bug on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
-	)
-
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
-
-	suite.ConfigureSampleHook_FailWithMessage(
-		context.PreReceive(),
-		`XXX`,
-	)
-
-	Assert_PushRejected(suite, repository, `XXX`)
-
-	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
-
-	Assert_PushRejected(suite, repository, `XXX`)
-}
-
-func (suite *Suite) testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
-	log *cog.Logger,
-	params TestParams,
-	context *external_hooks.Context,
-	project *stash.Project,
-	repository *stash.Repository,
-) {
-	log.Infof(
-		nil,
-		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
-	)
-
-	suite.InstallAddon(params["addon_fixed"].(Addon))
-	suite.RecordHookScripts()
-
-	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
-
-	suite.DisableHook(context.PreReceive())
-
-	suite.DetectHookScriptsLeak()
-}
-
-func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
+func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 	params TestParams,
 ) {
 	suite.UseBitbucket(params["bitbucket"].(string))
@@ -75,24 +23,70 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks(
 		log     = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 	)
 
-	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
-		log,
-		params,
-		context,
-		project,
-		repository,
+	log.Infof(
+		nil,
+		"> reproducing bug on add-on version %s",
+		params["addon_reproduced"].(Addon).Version,
 	)
 
-	suite.testBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
-		log,
-		params,
-		context,
-		project,
-		repository,
+	suite.InstallAddon(params["addon_reproduced"].(Addon))
+
+	suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
+		HookOptions{WaitHookScripts: true},
+		`XXX`,
 	)
+
+	Assert_PushRejected(suite, repository, `XXX`)
+
+	suite.DisableHook(
+		context.OnRepository(repository.Slug).PreReceive(),
+		HookOptions{WaitHookScripts: false},
+	)
+
+	Assert_PushRejected(suite, repository, `XXX`)
 }
 
-func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository(
+func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	var (
+		project    = suite.CreateRandomProject()
+		repository = suite.CreateRandomRepository(project)
+	)
+
+	var (
+		context = suite.ExternalHooks().OnProject(project.Key)
+		log     = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+	)
+
+	log.Infof(
+		nil,
+		"> validating fix on add-on version %s",
+		params["addon_fixed"].(Addon).Version,
+	)
+
+	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.RecordHookScripts()
+
+	suite.ConfigureSampleHook_FailWithMessage(
+		context.PreReceive(),
+		HookOptions{WaitHookScripts: true},
+		`XXX`,
+	)
+
+	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
+
+	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
+
+	suite.DisableHook(context.PreReceive(), HookOptions{WaitHookScripts: false})
+
+	suite.DetectHookScriptsLeak()
+}
+
+func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 	params TestParams,
 ) {
 	suite.UseBitbucket(params["bitbucket"].(string))
@@ -104,27 +98,6 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository(
 		log     = log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 	)
 
-	suite.testBug_ProjectHookCreatedBeforeRepository_Reproduced(
-		log,
-		params,
-		context,
-		project,
-	)
-
-	suite.testBug_ProjectHookCreatedBeforeRepository_Fixed(
-		log,
-		params,
-		context,
-		project,
-	)
-}
-
-func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Reproduced(
-	log *cog.Logger,
-	params TestParams,
-	context *external_hooks.Context,
-	project *stash.Project,
-) {
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
@@ -136,6 +109,7 @@ func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Reproduced(
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
+		HookOptions{WaitHookScripts: false},
 		`XXX`,
 	)
 
@@ -143,17 +117,25 @@ func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Reproduced(
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 
-	suite.DisableHook(preReceive)
+	suite.DisableHook(preReceive, HookOptions{WaitHookScripts: false})
 
 	suite.DetectHookScriptsLeak()
 }
 
-func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Fixed(
-	log *cog.Logger,
+func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 	params TestParams,
-	context *external_hooks.Context,
-	project *stash.Project,
 ) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	project := suite.CreateRandomProject()
+
+	var (
+		projectContext = suite.ExternalHooks().OnProject(project.Key)
+		log            = log.NewChildWithPrefix(
+			fmt.Sprintf("{test} %s", project.Key),
+		)
+	)
+
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
@@ -164,25 +146,137 @@ func (suite *Suite) testBug_ProjectHookCreatedBeforeRepository_Fixed(
 	suite.RecordHookScripts()
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
-		context.PreReceive(),
+		projectContext.PreReceive(),
+		HookOptions{WaitHookScripts: false},
 		`XXX`,
 	)
 
 	repository := suite.CreateRandomRepository(project)
 
+	suite.WaitHookScriptsCreated()
+
 	Assert_PushRejected(suite, repository, `XXX`)
 
-	suite.DisableHook(preReceive)
+	suite.DisableHook(preReceive, HookOptions{WaitHookScripts: true})
 
 	suite.DetectHookScriptsLeak()
 }
 
-func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
-	log *cog.Logger,
+func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 	params TestParams,
-	settings *external_hooks.Settings,
-	project *stash.Project,
 ) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	var (
+		project        = suite.CreateRandomProject()
+		projectContext = suite.ExternalHooks().OnProject(project.Key)
+
+		repository        = suite.CreateRandomRepository(project)
+		repositoryContext = suite.ExternalHooks().OnProject(project.Key).
+					OnRepository(repository.Slug)
+
+		log = log.NewChildWithPrefix(
+			fmt.Sprintf("{test} %s", project.Key),
+		)
+	)
+
+	log.Infof(
+		nil,
+		"> reproducing bug on add-on version %s",
+		params["addon_reproduced"].(Addon).Version,
+	)
+
+	suite.InstallAddon(params["addon_reproduced"].(Addon))
+	suite.RecordHookScripts()
+
+	// repository first and project second
+	repositoryPreReceive := suite.ConfigureSampleHook_Message(
+		repositoryContext.PreReceive(),
+		HookOptions{WaitHookScripts: false},
+		`XXX_REPOSITORY_XXX`,
+	)
+
+	projectPreReceive := suite.ConfigureSampleHook_Message(
+		projectContext.PreReceive(),
+		HookOptions{WaitHookScripts: true},
+		`XXX_PROJECT_XXX`,
+	)
+
+	Assert_PushOutputsMessages(
+		suite,
+		repository,
+		`XXX_PROJECT_XXX`,
+		`XXX_REPOSITORY_XXX`,
+	)
+
+	suite.DisableHook(projectPreReceive, HookOptions{WaitHookScripts: false})
+	suite.DisableHook(repositoryPreReceive)
+
+	suite.DetectHookScriptsLeak()
+}
+
+func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Fixed(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	var (
+		project        = suite.CreateRandomProject()
+		projectContext = suite.ExternalHooks().OnProject(project.Key)
+
+		repository        = suite.CreateRandomRepository(project)
+		repositoryContext = suite.ExternalHooks().OnProject(project.Key).
+					OnRepository(repository.Slug)
+
+		log = log.NewChildWithPrefix(
+			fmt.Sprintf("{test} %s", project.Key),
+		)
+	)
+
+	log.Infof(
+		nil,
+		"> validating fix on add-on version %s",
+		params["addon_fixed"].(Addon).Version,
+	)
+
+	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.RecordHookScripts()
+
+	// repository first and project second
+	repositoryPreReceive := suite.ConfigureSampleHook_Message(
+		repositoryContext.PreReceive(),
+		HookOptions{WaitHookScripts: true},
+		`XXX_REPOSITORY_XXX`,
+	)
+
+	projectPreReceive := suite.ConfigureSampleHook_Message(
+		projectContext.PreReceive(),
+		HookOptions{WaitHookScripts: true},
+		`XXX_PROJECT_XXX`,
+	)
+
+	Assert_PushDoesNotOutputMessages(suite, repository, `XXX_PROJECT_XXX`)
+	Assert_PushOutputsMessages(suite, repository, `XXX_REPOSITORY_XXX`)
+
+	suite.DisableHook(repositoryPreReceive)
+	suite.DisableHook(projectPreReceive, HookOptions{WaitHookScripts: false})
+
+	suite.DetectHookScriptsLeak()
+}
+
+func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
+	params TestParams,
+) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	project := suite.CreateRandomProject()
+
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+
+	settings := external_hooks.NewScopeSettings().
+		UseSafePath(true).
+		WithExe(`hook.` + lojban.GetRandomID(5))
+
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
@@ -197,11 +291,12 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	preReceiveRepository := suite.ConfigureHook(
@@ -209,26 +304,34 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	Assert_PushOutputsMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
 	suite.DisableHook(preReceiveProject)
-	suite.DisableHook(preReceiveRepository)
+	suite.DisableHook(preReceiveRepository, HookOptions{WaitHookScripts: false})
 }
 
-func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
-	log *cog.Logger,
+func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 	params TestParams,
-	settings *external_hooks.Settings,
-	project *stash.Project,
 ) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	project := suite.CreateRandomProject()
+
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+
+	settings := external_hooks.NewScopeSettings().
+		UseSafePath(true).
+		WithExe(`hook.` + lojban.GetRandomID(5))
+
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
@@ -243,11 +346,12 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	preReceiveRepository := suite.ConfigureHook(
@@ -255,21 +359,22 @@ func (suite *Suite) testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
-	suite.DisableHook(preReceiveProject)
+	suite.DisableHook(preReceiveProject, HookOptions{WaitHookScripts: false})
 	suite.DisableHook(preReceiveRepository)
 }
 
-func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
+func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
 	params TestParams,
 ) {
 	suite.UseBitbucket(params["bitbucket"].(string))
@@ -278,59 +383,10 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks(
 
 	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
 
-	settings := external_hooks.NewSettings().
+	settings := external_hooks.NewScopeSettings().
 		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5))
+		WithExe(`hook.` + lojban.GetRandomID(5))
 
-	suite.testBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
-		log,
-		params,
-		settings,
-		project,
-	)
-
-	suite.testBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
-		log,
-		params,
-		settings,
-		project,
-	)
-}
-
-func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook(
-	params TestParams,
-) {
-	suite.UseBitbucket(params["bitbucket"].(string))
-
-	project := suite.CreateRandomProject()
-
-	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
-
-	settings := external_hooks.NewSettings().
-		UseSafePath(true).
-		WithExecutable(`hook.` + lojban.GetRandomID(5))
-
-	suite.testBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
-		log,
-		params,
-		settings,
-		project,
-	)
-
-	suite.testBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
-		log,
-		params,
-		settings,
-		project,
-	)
-}
-
-func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
-	log *cog.Logger,
-	params TestParams,
-	settings *external_hooks.Settings,
-	project *stash.Project,
-) {
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
@@ -345,11 +401,12 @@ func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	alice := suite.CreateUserAlice()
@@ -365,11 +422,12 @@ func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
@@ -377,6 +435,7 @@ func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 	suite.InheritHook(
 		preReceiveRepository,
 		InheritHookExpectedStateEnabledProject,
+		HookOptions{WaitHookScripts: false},
 	)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
@@ -384,12 +443,19 @@ func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 	suite.DisableHook(preReceiveProject)
 }
 
-func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
-	log *cog.Logger,
+func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 	params TestParams,
-	settings *external_hooks.Settings,
-	project *stash.Project,
 ) {
+	suite.UseBitbucket(params["bitbucket"].(string))
+
+	project := suite.CreateRandomProject()
+
+	log := log.NewChildWithPrefix(fmt.Sprintf("{test} %s", project.Key))
+
+	settings := external_hooks.NewScopeSettings().
+		UseSafePath(true).
+		WithExe(`hook.` + lojban.GetRandomID(5))
+
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
@@ -404,11 +470,12 @@ func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 		suite.ExternalHooks().
 			OnProject(project.Key).
 			PreReceive(),
-		settings.WithArgs(`XXX PROJECT`),
+		settings.WithParams(`XXX PROJECT`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	alice := suite.CreateUserAlice()
@@ -424,11 +491,12 @@ func (suite *Suite) testBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 			OnProject(project.Key).
 			OnRepository(repository.Slug).
 			PreReceive(),
-		settings.WithArgs(`YYY REPOSITORY`),
+		settings.WithParams(`YYY REPOSITORY`),
 		text(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
+		HookOptions{WaitHookScripts: true},
 	)
 
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)

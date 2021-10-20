@@ -3,6 +3,7 @@
 <html>
     <head>
         <meta name="decorator" content="atl.admin">
+        <meta name="activeTab" content="rq-hooks-admin-section-diagnostics" />
         $webResourceManager.requireResource("com.ngs.stash.externalhooks.external-hooks:web-resources")
         $webResourceManager.requireResource("com.atlassian.auiplugin:aui-select")
     </head>

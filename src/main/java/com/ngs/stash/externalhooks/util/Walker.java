@@ -5,7 +5,6 @@ import com.atlassian.bitbucket.project.ProjectService;
 import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.bitbucket.user.ApplicationUser;
-import com.atlassian.bitbucket.user.SecurityService;
 import com.atlassian.bitbucket.user.UserSearchRequest;
 import com.atlassian.bitbucket.user.UserService;
 import com.atlassian.bitbucket.util.Page;
@@ -16,14 +15,9 @@ public class Walker {
   private RepositoryService repositoryService;
   private ProjectService projectService;
   private UserService userService;
-  private SecurityService securityService;
 
   public Walker(
-      SecurityService securityService,
-      UserService userService,
-      ProjectService projectService,
-      RepositoryService repositoryService) {
-    this.securityService = securityService;
+      UserService userService, ProjectService projectService, RepositoryService repositoryService) {
     this.userService = userService;
     this.projectService = projectService;
     this.repositoryService = repositoryService;

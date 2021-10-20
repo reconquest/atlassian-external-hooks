@@ -14,3 +14,6 @@ batch.js
 /taskutils/nginx.crt
 /taskutils/nginx.key
 /taskutils/nginx.conf
+/.task
+/log
+/builds
