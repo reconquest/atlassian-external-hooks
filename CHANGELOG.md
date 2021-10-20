@@ -1,6 +1,14 @@
 ## Bitbucket 6.2.0 and higher
 
-## 11.1.0 (2020-11-13)
+### 12.0.0 (2021-10-20)
+
+* New feature: [global hooks](https://external-hooks.reconquest.io/docs/global_hooks/).
+* Fixed a bug where configuring a project hook after a repository hook led to having two hooks at the same
+    time, while doing the same in a different order did not lead to having two hooks. Now
+    configuring both project and repository hooks means a repository hook *overrides* project hook as
+    it was supposted to.
+
+### 11.1.0 (2020-11-13)
 
 Fix back-compatibility of STASH_USER_NAME. It was equal to BB_USER_DISPLAY_NAME by a mistake.
 
