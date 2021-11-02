@@ -17,7 +17,7 @@ func Clone(href string, path string) (*Git, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to run git clone",
+			"run git clone",
 		)
 	}
 

@@ -90,10 +90,10 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 	Assert_PushDoesNotOutputMessages(suite, repo, `YYY`)
 
 	err := pre.Enable()
-	suite.NoError(err, "unable to enable pre-receive hook")
+	suite.NoError(err, "enable pre-receive hook")
 
 	err = post.Enable()
-	suite.NoError(err, "unable to enable post-receive hook")
+	suite.NoError(err, "enable post-receive hook")
 
 	return pre, post
 }

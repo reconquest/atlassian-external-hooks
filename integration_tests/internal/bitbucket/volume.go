@@ -61,7 +61,7 @@ func (volume Volume) Start(
 		if err != nil {
 			return nil, karma.Format(
 				err,
-				"unable to start bitbicket container",
+				"start bitbicket container",
 			)
 		}
 	}
@@ -70,18 +70,18 @@ func (volume Volume) Start(
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to connect to container",
+			"connect to container",
 		)
 	}
 
 	instance.stacktraceLogs, err = instance.startLogReader(false)
 	if err != nil {
-		return nil, karma.Format(err, "unable to start log reader")
+		return nil, karma.Format(err, "start log reader")
 	}
 
 	instance.testcaseLogs, err = instance.startLogReader(true)
 	if err != nil {
-		return nil, karma.Format(err, "unable to start log reader")
+		return nil, karma.Format(err, "start log reader")
 	}
 
 	var message string
@@ -91,7 +91,7 @@ func (volume Volume) Start(
 		if err != nil {
 			return nil, karma.Format(
 				err,
-				"unable to get container startup status",
+				"get container startup status",
 			)
 		}
 

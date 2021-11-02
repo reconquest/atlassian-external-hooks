@@ -27,7 +27,7 @@ func New(instance *Instance) (*Bitbucket, error) {
 			Describe("uri", instance.GetConnectorURI(users.USER_ADMIN)).
 			Format(
 				err,
-				"unable to parse bitbucket connector uri",
+				"parse bitbucket connector uri",
 			)
 	}
 
@@ -246,7 +246,7 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 	if err != nil {
 		return "", karma.Format(
 			err,
-			"unable to get upm token",
+			"get upm token",
 		)
 	}
 
@@ -260,7 +260,7 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 	if err != nil {
 		return "", karma.Format(
 			err,
-			"unable to install add-on",
+			"install add-on",
 		)
 	}
 
@@ -268,7 +268,7 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 	if err != nil {
 		return "", karma.Format(
 			err,
-			"unable to get add-on info",
+			"get add-on info",
 		)
 	}
 
@@ -276,7 +276,7 @@ func (api *BitbucketAddonsAPI) Install(path string) (string, error) {
 	if err != nil {
 		return "", karma.Format(
 			err,
-			"unable to enable add-on",
+			"enable add-on",
 		)
 	}
 
@@ -288,7 +288,7 @@ func (api *BitbucketAddonsAPI) Uninstall(key string) error {
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to get upm token",
+			"get upm token",
 		)
 	}
 
@@ -302,7 +302,7 @@ func (api *BitbucketAddonsAPI) Uninstall(key string) error {
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to uninstall add-on",
+			"uninstall add-on",
 		)
 	}
 
@@ -314,7 +314,7 @@ func (api *BitbucketAddonsAPI) Get(key string) (*stash.Addon, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to get upm token",
+			"get upm token",
 		)
 	}
 
@@ -322,7 +322,7 @@ func (api *BitbucketAddonsAPI) Get(key string) (*stash.Addon, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to uninstall add-on",
+			"uninstall add-on",
 		)
 	}
 
@@ -343,7 +343,7 @@ func (api *BitbucketAddonsAPI) SetLicense(addon string, license string) error {
 			Describe("addon", addon).
 			Format(
 				err,
-				"unable to set addon license",
+				"set addon license",
 			)
 	}
 

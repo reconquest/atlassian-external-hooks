@@ -56,7 +56,7 @@ func startExisting(version string, opts StartOpts) (*Bitbucket, error) {
 			Describe("container", opts.ContainerID).
 			Format(
 				err,
-				"unable to inspect container",
+				"inspect container",
 			)
 	}
 
@@ -76,7 +76,7 @@ func startExisting(version string, opts StartOpts) (*Bitbucket, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to unmarshal inspect output",
+			"unmarshal inspect output",
 		)
 	}
 

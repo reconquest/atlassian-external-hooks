@@ -179,7 +179,7 @@ func (suite *Suite) testGlobalHooks_RepositoryDeleted(
 	})
 
 	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
-	suite.NoError(err, "unable to remove repository")
+	suite.NoError(err, "remove repository")
 
 	waiter.Wait(suite.FailNow, "hook scripts", "deleted")
 

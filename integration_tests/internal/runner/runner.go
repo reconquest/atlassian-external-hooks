@@ -68,12 +68,12 @@ func (runner *Runner) UseBitbucket(version string) {
 				volume := runner.run.bitbucket.GetVolume()
 
 				err := runner.run.bitbucket.Stop()
-				runner.assert.NoError(err, "unable to stop bitbucket")
+				runner.assert.NoError(err, "stop bitbucket")
 
 				err = runner.run.bitbucket.RemoveContainer()
 				runner.assert.NoError(
 					err,
-					"unable to remove previous container",
+					"remove previous container",
 				)
 
 				runner.run.bitbucket, err = bitbucket.Volume(volume).Start(
@@ -82,11 +82,11 @@ func (runner *Runner) UseBitbucket(version string) {
 				)
 				runner.assert.NoError(
 					err,
-					"unable to upgrade bitbucket container",
+					"upgrade bitbucket container",
 				)
 			} else {
 				runner.assert.FailNowf(
-					"unable to change bitbucket version",
+					"change bitbucket version",
 					"bitbucket instance cannot be downgraded: %s -> %s",
 					running,
 					requested,
@@ -100,7 +100,7 @@ func (runner *Runner) UseBitbucket(version string) {
 				ContainerID: string(runner.run.container),
 			},
 		)
-		runner.assert.NoError(err, "unable to start bitbucket container")
+		runner.assert.NoError(err, "start bitbucket container")
 	}
 
 	runner.run.container = runner.run.bitbucket.GetContainerID()
@@ -122,10 +122,10 @@ func (runner *Runner) UseBitbucket(version string) {
 
 func (runner *Runner) InstallAddon(version string, path string) string {
 	key, err := runner.run.bitbucket.Addons().Install(path)
-	runner.assert.NoError(err, "unable to install addon")
+	runner.assert.NoError(err, "install addon")
 
 	addon, err := runner.run.bitbucket.Addons().Get(key)
-	runner.assert.NoError(err, "unable to get addon information")
+	runner.assert.NoError(err, "get addon information")
 
 	if addon.Version != version {
 		log.Debugf(
@@ -136,21 +136,21 @@ func (runner *Runner) InstallAddon(version string, path string) string {
 		)
 
 		err := runner.run.bitbucket.Addons().Uninstall(key)
-		runner.assert.NoError(err, "unable to uninstall add-on for downgrade")
+		runner.assert.NoError(err, "uninstall add-on for downgrade")
 
 		_, err = runner.run.bitbucket.Addons().Install(path)
-		runner.assert.NoError(err, "unable to install addon")
+		runner.assert.NoError(err, "install addon")
 	}
 
 	err = runner.run.bitbucket.Addons().SetLicense(key, ADDON_LICENSE_3H)
-	runner.assert.NoError(err, "unable to set addon license")
+	runner.assert.NoError(err, "set addon license")
 
 	return key
 }
 
 func (runner *Runner) UninstallAddon(key string) {
 	err := runner.run.bitbucket.Addons().Uninstall(key)
-	runner.assert.NoError(err, "unable to install addon")
+	runner.assert.NoError(err, "install addon")
 }
 
 func (runner *Runner) Suite(suite Suite) {
@@ -173,7 +173,7 @@ func (runner *Runner) Cleanup() error {
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to stop bitbucket",
+			"stop bitbucket",
 		)
 	}
 
@@ -181,7 +181,7 @@ func (runner *Runner) Cleanup() error {
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to remove bitbucket container",
+			"remove bitbucket container",
 		)
 	}
 
@@ -189,7 +189,7 @@ func (runner *Runner) Cleanup() error {
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to remove bitbucket volume",
+			"remove bitbucket volume",
 		)
 	}
 

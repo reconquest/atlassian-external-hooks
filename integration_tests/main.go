@@ -84,7 +84,7 @@ func main() {
 
 	dir, err := ioutil.TempDir("", "external-hooks.test.")
 	if err != nil {
-		log.Fatalf(err, "unable to create work dir")
+		log.Fatalf(err, "create work dir")
 	}
 
 	ensureAddons()
@@ -247,13 +247,13 @@ func main() {
 	log.Debugf(nil, "{run} removing work dir: %s", dir)
 	err = os.RemoveAll(dir)
 	if err != nil {
-		log.Errorf(err, "unable to remove work dir")
+		log.Errorf(err, "remove work dir")
 	}
 
 	if !opts.FlagKeep && opts.ValueContainer == "" {
 		err := run.Cleanup()
 		if err != nil {
-			log.Fatalf(err, "unable to cleanup runner")
+			log.Fatalf(err, "cleanup runner")
 		}
 	} else {
 		if run.Bitbucket() != nil {
@@ -323,7 +323,7 @@ func getAddon(version string) Addon {
 		if err != nil {
 			log.Fatalf(
 				karma.Describe("build", build).Reason(err),
-				"unable to download add-on %s from Marketplace to %q",
+				"download add-on %s from Marketplace to %q",
 				version, buildsPath,
 			)
 		}
@@ -339,7 +339,7 @@ func getAddon(version string) Addon {
 	if err != nil {
 		log.Fatalf(
 			err,
-			"unable to find add-on version %s at path %q and %q",
+			"find add-on version %s at path %q and %q",
 			version, buildsPath, targetPath,
 		)
 	}
@@ -353,17 +353,17 @@ func getAddon(version string) Addon {
 func getLatestVersionXML() string {
 	contents, err := ioutil.ReadFile("pom.xml")
 	if err != nil {
-		log.Fatalf(err, "unable to read pom.xml")
+		log.Fatalf(err, "read pom.xml")
 	}
 
 	model, err := pom.Unmarshal(contents)
 	if err != nil {
-		log.Fatalf(err, "unable to unmarshal pom.xml")
+		log.Fatalf(err, "unmarshal pom.xml")
 	}
 
 	version, err := model.Get("version")
 	if err != nil {
-		log.Fatalf(err, "unable to read pom.xml version")
+		log.Fatalf(err, "read pom.xml version")
 	}
 
 	return version

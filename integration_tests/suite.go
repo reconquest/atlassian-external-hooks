@@ -583,7 +583,7 @@ func (suite *Suite) CreateUser(name string) *stash.User {
 			return &stash.User{Name: name, Password: password}
 		}
 
-		suite.NoError(err, "unable to create user")
+		suite.NoError(err, "create user")
 	}
 
 	return user
@@ -637,7 +637,7 @@ func (suite *Suite) ExternalHooks(opts ...interface{}) *external_hooks.Addon {
 func (suite *Suite) CreateRandomProject() *stash.Project {
 	project, err := suite.Bitbucket().Projects().
 		Create(lojban.GetRandomID(6))
-	suite.NoError(err, "unable to create project")
+	suite.NoError(err, "create project")
 
 	return project
 }
@@ -647,7 +647,7 @@ func (suite *Suite) CreateRandomRepository(
 ) *stash.Repository {
 	repository, err := suite.Bitbucket().Repositories(project.Key).
 		Create(lojban.GetRandomID(6))
-	suite.NoError(err, "unable to create repository")
+	suite.NoError(err, "create repository")
 
 	return repository
 }
@@ -661,14 +661,14 @@ func (suite *Suite) CreateRandomPullRequest(
 	suite.GitCommitRandomFile(git)
 
 	_, err := git.Push()
-	suite.NoError(err, "unable to git push into master")
+	suite.NoError(err, "git push into master")
 
 	branch := suite.GitCreateRandomBranch(git)
 
 	suite.GitCommitRandomFile(git)
 
 	_, err = git.Push("origin", branch)
-	suite.NoErrorf(err, "unable to git push into branch %s", branch)
+	suite.NoErrorf(err, "git push into branch %s", branch)
 
 	pullRequest, err := suite.Bitbucket().Repositories(project.Key).
 		PullRequests(repository.Slug).
@@ -678,7 +678,7 @@ func (suite *Suite) CreateRandomPullRequest(
 			branch,
 			"master",
 		)
-	suite.NoError(err, "unable to create pull request")
+	suite.NoError(err, "create pull request")
 
 	return pullRequest
 }

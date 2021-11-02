@@ -98,10 +98,10 @@ func (tester *HookTester) TestEnableDisable(
 	assertEnabled(tester.suite, tester.repository, message)
 
 	err := tester.hook.Disable()
-	tester.suite.NoError(err, "unable to disable hook")
+	tester.suite.NoError(err, "disable hook")
 
 	err = tester.hook.Wait()
-	tester.suite.NoError(err, "unable to wait for disable hook")
+	tester.suite.NoError(err, "wait for disable hook")
 
 	assertDisabled(tester.suite, tester.repository, message)
 }

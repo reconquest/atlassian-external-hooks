@@ -133,7 +133,7 @@ func (instance *Instance) ReadFile(path string) (string, error) {
 	if err != nil {
 		return "", karma.Format(
 			err,
-			"unable to get stdout pipe for docker exec",
+			"get stdout pipe for docker exec",
 		)
 	}
 
@@ -141,7 +141,7 @@ func (instance *Instance) ReadFile(path string) (string, error) {
 	if err != nil {
 		return "", karma.Format(
 			err,
-			"unable to start docker cp",
+			"start docker cp",
 		)
 	}
 
@@ -168,7 +168,7 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to get stdout pipe for docker cp",
+			"get stdout pipe for docker cp",
 		)
 	}
 
@@ -176,7 +176,7 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to start docker cp",
+			"start docker cp",
 		)
 	}
 
@@ -193,7 +193,7 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 
 			return nil, karma.Format(
 				err,
-				"unable to read next file from docker cp tar output",
+				"read next file from docker cp tar output",
 			)
 		}
 
@@ -210,7 +210,7 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to finalize docker cp",
+			"finalize docker cp",
 		)
 	}
 
@@ -238,7 +238,7 @@ func (instance *Instance) ReadFiles(path string) ([]File, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to get stdout pipe for docker cp",
+			"get stdout pipe for docker cp",
 		)
 	}
 
@@ -246,7 +246,7 @@ func (instance *Instance) ReadFiles(path string) ([]File, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to start docker cp",
+			"start docker cp",
 		)
 	}
 
@@ -263,7 +263,7 @@ func (instance *Instance) ReadFiles(path string) ([]File, error) {
 
 			return nil, karma.Format(
 				err,
-				"unable to read next file from docker cp tar output",
+				"read next file from docker cp tar output",
 			)
 		}
 
@@ -293,7 +293,7 @@ func (instance *Instance) ReadFiles(path string) ([]File, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to finalize docker cp",
+			"finalize docker cp",
 		)
 	}
 
@@ -320,7 +320,7 @@ func (instance *Instance) WriteFile(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to start docker cp",
+			"start docker cp",
 		)
 	}
 
@@ -336,7 +336,7 @@ func (instance *Instance) WriteFile(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to write file header",
+			"write file header",
 		)
 	}
 
@@ -344,7 +344,7 @@ func (instance *Instance) WriteFile(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to write file contents",
+			"write file contents",
 		)
 	}
 
@@ -352,7 +352,7 @@ func (instance *Instance) WriteFile(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to close file",
+			"close file",
 		)
 	}
 
@@ -360,7 +360,7 @@ func (instance *Instance) WriteFile(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to close docker cp stdin",
+			"close docker cp stdin",
 		)
 	}
 
@@ -368,7 +368,7 @@ func (instance *Instance) WriteFile(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to complete docker cp",
+			"complete docker cp",
 		)
 	}
 
@@ -385,7 +385,7 @@ func (instance *Instance) Stop() error {
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to send docker stop",
+			"send docker stop",
 		)
 	}
 
@@ -572,7 +572,7 @@ func (instance *Instance) getAtlToken(
 		if err != nil {
 			return nil, karma.Format(
 				err,
-				"unable to request setup page for bitbucket instance",
+				"request setup page for bitbucket instance",
 			)
 		}
 	}
@@ -581,7 +581,7 @@ func (instance *Instance) getAtlToken(
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to read response body from bitbucket setup page",
+			"read response body from bitbucket setup page",
 		)
 	}
 
@@ -592,7 +592,7 @@ func (instance *Instance) getAtlToken(
 	if len(matches) == 0 {
 		return nil, karma.Format(
 			err,
-			"unable to match atl_token from bitbucket setup page",
+			"match atl_token from bitbucket setup page",
 		)
 	}
 
@@ -616,7 +616,7 @@ func (instance *Instance) postSetupForm(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to create http request",
+			"create http request",
 		)
 	}
 
@@ -630,7 +630,7 @@ func (instance *Instance) postSetupForm(
 	if err != nil {
 		return karma.Format(
 			err,
-			"unable to post setup form to bitbucket instance",
+			"post setup form to bitbucket instance",
 		)
 	}
 
@@ -660,7 +660,7 @@ func (instance *Instance) isConfigured() (bool, error) {
 	if err != nil {
 		return false, karma.Format(
 			err,
-			"unable to create http request",
+			"create http request",
 		)
 	}
 
@@ -668,7 +668,7 @@ func (instance *Instance) isConfigured() (bool, error) {
 	if err != nil {
 		return false, karma.Format(
 			err,
-			"unable to check is bitbucket already configured or not",
+			"check is bitbucket already configured or not",
 		)
 	}
 
@@ -794,7 +794,7 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to create http request",
+			"create http request",
 		)
 	}
 
@@ -820,7 +820,7 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 
 		return nil, karma.Format(
 			err,
-			"unable to request startup status",
+			"request startup status",
 		)
 	}
 
@@ -832,7 +832,7 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to decode startup status",
+			"decode startup status",
 		)
 	}
 
@@ -857,7 +857,7 @@ func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to get stdout pipe for docker logs",
+			"get stdout pipe for docker logs",
 		)
 	}
 
@@ -865,7 +865,7 @@ func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 	if err != nil {
 		return nil, karma.Format(
 			err,
-			"unable to start docker logs",
+			"start docker logs",
 		)
 	}
 
