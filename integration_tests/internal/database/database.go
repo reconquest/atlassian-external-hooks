@@ -28,7 +28,7 @@ type Database interface {
 func Start(kind string, id string) (Database, error) {
 	switch kind {
 	case "postgres":
-		// return newPostgres()
+		return newPostgres(id)
 	case "mysql":
 		return newMysql(id)
 	case "oracle":
@@ -78,7 +78,6 @@ func waitLog(container string, name string, substring string) error {
 	execution := exec.New(
 		"docker",
 		"logs", "-f",
-		"--tail", "0",
 		container,
 	)
 

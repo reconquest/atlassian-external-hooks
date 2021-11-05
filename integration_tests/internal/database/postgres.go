@@ -1,72 +1,92 @@
 package database
 
 import (
-	"fmt"
-	"strings"
-	"time"
-
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
-	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
+	"github.com/reconquest/karma-go"
 	"github.com/reconquest/lexec-go"
 )
 
 type Postgres struct {
 	container string
-	volume    string
 }
 
-func (postgres *Postgres) Addr() string {
-	return "postgres"
+func (postgres *Postgres) Driver() string {
+	return "org.postgresql.Driver"
+}
+
+func (postgres *Postgres) URL() string {
+	return "jdbc:postgresql://" + postgres.container + ":5432/bitbucket"
+}
+
+func (postgres *Postgres) User() string {
+	return "bitbucket"
+}
+
+func (postgres *Postgres) Password() string {
+	return "bitbucket"
 }
 
 func (postgres *Postgres) Container() string {
 	return postgres.container
 }
 
-func newPostgres() (*Postgres, error) {
-	name := "aeh-postgres-" + lojban.GetRandomID(4)
+func (postgres *Postgres) Volume() string {
+	return postgres.container
+}
 
-	instance := &Postgres{}
-	instance.volume = name
-
+func (postgres *Postgres) start() error {
 	execution := exec.New(
 		"docker",
-		"run", "-d",
-		"-e", "POSTGRES_PASSWORD=bitbucket",
+		"run",
+		"--name", postgres.container,
+		"-d",
+		"-v", postgres.container+":/var/lib/postgresql/data",
 		"-e", "POSTGRES_DB=bitbucket",
 		"-e", "POSTGRES_USER=bitbucket",
-		"-v", fmt.Sprintf(
-			"%s:%s",
-			instance.volume,
-			"/var/lib/postgresql/data",
-		),
-		"postgres",
+		"-e", "POSTGRES_PASSWORD=bitbucket",
+		"postgres:latest",
 	)
-
-	stdout, _, err := execution.Output()
+	err := execution.Run()
 	if err != nil {
-		return nil, err
+		return karma.Format(err, "start postgres container")
 	}
 
-	instance.container = strings.TrimSpace(string(stdout))
+	ip, err := inspectIP(postgres.container)
+	if err != nil {
+		return karma.Format(err, "inspect ip address")
+	}
 
-	for {
-		waiter := exec.New(
-			"docker", "exec", instance.container,
-			"pg_isready",
-		)
+	waitService(ip, 5432, "postgres")
 
-		err := waiter.Run()
+	return nil
+}
+
+func (postgres *Postgres) Stop() error {
+	return stop(postgres.container)
+}
+
+func (postgres *Postgres) RemoveContainer() error {
+	return removeContainer(postgres.container)
+}
+
+func newPostgres(id string) (*Postgres, error) {
+	instance := &Postgres{container: id + "-postgres"}
+
+	ip, err := inspectIP(instance.container)
+	switch {
+	case err != nil && lexec.IsExitStatus(err):
+		err := instance.start()
 		if err != nil {
-			if !lexec.IsExitStatus(err) {
-				return nil, err
-			}
-
-			time.Sleep(time.Millisecond * 50)
-			continue
+			return nil, karma.Format(err, "start new postgres instance")
 		}
 
-		break
+	case err != nil && !lexec.IsExitStatus(err):
+		return nil, karma.Format(err, "docker inspect container")
+
+	default:
+		// if we found ip it means it's already started/starting, so we ensure
+		// it's running and ready for bitbucket
+		waitService(ip, 5432, "postgres")
 	}
 
 	return instance, nil
