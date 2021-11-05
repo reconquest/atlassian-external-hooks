@@ -1,5 +1,9 @@
 ## Bitbucket 6.2.0 and higher
 
+### 12.0.1 (2021-11-05)
+
+* Fix compatibility of the global hooks feature and Oracle/Postgers databases.
+
 ### 12.0.0 (2021-10-20)
 
 * New feature: [global hooks](https://external-hooks.reconquest.io/docs/global_hooks/).
