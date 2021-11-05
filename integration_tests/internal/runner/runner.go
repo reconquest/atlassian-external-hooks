@@ -165,20 +165,15 @@ func (runner *Runner) upgrade(id string, version string) {
 				requested,
 			)
 
-			container := runner.run.instanceBitbucket.Container()
-
 			err := runner.run.instanceBitbucket.Stop()
 			runner.assert.NoError(err, "stop bitbucket")
 
 			err = runner.run.instanceBitbucket.RemoveContainer()
-			runner.assert.NoError(
-				err,
-				"remove previous container",
-			)
+			runner.assert.NoError(err, "remove previous container")
 
-			runner.run.instanceBitbucket, err = bitbucket.StartExisting(
-				bitbucket.StartExistingOpts{
-					Container: container,
+			runner.run.instanceBitbucket, err = bitbucket.StartNew(
+				bitbucket.StartNewOpts{
+					ID: string(id),
 					RunOpts: bitbucket.RunOpts{
 						Version:  version,
 						Database: runner.run.instanceDatabase,
