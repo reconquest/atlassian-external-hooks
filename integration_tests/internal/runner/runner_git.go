@@ -24,14 +24,16 @@ func (runner *Runner) GitClone(repository *stash.Repository) *git.Git {
 	privateURL, err := url.Parse(href)
 	runner.assert.NoError(err, "parse git repository uri")
 
-	publicURL, err := url.Parse(runner.Bitbucket().GetConnectorURI(users.USER_ADMIN))
+	publicURL, err := url.Parse(
+		runner.Bitbucket().ConnectorURI(users.USER_ADMIN),
+	)
 	runner.assert.NoError(err, "parse bitbucket connector uri")
 
 	publicURL.Path = privateURL.Path
 
 	runner.assert.NotEmpty(href, "git clone url is empty")
 
-	dir, err := ioutil.TempDir(runner.run.dir, "repo.")
+	dir, err := ioutil.TempDir(runner.run.workdir, "repo.")
 	runner.assert.NoError(err, "create dir for repo")
 
 	git, err := git.Clone(publicURL.String(), dir)

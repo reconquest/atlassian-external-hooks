@@ -24,10 +24,7 @@ func (suite *Suite) testPostReceive(
 	suite.testPostReceiveHook_Output(tester)
 	suite.testPostReceiveHook_AfterMerge(tester)
 
-	suite.DisableHook(hook, HookOptions{
-		// should be already disabled at this moment
-		WaitHookScripts: false,
-	})
+	suite.DisableHook(hook)
 }
 
 func (suite *Suite) testPostReceiveHook_Output(
@@ -45,11 +42,12 @@ func (suite *Suite) testPostReceiveHook_AfterMerge(
 	name := "/tmp/" + fmt.Sprint(time.Now().UnixNano())
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
-		HookOptions{WaitHookScripts: true},
 		string(text(
 			fmt.Sprintf(`echo 1 > `+name),
 		)),
 	)
+
+	tester.suite.WaitExternalHookEnabled(tester.hook)
 
 	pullRequest := suite.CreateRandomPullRequest(
 		&tester.repository.Project,

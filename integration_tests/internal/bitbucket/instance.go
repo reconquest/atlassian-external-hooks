@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
@@ -44,12 +45,16 @@ type Logs struct {
 }
 
 type Instance struct {
-	version   string
-	container string
-	volume    string
-	ip        string
-	opts      struct {
-		StartOpts
+	id              string
+	version         string
+	container       string
+	database        database.Database
+	volumeData      string
+	volumeLibNative string
+	network         string
+	ip              string
+	opts            struct {
+		RunOpts
 		ConfigureOpts
 	}
 
@@ -57,14 +62,18 @@ type Instance struct {
 	testcaseLogs   *Logs
 }
 
-func (instance *Instance) GetOpts() struct {
-	StartOpts
+func (instance *Instance) ID() string {
+	return instance.id
+}
+
+func (instance *Instance) Opts() struct {
+	RunOpts
 	ConfigureOpts
 } {
 	return instance.opts
 }
 
-func (instance *Instance) GetConnectorURI(user *stash.User) string {
+func (instance *Instance) ConnectorURI(user *stash.User) string {
 	var auth *url.Userinfo
 
 	if user == nil {
@@ -85,7 +94,7 @@ func (instance *Instance) GetConnectorURI(user *stash.User) string {
 	return url.String()
 }
 
-func (instance *Instance) GetURI(path string) string {
+func (instance *Instance) URI(path string) string {
 	url := url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s:%d", instance.ip, instance.opts.PortHTTP),
@@ -95,7 +104,7 @@ func (instance *Instance) GetURI(path string) string {
 	return url.String()
 }
 
-func (instance *Instance) GetClonePathSSH(repo, project string) string {
+func (instance *Instance) ClonePathSSH(repo, project string) string {
 	url := url.URL{
 		Scheme: "ssh",
 		User:   url.User("git"),
@@ -106,8 +115,8 @@ func (instance *Instance) GetClonePathSSH(repo, project string) string {
 	return url.String()
 }
 
-func (instance *Instance) GetClonePathHTTP(repo, project string) string {
-	return instance.GetURI(
+func (instance *Instance) ClonePathHTTP(repo, project string) string {
+	return instance.URI(
 		fmt.Sprintf(
 			"scm/%s/%s.git",
 			strings.ToLower(repo),
@@ -116,11 +125,11 @@ func (instance *Instance) GetClonePathHTTP(repo, project string) string {
 	)
 }
 
-func (instance *Instance) GetContainerID() string {
+func (instance *Instance) Container() string {
 	return instance.container
 }
 
-func (instance *Instance) GetVersion() string {
+func (instance *Instance) Version() string {
 	return instance.version
 }
 
@@ -400,12 +409,21 @@ func (instance *Instance) RemoveContainer() error {
 	).Run()
 }
 
-func (instance *Instance) RemoveVolume() error {
+func (instance *Instance) RemoveVolumeData() error {
 	return exec.New(
 		"docker",
 		"volume",
 		"rm", "-f",
-		instance.volume,
+		instance.volumeData,
+	).Run()
+}
+
+func (instance *Instance) RemoveVolumeLibNative() error {
+	return exec.New(
+		"docker",
+		"volume",
+		"rm", "-f",
+		instance.volumeLibNative,
 	).Run()
 }
 
@@ -430,10 +448,10 @@ func (instance *Instance) Configure(opts ConfigureOpts) error {
 		return err
 	}
 
-	err = instance.configureDatabase(token)
-	if err != nil {
-		return err
-	}
+	// err = instance.configureDatabase(token)
+	// if err != nil {
+	//    return err
+	//}
 
 	err = instance.configureLicense(token)
 	if err != nil {
@@ -448,15 +466,23 @@ func (instance *Instance) Configure(opts ConfigureOpts) error {
 	return nil
 }
 
-func (instance *Instance) GetVolume() string {
-	return instance.volume
+func (instance *Instance) VolumeData() string {
+	return instance.volumeData
 }
 
-func (instance *Instance) GetStacktraceLogs() *Logs {
+func (instance *Instance) VolumeLibNative() string {
+	return instance.volumeLibNative
+}
+
+func (instance *Instance) Network() string {
+	return instance.network
+}
+
+func (instance *Instance) StacktraceLogs() *Logs {
 	return instance.stacktraceLogs
 }
 
-func (instance *Instance) GetTestcaseLogs() *Logs {
+func (instance *Instance) TestcaseLogs() *Logs {
 	return instance.testcaseLogs
 }
 
@@ -568,7 +594,7 @@ func (instance *Instance) getAtlToken(
 	if response == nil {
 		var err error
 
-		response, err = http.Get(instance.GetURI("/setup"))
+		response, err = http.Get(instance.URI("/setup"))
 		if err != nil {
 			return nil, karma.Format(
 				err,
@@ -610,7 +636,7 @@ func (instance *Instance) postSetupForm(
 
 	request, err := http.NewRequest(
 		http.MethodPost,
-		instance.GetURI("/setup"),
+		instance.URI("/setup"),
 		strings.NewReader(form.Encode()),
 	)
 	if err != nil {
@@ -654,7 +680,7 @@ func (instance *Instance) isConfigured() (bool, error) {
 
 	request, err := http.NewRequest(
 		http.MethodGet,
-		instance.GetURI("/setup"),
+		instance.URI("/setup"),
 		nil,
 	)
 	if err != nil {
@@ -696,7 +722,7 @@ func (instance *Instance) configureLicense(token *AtlToken) error {
 	form.Set("step", "settings")
 	form.Set("license", instance.opts.License)
 	form.Set("applicationTitle", "Bitbucket")
-	form.Set("baseUrl", instance.GetURI("/"))
+	form.Set("baseUrl", instance.URI("/"))
 
 	return instance.postSetupForm(form, token)
 }
@@ -717,7 +743,7 @@ func (instance *Instance) GetApplicationDataDir() string {
 	return BITBUCKET_DATA_DIR
 }
 
-func (instance *Instance) start() error {
+func (instance *Instance) create() error {
 	type M map[string]interface{}
 
 	springApplicationConfig, _ := json.Marshal(M{
@@ -728,31 +754,65 @@ func (instance *Instance) start() error {
 		},
 	})
 
+	var (
+		jdbcDriver   = instance.database.Driver()
+		jdbcURL      = instance.database.URL()
+		jdbcUser     = instance.database.User()
+		jdbcPassword = instance.database.Password()
+	)
+
+	bitbucketDataDirLib, err := filepath.Abs(
+		"./integration_tests/assets/bitbucket-data-dir-lib/",
+	)
+	if err != nil {
+		return err
+	}
+
 	execution := exec.New(
-		"docker",
-		"run", "-d",
+		"docker", "container", "create",
 		"--add-host=marketplace.atlassian.com:127.0.0.1",
+		"--network", instance.opts.Network,
+		"-e", "JDBC_DRIVER="+jdbcDriver,
+		"-e", "JDBC_URL="+jdbcURL,
+		"-e", "JDBC_USER="+jdbcUser,
+		"-e", "JDBC_PASSWORD="+jdbcPassword,
 		"-e", "ELASTICSEARCH_ENABLED=false",
 		"-e", fmt.Sprintf(
 			`SPRING_APPLICATION_JSON=%s`,
 			string(springApplicationConfig),
 		),
+		// required for Oracle
+		"-e", "TZ=Europe/Moscow",
 		"-v", fmt.Sprintf(
 			"%s:%s",
-			instance.volume,
+			instance.volumeData,
 			instance.GetApplicationDataDir(),
 		),
+		"-v", fmt.Sprintf(
+			"%s:%s",
+			bitbucketDataDirLib,
+			instance.GetApplicationDataDir()+"/lib",
+		),
+		"-v", fmt.Sprintf(
+			"%s:%s/lib/native",
+			instance.volumeLibNative,
+			instance.GetApplicationDataDir(),
+		),
+		"--name", instance.container,
 		fmt.Sprintf(BITBUCKET_IMAGE, instance.version),
 	)
 
-	stdout, _, err := execution.Output()
+	err = execution.Run()
 	if err != nil {
 		return err
 	}
 
-	instance.container = strings.TrimSpace(string(stdout))
+	return instance.start()
+}
 
-	return nil
+func (instance *Instance) start() error {
+	execution := exec.New("docker", "container", "start", instance.container)
+	return execution.Run()
 }
 
 func (instance *Instance) connect() error {
@@ -788,7 +848,7 @@ func (instance *Instance) connect() error {
 func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 	request, err := http.NewRequest(
 		http.MethodGet,
-		instance.GetURI("/system/startup"),
+		instance.URI("/system/startup"),
 		nil,
 	)
 	if err != nil {

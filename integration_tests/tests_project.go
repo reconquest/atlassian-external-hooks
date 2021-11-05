@@ -45,18 +45,22 @@ func (suite *Suite) TestProjectHooks_DoNotCreateDisabledHooks(
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
+
+	suite.WaitExternalHookEnabled(context.PreReceive())
 
 	err := preReceive.Disable()
 	suite.NoError(err, "pre-receive hook should be disabled")
 
+	suite.WaitExternalHookDisabled(preReceive)
+
 	postReceive := suite.ConfigureSampleHook_FailWithMessage(
 		context.PostReceive(),
-		HookOptions{WaitHookScripts: true},
 		`YYY`,
 	)
+
+	suite.WaitExternalHookEnabled(context.PostReceive())
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 	Assert_PushOutputsMessages(suite, repository, `YYY`)

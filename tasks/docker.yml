@@ -18,3 +18,15 @@ tasks:
         --add-host=marketplace.atlassian.com:127.0.0.1
         -v {{ .dir }}/{{ .version }}:/var/atlassian/application-data/bitbucket
         {{ .image }}
+  clean:
+    desc: clean up aeh-* docker resources
+    cmds:
+      - echo "*** removing docker containers"
+      - docker ps -a --filter 'name=aeh-*' --format {{`'{{.Names}}'`}}
+        | xargs -n1 --verbose --no-run-if-empty docker rm -f
+      - echo "*** removing docker volumes"
+      - docker volume ls -q --filter 'name=aeh-*'
+        | xargs -n1 --verbose --no-run-if-empty docker volume rm
+      - echo "*** removing docker networks"
+      - docker network ls -q --filter 'name=aeh-*' --format {{`'{{.Name}}'`}}
+        | xargs -n1 --verbose --no-run-if-empty docker network rm

@@ -19,9 +19,9 @@ func (suite *Suite) TestHookScriptsLeak_NoLeakAfterRepositoryDelete(
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
+	suite.WaitExternalHookEnabled(context.PreReceive())
 
 	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
 		return strings.Contains(

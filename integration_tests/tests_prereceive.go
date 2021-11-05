@@ -20,10 +20,7 @@ func (suite *Suite) testPreReceive(
 	suite.testPreReceiveHook_Input(tester)
 	suite.testPreReceiveHook_Veto(tester)
 
-	suite.DisableHook(hook, HookOptions{
-		// should be already disabled at this moment
-		WaitHookScripts: false,
-	})
+	suite.DisableHook(hook)
 }
 
 func (suite *Suite) testPreReceiveHook_Veto(tester *HookTester) {

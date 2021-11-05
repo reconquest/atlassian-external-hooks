@@ -98,11 +98,10 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_Settings(
 		settings.
 			UseSafePath(true).
 			WithExe(`hook.`+lojban.GetRandomID(5)),
-		HookOptions{
-			WaitHookScripts: true,
-		},
 		`echo XXXGLOBAL; exit 1`,
 	)
+
+	// suite.WaitExternalHookEnabled()
 
 	userRepositoryAfter := suite.CreateRandomRepository(userProject)
 	repositoryAfter := suite.CreateRandomRepository(project)
@@ -114,7 +113,8 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_Settings(
 		repositoryAfter,
 	)
 
-	suite.DisableHook(hook, HookOptions{WaitHookScripts: true})
+	suite.DisableHook(hook)
+	// suite.WaitExternalHookDisabled()
 }
 
 func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(
@@ -132,11 +132,10 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(
 			WithFilterPersonalRepositories(external_hooks.FILTER_PERSONAL_REPOSITORIES_DISABLED).
 			UseSafePath(true).
 			WithExe(`hook.`+lojban.GetRandomID(5)),
-		HookOptions{
-			WaitHookScripts: true,
-		},
 		`echo XXX_DISABLED; exit 1`,
 	)
+
+	// suite.WaitExternalHookEnabled()
 
 	Assert_PushRejected(suite, userRepository, "XXX_DISABLED")
 
@@ -146,11 +145,10 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(
 			WithFilterPersonalRepositories(external_hooks.FILTER_PERSONAL_REPOSITORIES_ONLY_PERSONAL).
 			UseSafePath(true).
 			WithExe(`hook.`+lojban.GetRandomID(5)),
-		HookOptions{
-			WaitHookScripts: true,
-		},
 		`echo XXX_ONLY_PERSONAL; exit 1`,
 	)
+
+	// suite.WaitExternalHookEnabled()
 
 	Assert_PushRejected(suite, userRepository, "XXX_ONLY_PERSONAL")
 
@@ -160,11 +158,10 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(
 			WithFilterPersonalRepositories(external_hooks.FILTER_PERSONAL_REPOSITORIES_EXCLUDE_PERSONAL).
 			UseSafePath(true).
 			WithExe(`hook.`+lojban.GetRandomID(5)),
-		HookOptions{
-			WaitHookScripts: true,
-		},
 		`echo XXX_EXCLUDE_PERSONAL; exit 1`,
 	)
+
+	// suite.WaitExternalHookEnabled()
 
 	Assert_PushDoesNotOutputMessages(
 		suite,
@@ -172,5 +169,6 @@ func (suite *Suite) testGlobalHooks_PersonalRepositoriesFilter_SwitchFilter(
 		"XXX_EXCLUDE_PERSONAL",
 	)
 
-	suite.DisableHook(hook, HookOptions{WaitHookScripts: true})
+	suite.DisableHook(hook)
+	// suite.WaitExternalHookDisabled()
 }

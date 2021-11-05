@@ -21,10 +21,10 @@ func New(instance *Instance) (*Bitbucket, error) {
 		Instance: instance,
 	}
 
-	url, err := url.Parse(instance.GetConnectorURI(users.USER_ADMIN))
+	url, err := url.Parse(instance.ConnectorURI(users.USER_ADMIN))
 	if err != nil {
 		return nil, karma.
-			Describe("uri", instance.GetConnectorURI(users.USER_ADMIN)).
+			Describe("uri", instance.ConnectorURI(users.USER_ADMIN)).
 			Format(
 				err,
 				"parse bitbucket connector uri",
@@ -88,7 +88,9 @@ type BitbucketRepositoriesAPI struct {
 	project string
 }
 
-func (api *BitbucketRepositoriesAPI) Create(slug string) (*stash.Repository, error) {
+func (api *BitbucketRepositoriesAPI) Create(
+	slug string,
+) (*stash.Repository, error) {
 	log.Debugf(
 		nil,
 		"{bitbucket} creating repository: %s / %s",
@@ -176,12 +178,24 @@ func (api *BitbucketPullRequestsAPI) Create(
 		fromRef, toRef,
 	)
 
+	prRepo := stash.PullRequestRepository{
+		Slug: api.repository,
+		Project: stash.PullRequestProject{
+			Key: api.project,
+		},
+	}
+
 	pullRequest, err := api.client.CreatePullRequest(
-		api.project,
-		api.repository,
 		title,
 		description,
-		fromRef, toRef,
+		stash.PullRequestRef{
+			Id:         fromRef,
+			Repository: prRepo,
+		},
+		stash.PullRequestRef{
+			Id:         toRef,
+			Repository: prRepo,
+		},
 		nil,
 	)
 	if err != nil {
@@ -354,7 +368,9 @@ type BitbucketAdminAPI struct {
 	client stash.Stash
 }
 
-func (api *BitbucketAdminAPI) CreateUser(name, password, email string) (*stash.User, error) {
+func (api *BitbucketAdminAPI) CreateUser(
+	name, password, email string,
+) (*stash.User, error) {
 	displayName := name
 
 	user, err := api.client.CreateUser(name, password, displayName, email)

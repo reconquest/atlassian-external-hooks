@@ -15,7 +15,12 @@ import com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class BitbucketEventListener {
+  private static Logger log = LoggerFactory.getLogger(BitbucketEventListener.class);
+
   private GlobalHookSettingsDao globalHookSettingsDao;
   private HookInstaller hookInstaller;
 
@@ -41,6 +46,11 @@ public class BitbucketEventListener {
     if (globalHooks.isEnabled(script.getHookKey())) {
       hookInstaller.enable(event.getScope(), script, globalHooks);
     }
+
+    log.debug(
+        "external hook enabled and hook scripts installed: {} {}",
+        event.getRepositoryHookKey(),
+        ScopeUtil.toString(event.getScope()));
   }
 
   @EventListener
@@ -57,6 +67,11 @@ public class BitbucketEventListener {
     } else if (ScopeUtil.isProject(scope)) {
       hookInstaller.disable((ProjectScope) scope, script);
     }
+
+    log.debug(
+        "external hook disabled and hook scripts uninstalled: {} {}",
+        event.getRepositoryHookKey(),
+        ScopeUtil.toString(event.getScope()));
   }
 
   // This event is triggered when repository hook transfered from 'Enabled' to
@@ -74,6 +89,11 @@ public class BitbucketEventListener {
     Scope scope = event.getScope();
     if (ScopeUtil.isRepository(scope)) {
       hookInstaller.inherit((RepositoryScope) scope, script);
+
+    log.debug(
+        "external hook inherited and hook scripts configured: {} {}",
+        event.getRepositoryHookKey(),
+        ScopeUtil.toString(event.getScope()));
     }
   }
 

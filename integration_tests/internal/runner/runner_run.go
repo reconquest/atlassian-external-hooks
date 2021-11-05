@@ -8,15 +8,18 @@ import (
 )
 
 type RunOpts struct {
+	Workdir   string
+	Database  string
 	Container string
 	Randomize bool
 }
 
-func (runner *Runner) Run(dir string, opts RunOpts) {
-	runner.run.dir = dir
+func (runner *Runner) Run(opts RunOpts) {
+	runner.run.workdir = opts.Workdir
 	runner.run.container = opts.Container
+	runner.run.database = opts.Database
 
-	log.Debugf(nil, "{run} work dir: %s", runner.run.dir)
+	log.Debugf(nil, "{run} work dir: %s", runner.run.workdir)
 
 	if opts.Randomize {
 		rand.Shuffle(

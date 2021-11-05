@@ -33,16 +33,14 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
+	suite.WaitHookScriptsCreated()
+
 	Assert_PushRejected(suite, repository, `XXX`)
 
-	suite.DisableHook(
-		context.OnRepository(repository.Slug).PreReceive(),
-		HookOptions{WaitHookScripts: false},
-	)
+	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
 
 	Assert_PushRejected(suite, repository, `XXX`)
 }
@@ -73,15 +71,20 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
-	suite.DisableHook(context.OnRepository(repository.Slug).PreReceive())
+	suite.WaitExternalHookEnabled(context.PreReceive())
+
+	repoReceive := context.OnRepository(repository.Slug).PreReceive()
+
+	suite.DisableHook(repoReceive)
+
+	suite.WaitExternalHookDisabled(repoReceive)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 
-	suite.DisableHook(context.PreReceive(), HookOptions{WaitHookScripts: false})
+	suite.DisableHook(context.PreReceive())
 
 	suite.DetectHookScriptsLeak()
 }
@@ -109,7 +112,6 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
-		HookOptions{WaitHookScripts: false},
 		`XXX`,
 	)
 
@@ -117,7 +119,7 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 
-	suite.DisableHook(preReceive, HookOptions{WaitHookScripts: false})
+	suite.DisableHook(preReceive)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -147,7 +149,6 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
 		projectContext.PreReceive(),
-		HookOptions{WaitHookScripts: false},
 		`XXX`,
 	)
 
@@ -157,7 +158,7 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 
 	Assert_PushRejected(suite, repository, `XXX`)
 
-	suite.DisableHook(preReceive, HookOptions{WaitHookScripts: true})
+	suite.DisableHook(preReceive)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -192,15 +193,15 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 	// repository first and project second
 	repositoryPreReceive := suite.ConfigureSampleHook_Message(
 		repositoryContext.PreReceive(),
-		HookOptions{WaitHookScripts: false},
 		`XXX_REPOSITORY_XXX`,
 	)
 
 	projectPreReceive := suite.ConfigureSampleHook_Message(
 		projectContext.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX_PROJECT_XXX`,
 	)
+
+	suite.WaitHookScriptsCreated()
 
 	Assert_PushOutputsMessages(
 		suite,
@@ -209,7 +210,7 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 		`XXX_REPOSITORY_XXX`,
 	)
 
-	suite.DisableHook(projectPreReceive, HookOptions{WaitHookScripts: false})
+	suite.DisableHook(projectPreReceive)
 	suite.DisableHook(repositoryPreReceive)
 
 	suite.DetectHookScriptsLeak()
@@ -245,21 +246,21 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Fixed(
 	// repository first and project second
 	repositoryPreReceive := suite.ConfigureSampleHook_Message(
 		repositoryContext.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX_REPOSITORY_XXX`,
 	)
 
 	projectPreReceive := suite.ConfigureSampleHook_Message(
 		projectContext.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX_PROJECT_XXX`,
 	)
+
+	suite.WaitExternalHookEnabled(projectContext.PreReceive())
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX_PROJECT_XXX`)
 	Assert_PushOutputsMessages(suite, repository, `XXX_REPOSITORY_XXX`)
 
 	suite.DisableHook(repositoryPreReceive)
-	suite.DisableHook(projectPreReceive, HookOptions{WaitHookScripts: false})
+	suite.DisableHook(projectPreReceive)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -296,7 +297,6 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
 
 	preReceiveRepository := suite.ConfigureHook(
@@ -309,14 +309,15 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
+
+	suite.WaitHookScriptsCreated()
 
 	Assert_PushOutputsMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
 	suite.DisableHook(preReceiveProject)
-	suite.DisableHook(preReceiveRepository, HookOptions{WaitHookScripts: false})
+	suite.DisableHook(preReceiveRepository)
 }
 
 func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
@@ -351,7 +352,6 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
 
 	preReceiveRepository := suite.ConfigureHook(
@@ -364,14 +364,17 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
+
+	suite.WaitExternalHookEnabled(preReceiveRepository)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
-	suite.DisableHook(preReceiveProject, HookOptions{WaitHookScripts: false})
+	suite.DisableHook(preReceiveProject)
 	suite.DisableHook(preReceiveRepository)
+
+	suite.WaitExternalHookDisabled(preReceiveRepository)
 }
 
 func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
@@ -406,8 +409,9 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
+
+	suite.WaitHookScriptsCreated()
 
 	alice := suite.CreateUserAlice()
 
@@ -427,15 +431,15 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
+
+	suite.WaitHookScriptsCreated()
 
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
 	suite.InheritHook(
 		preReceiveRepository,
 		InheritHookExpectedStateEnabledProject,
-		HookOptions{WaitHookScripts: false},
 	)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX PROJECT`)
@@ -475,8 +479,9 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
+
+	suite.WaitExternalHookEnabled(preReceiveProject)
 
 	alice := suite.CreateUserAlice()
 
@@ -496,8 +501,9 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 			`#!/bin/bash`,
 			`echo $1`,
 		),
-		HookOptions{WaitHookScripts: true},
 	)
+
+	suite.WaitExternalHookEnabled(preReceiveRepository)
 
 	Assert_PushOutputsMessages(suite, repository, `YYY REPOSITORY`)
 
