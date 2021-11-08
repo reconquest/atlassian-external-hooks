@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
@@ -116,6 +117,13 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 	)
 
 	repository := suite.CreateRandomRepository(project)
+
+	// usually we would use the following:
+	// suite.WaitHookScriptsCreated()
+	// to wait that hook scripts are being created
+	// but since we are reproducing a bug where hook scripts are not going to be
+	// created, we just wait for a while and go check
+	time.Sleep(time.Second * 3)
 
 	Assert_PushDoesNotOutputMessages(suite, repository, `XXX`)
 
@@ -511,6 +519,8 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 		preReceiveRepository,
 		InheritHookExpectedStateEnabledProject,
 	)
+
+	suite.WaitHookScriptsInherited()
 
 	Assert_PushOutputsMessages(suite, repository, `XXX PROJECT`)
 

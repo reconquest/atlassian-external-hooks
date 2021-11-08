@@ -90,10 +90,10 @@ public class BitbucketEventListener {
     if (ScopeUtil.isRepository(scope)) {
       hookInstaller.inherit((RepositoryScope) scope, script);
 
-    log.debug(
-        "external hook inherited and hook scripts configured: {} {}",
-        event.getRepositoryHookKey(),
-        ScopeUtil.toString(event.getScope()));
+      log.debug(
+          "external hook inherited and hook scripts configured: {} {}",
+          event.getRepositoryHookKey(),
+          ScopeUtil.toString(event.getScope()));
     }
   }
 
@@ -108,6 +108,10 @@ public class BitbucketEventListener {
         hookInstaller.enable(scope, script, globalHooks);
       }
     });
+
+    log.debug(
+        "external hook configured for created repository: {} {}",
+        ScopeUtil.toString(new RepositoryScope(event.getRepository())));
   }
 
   @EventListener
@@ -117,5 +121,9 @@ public class BitbucketEventListener {
       script.uninstall(scope);
       script.uninstall(new GlobalScope(), scope);
     });
+
+    log.debug(
+        "external hook unconfigured for deleted repository: {} {}",
+        ScopeUtil.toString(new RepositoryScope(event.getRepository())));
   }
 }

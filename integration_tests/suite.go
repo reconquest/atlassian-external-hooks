@@ -14,6 +14,7 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
@@ -221,7 +222,7 @@ func (suite *Suite) watchException() (result chan bool, stop func()) {
 	result = make(chan bool)
 
 	go func() {
-		bitbucket := suite.WaitBitbucket()
+		bb := suite.WaitBitbucket()
 
 		re := regexp.MustCompile(
 			`(at com.ngs.stash.externalhooks.|java.lang.\w+Exception)`,
@@ -229,9 +230,9 @@ func (suite *Suite) watchException() (result chan bool, stop func()) {
 
 		found := false
 
-		bitbucket.WaitLogEntryContext(
+		bb.WaitLogEntryContext(
 			ctx,
-			bitbucket.Instance.StacktraceLogs(),
+			bb.Instance.StacktraceLogs(),
 			func(line string) bool {
 				if re.MatchString(line) {
 					log.Errorf(nil, "got an exception: %s", line)
@@ -241,6 +242,7 @@ func (suite *Suite) watchException() (result chan bool, stop func()) {
 				}
 				return false
 			},
+			bitbucket.DefaultWaitLogEntryDuration,
 		)
 
 		<-ctx.Done()
@@ -345,18 +347,25 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 		v9_1_0  = *semver.New("9.1.0")
 	)
 
-	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		switch {
-		case v.Compare(v10_0_0) >= 0 &&
-			strings.Contains(line, "Finished job for creating HookScripts"):
-			return true
-		case v.Compare(v10_0_0) < 0 && v.Compare(v9_1_0) >= 0 &&
-			strings.Contains(line, "HookScripts created successfully"):
-			return true
-		default:
-			return false
-		}
-	})
+	suite.Bitbucket().FlushLogs(suite.Bitbucket().TestcaseLogs())
+
+	waiter := suite.Bitbucket().WaitLogEntryContext(
+		context.Background(),
+		suite.Bitbucket().TestcaseLogs(),
+		func(line string) bool {
+			switch {
+			case v.Compare(v10_0_0) >= 0 &&
+				strings.Contains(line, "Finished job for creating HookScripts"):
+				return true
+			case v.Compare(v10_0_0) < 0 && v.Compare(v9_1_0) >= 0 &&
+				strings.Contains(line, "HookScripts created successfully"):
+				return true
+			default:
+				return false
+			}
+		},
+		time.Second*60,
+	)
 
 	key := suite.Runner.InstallAddon(addon.Version, addon.Path)
 
@@ -414,6 +423,34 @@ func (suite *Suite) WaitExternalHookDisabled(hook interface {
 	waiter.Wait(suite.FailNow, "external hook", "disabled")
 }
 
+func (suite *Suite) WaitExternalHookConfigured(hook interface {
+	Global() bool
+}) {
+	if hook.Global() {
+		return
+	}
+
+	re := regexp.MustCompile(`(?i)external hook configured`)
+	waiter := suite.Bitbucket().WaitLogEntry(
+		func(line string) bool {
+			return re.MatchString(line)
+		},
+	)
+
+	waiter.Wait(suite.FailNow, "external hook", "configured")
+}
+
+func (suite *Suite) WaitExternalHookUnconfigured() {
+	re := regexp.MustCompile(`(?i)external hook unconfigured`)
+	waiter := suite.Bitbucket().WaitLogEntry(
+		func(line string) bool {
+			return re.MatchString(line)
+		},
+	)
+
+	waiter.Wait(suite.FailNow, "external hook", "unconfigured")
+}
+
 func (suite *Suite) WaitHookScriptsCreated() {
 	re := regexp.MustCompile(
 		`(?i)(ExternalHookScript|HooksFactory)\W+(applied|created).*hook\s*script`,
@@ -425,6 +462,19 @@ func (suite *Suite) WaitHookScriptsCreated() {
 	)
 
 	waiter.Wait(suite.FailNow, "hook scripts", "created")
+}
+
+func (suite *Suite) WaitHookScriptsInherited() {
+	re := regexp.MustCompile(
+		`(?i)ExternalHookScript`,
+	)
+	waiter := suite.Bitbucket().WaitLogEntry(
+		func(line string) bool {
+			return re.MatchString(line)
+		},
+	)
+
+	waiter.Wait(suite.FailNow, "hook scripts", "inherited")
 }
 
 func (suite *Suite) EnableHook(

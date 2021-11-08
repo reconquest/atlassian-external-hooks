@@ -1,7 +1,5 @@
 package main
 
-import "strings"
-
 func (suite *Suite) TestHookScriptsLeak_NoLeakAfterRepositoryDelete(
 	params TestParams,
 ) {
@@ -23,17 +21,10 @@ func (suite *Suite) TestHookScriptsLeak_NoLeakAfterRepositoryDelete(
 	)
 	suite.WaitExternalHookEnabled(context.PreReceive())
 
-	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		return strings.Contains(
-			line,
-			"Successfully deleted repository directory",
-		)
-	})
-
 	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
 	suite.NoError(err, "remove repository")
 
-	waiter.Wait(suite.FailNow, "repository", "deleted")
+	suite.WaitExternalHookUnconfigured()
 
 	suite.DetectHookScriptsLeak()
 }

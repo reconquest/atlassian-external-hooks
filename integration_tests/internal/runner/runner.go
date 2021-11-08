@@ -119,6 +119,7 @@ func (runner *Runner) UseBitbucket(version string) {
 				},
 			},
 		)
+		runner.assert.NoError(err, "start existing container")
 
 	default:
 		runner.useDatabase(id)

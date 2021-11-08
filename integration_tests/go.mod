@@ -28,3 +28,5 @@ require (
 )
 
 replace github.com/reconquest/lexec-go => /home/operator/go/src/github.com/reconquest/lexec-go
+
+replace github.com/kovetskiy/stash => /home/operator/go/src/github.com/kovetskiy/stash

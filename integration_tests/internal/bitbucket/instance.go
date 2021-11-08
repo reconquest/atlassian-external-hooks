@@ -513,11 +513,14 @@ func (waiter *LogEntryWaiter) Wait(
 	}
 }
 
+var DefaultWaitLogEntryDuration = time.Second * 10
+
 func (instance *Instance) WaitLogEntry(fn func(string) bool) *LogEntryWaiter {
 	return instance.WaitLogEntryContext(
 		context.Background(),
 		instance.testcaseLogs,
 		fn,
+		DefaultWaitLogEntryDuration,
 	)
 }
 
@@ -525,6 +528,7 @@ func (instance *Instance) WaitLogEntryContext(
 	ctx context.Context,
 	logs *Logs,
 	fn func(string) bool,
+	duration time.Duration,
 ) *LogEntryWaiter {
 	waiter := sync.WaitGroup{}
 	waiter.Add(1)
@@ -575,7 +579,7 @@ func (instance *Instance) WaitLogEntryContext(
 
 	return &LogEntryWaiter{
 		group:    &waiter,
-		duration: time.Second * 10,
+		duration: duration,
 	}
 }
 
