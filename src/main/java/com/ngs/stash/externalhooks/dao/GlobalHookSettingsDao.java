@@ -28,7 +28,7 @@ public class GlobalHookSettingsDao {
   public GlobalHookSettings get(String hookKey) {
     GlobalHookSettings[] items = ao.find(
         GlobalHookSettings.class,
-        Query.select().from(GlobalHookSettings.class).where("hook = ?", hookKey));
+        Query.select().from(GlobalHookSettings.class).where("HOOK = ?", hookKey));
     if (items.length == 0) {
       return null;
     }

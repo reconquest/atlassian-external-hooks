@@ -29,10 +29,8 @@ func (suite *Suite) testMergeCheck(
 	suite.testMergeCheck_Input(tester, pullRequest)
 	suite.testMergeCheck_Veto(tester, pullRequest)
 
-	suite.DisableHook(hook, HookOptions{
-		// should be already disabled at this moment
-		WaitHookScripts: false,
-	})
+	suite.DisableHook(hook)
+	suite.WaitExternalHookDisabled(hook)
 }
 
 func (suite *Suite) testMergeCheck_Veto(

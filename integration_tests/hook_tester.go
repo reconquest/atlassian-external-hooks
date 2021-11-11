@@ -46,11 +46,12 @@ func (tester *HookTester) TestStdin(
 
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
-		HookOptions{WaitHookScripts: true},
 		string(text(
 			append(preamble, `cat`, fmt.Sprintf("exit %d", tester.exit))...,
 		)),
 	)
+
+	tester.suite.WaitExternalHookEnabled(tester.hook)
 
 	assert(tester.suite, tester.repository)
 }
@@ -62,7 +63,6 @@ func (tester *HookTester) TestArgs(
 
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
-		HookOptions{WaitHookScripts: true},
 		string(text(
 			`printf "[%s]\n" "$@"`,
 			fmt.Sprintf("exit %d", tester.exit),
@@ -71,6 +71,8 @@ func (tester *HookTester) TestArgs(
 		"arg-2",
 		"multi\nline",
 	)
+
+	tester.suite.WaitExternalHookEnabled(tester.hook)
 
 	assert(
 		tester.suite,
@@ -91,17 +93,20 @@ func (tester *HookTester) TestEnableDisable(
 
 	tester.suite.ConfigureSampleHook_FailWithMessage(
 		tester.hook,
-		HookOptions{WaitHookScripts: true},
 		message,
 	)
+
+	tester.suite.WaitExternalHookEnabled(tester.hook)
 
 	assertEnabled(tester.suite, tester.repository, message)
 
 	err := tester.hook.Disable()
-	tester.suite.NoError(err, "unable to disable hook")
+	tester.suite.NoError(err, "disable hook")
 
 	err = tester.hook.Wait()
-	tester.suite.NoError(err, "unable to wait for disable hook")
+	tester.suite.NoError(err, "wait for disable hook")
+
+	tester.suite.WaitExternalHookDisabled(tester.hook)
 
 	assertDisabled(tester.suite, tester.repository, message)
 }
@@ -115,12 +120,13 @@ func (tester *HookTester) TestEnv(
 
 	tester.suite.ConfigureSampleHook(
 		tester.hook,
-		HookOptions{WaitHookScripts: true},
 		string(text(
 			fmt.Sprintf(`echo [$%s]`, name),
 			fmt.Sprintf(`exit %d`, tester.exit),
 		)),
 	)
+
+	tester.suite.WaitExternalHookEnabled(tester.hook)
 
 	assert(tester.suite, tester.repository, fmt.Sprintf("[%s]", value))
 }
@@ -175,7 +181,7 @@ func (tester *HookTester) TestEnv_BB_REPO_IS_PUBLIC(
 func (tester *HookTester) TestEnv_BB_BASE_URL(
 	assert HookTesterAssert,
 ) {
-	tester.TestEnv(assert, "BB_BASE_URL", tester.suite.Bitbucket().GetURI(""))
+	tester.TestEnv(assert, "BB_BASE_URL", tester.suite.Bitbucket().URI(""))
 }
 
 func (tester *HookTester) TestEnv_BB_REPO_CLONE_SSH(
@@ -184,7 +190,7 @@ func (tester *HookTester) TestEnv_BB_REPO_CLONE_SSH(
 	tester.TestEnv(
 		assert,
 		"BB_REPO_CLONE_SSH",
-		tester.suite.Bitbucket().GetClonePathSSH(
+		tester.suite.Bitbucket().ClonePathSSH(
 			tester.repository.Project.Key,
 			tester.repository.Slug,
 		),
@@ -197,7 +203,7 @@ func (tester *HookTester) TestEnv_BB_REPO_CLONE_HTTP(
 	tester.TestEnv(
 		assert,
 		"BB_REPO_CLONE_HTTP",
-		tester.suite.Bitbucket().GetClonePathHTTP(
+		tester.suite.Bitbucket().ClonePathHTTP(
 			tester.repository.Project.Key,
 			tester.repository.Slug,
 		),
@@ -210,7 +216,7 @@ func (tester *HookTester) TestEnv_BB_USER_NAME(
 	tester.TestEnv(
 		assert,
 		"BB_USER_NAME",
-		tester.suite.Bitbucket().GetOpts().AdminUser,
+		tester.suite.Bitbucket().Opts().AdminUser,
 	)
 }
 
@@ -220,7 +226,7 @@ func (tester *HookTester) TestEnv_BB_USER_EMAIL(
 	tester.TestEnv(
 		assert,
 		"BB_USER_EMAIL",
-		tester.suite.Bitbucket().GetOpts().AdminEmail,
+		tester.suite.Bitbucket().Opts().AdminEmail,
 	)
 }
 
@@ -230,7 +236,7 @@ func (tester *HookTester) TestEnv_BB_USER_DISPLAY_NAME(
 	tester.TestEnv(
 		assert,
 		"BB_USER_DISPLAY_NAME",
-		tester.suite.Bitbucket().GetOpts().AdminUser,
+		tester.suite.Bitbucket().Opts().AdminUser,
 	)
 }
 
@@ -311,7 +317,7 @@ func (tester *HookTester) TestEnv_BB_FROM_REPO_CLONE_HTTP(
 	tester.TestEnv(
 		assert,
 		"BB_FROM_REPO_CLONE_HTTP",
-		tester.suite.Bitbucket().GetClonePathHTTP(
+		tester.suite.Bitbucket().ClonePathHTTP(
 			pullRequest.FromRef.Repository.Project.Key,
 			pullRequest.FromRef.Repository.Slug,
 		),
@@ -325,7 +331,7 @@ func (tester *HookTester) TestEnv_BB_FROM_REPO_CLONE_SSH(
 	tester.TestEnv(
 		assert,
 		"BB_FROM_REPO_CLONE_SSH",
-		tester.suite.Bitbucket().GetClonePathSSH(
+		tester.suite.Bitbucket().ClonePathSSH(
 			pullRequest.FromRef.Repository.Project.Key,
 			pullRequest.FromRef.Repository.Slug,
 		),

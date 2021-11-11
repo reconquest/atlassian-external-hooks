@@ -130,13 +130,13 @@ func Assert_MergeCheck_Callback(
 		PullRequests(repository.Slug)
 
 	pullRequest, err := service.Get(pullRequest.ID)
-	suite.NoError(err, "unable to get pull request object")
+	suite.NoError(err, "get pull request object")
 
 	result, err := service.Merge(
 		pullRequest.ID,
 		pullRequest.Version,
 	)
-	suite.NoError(err, "unable to get merge pull request result")
+	suite.NoError(err, "get merge pull request result")
 
 	suite.Equal(
 		len(result.Errors),
@@ -191,13 +191,13 @@ func Assert_MergeCheckPassed(
 		PullRequests(repository.Slug)
 
 	pullRequest, err := service.Get(pullRequest.ID)
-	suite.NoError(err, "unable to get pull request object")
+	suite.NoError(err, "get pull request object")
 
 	result, err := service.Merge(
 		pullRequest.ID,
 		pullRequest.Version,
 	)
-	suite.NoError(err, "unable to get merge pull request result")
+	suite.NoError(err, "get merge pull request result")
 	suite.Equal(
 		len(result.Errors),
 		0,

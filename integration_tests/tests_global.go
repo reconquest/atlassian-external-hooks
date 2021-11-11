@@ -66,7 +66,6 @@ func (suite *Suite) testGlobalHooks_RepositoryCreatedAfterEnabling(
 	const message = `XXX`
 	suite.ConfigureSampleHook_FailWithMessage(
 		hook,
-		HookOptions{WaitHookScripts: true},
 		message,
 	)
 
@@ -94,18 +93,20 @@ func (suite *Suite) testGlobalHooks_ProjectOrRepository_EnabledOrDisabled(
 	enableGlobal := func() {
 		suite.ConfigureSampleHook_Message(
 			globalHook,
-			HookOptions{WaitHookScripts: true},
 			`XXX_GLOBAL`,
 		)
+
+		// suite.WaitExternalHookEnabled()
 	}
 
 	enableGlobal()
 
 	suite.ConfigureSampleHook_Message(
 		resourceHook,
-		HookOptions{WaitHookScripts: true},
 		`XXX_RESOURCE`,
 	)
+
+	suite.WaitExternalHookEnabled(resourceHook)
 
 	Assert_PushOutputsMessages(suite, repo, `XXX_GLOBAL`, `XXX_RESOURCE`)
 
@@ -133,21 +134,20 @@ func (suite *Suite) testGlobalHooks_DoubleEnable(
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		hook,
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
 	suite.CreateRandomRepository(suite.CreateRandomProject())
 
-	suite.EnableHook(hook, HookOptions{})
+	suite.EnableHook(hook)
 
 	suite.CreateRandomRepository(suite.CreateRandomProject())
 
-	suite.EnableHook(hook, HookOptions{})
+	suite.EnableHook(hook)
 
 	suite.CreateRandomRepository(suite.CreateRandomProject())
 
-	suite.DisableHook(hook, HookOptions{})
+	suite.DisableHook(hook)
 
 	suite.DetectHookScriptsLeak()
 }
@@ -160,7 +160,6 @@ func (suite *Suite) testGlobalHooks_RepositoryDeleted(
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		hook,
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
 
@@ -179,7 +178,7 @@ func (suite *Suite) testGlobalHooks_RepositoryDeleted(
 	})
 
 	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
-	suite.NoError(err, "unable to remove repository")
+	suite.NoError(err, "remove repository")
 
 	waiter.Wait(suite.FailNow, "hook scripts", "deleted")
 

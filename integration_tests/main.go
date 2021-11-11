@@ -32,6 +32,9 @@ Options:
   -l --list                   List testcases.
   -C --container <container>  Use specified container.  
   -K --keep                   Keep work dir & bitbucket instance.
+  -D --database <type>        Type of database to use.
+                               [default: postgres]
+  -u --skip-until <regexp>    Skip until specified pattern.
   --no-upgrade                Do not run suites with upgrades.
   --no-reproduce              Do not run suites with bug reproduces.
   -r --run <name>             Run only specified testcases.
@@ -52,6 +55,8 @@ type Opts struct {
 
 	ValueContainer string `docopt:"--container"`
 	ValueRun       string `docopt:"--run"`
+	ValueDatabase  string `docopt:"--database"`
+	ValueSkipUntil string `docopt:"--skip-until"`
 }
 
 func init() {
@@ -82,9 +87,9 @@ func main() {
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	dir, err := ioutil.TempDir("", "external-hooks.test.")
+	workdir, err := ioutil.TempDir("", "external-hooks.test.")
 	if err != nil {
-		log.Fatalf(err, "unable to create work dir")
+		log.Fatalf(err, "create work dir")
 	}
 
 	ensureAddons()
@@ -104,13 +109,16 @@ func main() {
 	}
 
 	suite := NewSuite(
-		baseBitbucket,
-		mode == ModeRun && !opts.FlagNoRandomize,
-		mode,
-		Filter{
-			upgrade:   !opts.FlagNoUpgrade,
-			reproduce: !opts.FlagNoReproduce,
-			glob:      opts.ValueRun,
+		SuiteOpts{
+			baseBitbucket: baseBitbucket,
+			randomize:     mode == ModeRun && !opts.FlagNoRandomize,
+			mode:          mode,
+			skipUntil:     opts.ValueSkipUntil,
+			filter: Filter{
+				upgrade:   !opts.FlagNoUpgrade,
+				reproduce: !opts.FlagNoReproduce,
+				glob:      opts.ValueRun,
+			},
 		},
 	)
 
@@ -235,7 +243,9 @@ func main() {
 		),
 	)
 
-	run.Run(dir, runner.RunOpts{
+	run.Run(runner.RunOpts{
+		Workdir:   workdir,
+		Database:  opts.ValueDatabase,
 		Randomize: mode == ModeRun && !opts.FlagNoRandomize,
 		Container: opts.ValueContainer,
 	})
@@ -244,25 +254,27 @@ func main() {
 		log.Infof(nil, "{run} all tests passed")
 	}
 
-	log.Debugf(nil, "{run} removing work dir: %s", dir)
-	err = os.RemoveAll(dir)
+	log.Debugf(nil, "{run} removing work dir: %s", workdir)
+	err = os.RemoveAll(workdir)
 	if err != nil {
-		log.Errorf(err, "unable to remove work dir")
+		log.Errorf(err, "remove work dir")
 	}
 
 	if !opts.FlagKeep && opts.ValueContainer == "" {
 		err := run.Cleanup()
 		if err != nil {
-			log.Fatalf(err, "unable to cleanup runner")
+			log.Fatalf(err, "cleanup runner")
 		}
 	} else {
 		if run.Bitbucket() != nil {
-			log.Infof(
-				karma.
-					Describe("container", run.Bitbucket().GetContainerID()).
-					Describe("volume", run.Bitbucket().GetVolume()),
-				"{run} following resources can be reused",
-			)
+			facts := karma.
+				Describe("container/bitbucket", run.Bitbucket().Container()).
+				Describe("volume/bitbucket", run.Bitbucket().VolumeData()).
+				Describe("volume/bitbucket/lib-native", run.Bitbucket().VolumeLibNative()).
+				Describe("container/database", run.Database().Container()).
+				Describe("volume/database", run.Database().Volume())
+
+			log.Infof(facts, "{run} following resources can be reused")
 		}
 	}
 }
@@ -323,7 +335,7 @@ func getAddon(version string) Addon {
 		if err != nil {
 			log.Fatalf(
 				karma.Describe("build", build).Reason(err),
-				"unable to download add-on %s from Marketplace to %q",
+				"download add-on %s from Marketplace to %q",
 				version, buildsPath,
 			)
 		}
@@ -339,7 +351,7 @@ func getAddon(version string) Addon {
 	if err != nil {
 		log.Fatalf(
 			err,
-			"unable to find add-on version %s at path %q and %q",
+			"find add-on version %s at path %q and %q",
 			version, buildsPath, targetPath,
 		)
 	}
@@ -353,17 +365,17 @@ func getAddon(version string) Addon {
 func getLatestVersionXML() string {
 	contents, err := ioutil.ReadFile("pom.xml")
 	if err != nil {
-		log.Fatalf(err, "unable to read pom.xml")
+		log.Fatalf(err, "read pom.xml")
 	}
 
 	model, err := pom.Unmarshal(contents)
 	if err != nil {
-		log.Fatalf(err, "unable to unmarshal pom.xml")
+		log.Fatalf(err, "unmarshal pom.xml")
 	}
 
 	version, err := model.Get("version")
 	if err != nil {
-		log.Fatalf(err, "unable to read pom.xml version")
+		log.Fatalf(err, "read pom.xml version")
 	}
 
 	return version

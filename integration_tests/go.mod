@@ -8,12 +8,12 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/kovetskiy/lorg v0.0.0-20200107130803-9a7136a95634
-	github.com/kovetskiy/stash v1.2.0
+	github.com/kovetskiy/stash v1.2.1
 	github.com/reconquest/barely v0.0.0-20211011075640-c4e789dc39f8
 	github.com/reconquest/callbackwriter-go v0.0.0-20160818100920-951e238f72da // indirect
 	github.com/reconquest/cog v0.0.0-20210820140837-c5c4e8f49c65
 	github.com/reconquest/colorgful v0.0.0-20210914131800-3b7d32bf77e5 // indirect
-	github.com/reconquest/karma-go v0.0.0-20200928103525-22da92476de6
+	github.com/reconquest/karma-go v0.0.0-20211029072727-6027c6225ce4
 	github.com/reconquest/lexec-go v0.0.0-20200223130808-7bb9dd1fa68e
 	github.com/reconquest/lineflushwriter-go v0.0.0-20200921103343-b9b8d10a6851 // indirect
 	github.com/reconquest/loreley v0.0.0-20211011075601-29b1d7b0ad91
@@ -26,3 +26,7 @@ require (
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
+
+replace github.com/reconquest/lexec-go => /home/operator/go/src/github.com/reconquest/lexec-go
+
+replace github.com/kovetskiy/stash => /home/operator/go/src/github.com/kovetskiy/stash

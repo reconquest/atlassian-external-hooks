@@ -67,21 +67,25 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 ) (*external_hooks.Hook, *external_hooks.Hook) {
 	pre := suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
-		HookOptions{WaitHookScripts: true},
 		`XXX`,
 	)
+
+	suite.WaitExternalHookEnabled(context.PreReceive())
 
 	Assert_PushRejected(suite, repo, `XXX`)
 
 	suite.DisableHook(pre)
 
+	suite.WaitExternalHookDisabled(pre)
+
 	Assert_PushDoesNotOutputMessages(suite, repo, `XXX`)
 
 	post := suite.ConfigureSampleHook_FailWithMessage(
 		context.PostReceive(),
-		HookOptions{WaitHookScripts: true},
 		`YYY`,
 	)
+
+	suite.WaitExternalHookEnabled(context.PostReceive())
 
 	Assert_PushOutputsMessages(suite, repo, `YYY`)
 
@@ -90,10 +94,10 @@ func (suite *Suite) testBitbucketUpgrade_Before(
 	Assert_PushDoesNotOutputMessages(suite, repo, `YYY`)
 
 	err := pre.Enable()
-	suite.NoError(err, "unable to enable pre-receive hook")
+	suite.NoError(err, "enable pre-receive hook")
 
 	err = post.Enable()
-	suite.NoError(err, "unable to enable post-receive hook")
+	suite.NoError(err, "enable post-receive hook")
 
 	return pre, post
 }
@@ -102,8 +106,8 @@ func (suite *Suite) testBitbucketUpgrade_After(
 	repo *stash.Repository,
 	pre, post *external_hooks.Hook,
 ) {
-	pre.BitbucketURI = suite.Bitbucket().GetConnectorURI(users.USER_ADMIN)
-	post.BitbucketURI = suite.Bitbucket().GetConnectorURI(users.USER_ADMIN)
+	pre.BitbucketURI = suite.Bitbucket().ConnectorURI(users.USER_ADMIN)
+	post.BitbucketURI = suite.Bitbucket().ConnectorURI(users.USER_ADMIN)
 
 	Assert_PushRejected(suite, repo, `XXX`)
 
