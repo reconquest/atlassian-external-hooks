@@ -31,6 +31,8 @@ func Start(kind string, id string) (Database, error) {
 		return newPostgres(id)
 	case "mysql":
 		return newMysql(id)
+	case "mssql":
+		return newMssql(id)
 	case "oracle":
 		return newOracle(id)
 	}

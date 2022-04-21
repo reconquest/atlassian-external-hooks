@@ -17,3 +17,7 @@ batch.js
 /.task
 /log
 /builds
+/integration_tests/builds/
+/dependency-check
+/dependency-check-report.html
+/*.jar
