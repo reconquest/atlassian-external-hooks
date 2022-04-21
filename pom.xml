@@ -7,7 +7,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>12.0.1</version>
+    <version>12.0.3</version>
     <organization>
         <name>reconquest</name>
         <url>https://external-hooks.reconquest.io/</url>
@@ -140,7 +140,12 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.3</version>
+            <version>1.2.11</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.2.11</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.jackson</groupId>
