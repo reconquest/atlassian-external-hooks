@@ -1,0 +1,68 @@
+#!/bin/bash
+
+set -euo pipefail
+
+NETWORK=bitbucket-mesh
+
+BITBUCKET_VERSION=8.0.0-eap05
+
+mkdir -p bitbucket-cluster/nfs bitbucket-cluster/postgres
+NFS_DIR=$(readlink -f bitbucket-cluster/nfs)
+POSTGRES_DIR=$(readlink -f bitbucket-cluster/postgres)
+
+sudo chmod 0777 $NFS_DIR
+
+cp -v $(dirname $0)/cluster.bitbucket.properties $NFS_DIR/bitbucket.properties
+
+:start-bitbucket() {
+    local NUMBER=$1
+    local BITBUCKET_DIR=$(readlink -f bitbucket-cluster/server-$NUMBER)
+
+    mkdir -p $BITBUCKET_DIR
+
+    sudo chmod 0777 $BITBUCKET_DIR
+
+    docker run \
+        --detach \
+        --add-host=marketplace.atlassian.com:127.0.0.1 \
+        --network $NETWORK \
+        -e ELASTICSEARCH_ENABLED=false \
+        -v $BITBUCKET_DIR:/var/atlassian/application-data/bitbucket \
+        -v $NFS_DIR:/var/atlassian/application-data/bitbucket/shared \
+        --name bitbucket-server-$NUMBER \
+        atlassian/bitbucket-server:$BITBUCKET_VERSION
+}
+
+
+
+:start-postgres() {
+    docker run --name bitbucket-postgres --network $NETWORK \
+        --detach \
+        -v $POSTGRES_DIR:/var/lib/postgresql/data \
+		-e POSTGRES_DB=bitbucket \
+		-e POSTGRES_USER=bitbucket \
+		-e POSTGRES_PASSWORD=bitbucket \
+		postgres:latest
+
+}
+
+:wait-postgres() {
+    until docker exec bitbucket-postgres pg_isready; do
+        sleep 0.1
+    done
+}
+
+:ip() {
+    docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $1
+}
+
+:start-postgres
+:wait-postgres
+
+:start-bitbucket 1
+:start-bitbucket 2
+:start-bitbucket 3
+
+_host=$(:ip bitbucket-server-1):7990 bitbucket-wait-startup
+_host=$(:ip bitbucket-server-2):7990 bitbucket-wait-startup
+_host=$(:ip bitbucket-server-3):7990 bitbucket-wait-startup

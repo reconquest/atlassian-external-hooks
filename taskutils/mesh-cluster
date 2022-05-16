@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -euo pipefail
+
+NETWORK=bitbucket-mesh
+
+:start-mesh() {
+    local MESH_DIR=$(readlink -f bitbucket-cluster/mesh-$1)
+    mkdir -p $MESH_DIR
+
+    docker run --detach --network $NETWORK \
+        -v $MESH_DIR:/srv/mesh/data \
+        --name mesh-$1 kovetskiy/bitbucket-mesh
+}
+
+:start-mesh 1
+:start-mesh 2
+:start-mesh 3
