@@ -29,8 +29,10 @@ cp -v $(dirname $0)/cluster.bitbucket.properties $NFS_DIR/bitbucket.properties
         -e ELASTICSEARCH_ENABLED=false \
         -v $BITBUCKET_DIR:/var/atlassian/application-data/bitbucket \
         -v $NFS_DIR:/var/atlassian/application-data/bitbucket/shared \
+        -v $(mkcert -CAROOT)/rootCA.pem:/usr/share/ca-certificates/rootCA.pem \
         --name bitbucket-server-$NUMBER \
-        atlassian/bitbucket-server:$BITBUCKET_VERSION
+        atlassian/bitbucket-server:$BITBUCKET_VERSION \
+        bash -c "echo 'rootCA.pem' >> /etc/ca-certificates.conf && update-ca-certificates && /entrypoint.py --log=DEBUG"
 }
 
 
@@ -56,7 +58,10 @@ cp -v $(dirname $0)/cluster.bitbucket.properties $NFS_DIR/bitbucket.properties
     docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $1
 }
 
-:start-postgres
+if ! docker inspect bitbucket-postgres; then
+    :start-postgres
+fi
+
 :wait-postgres
 
 :start-bitbucket 1
