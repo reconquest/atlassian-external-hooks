@@ -4,7 +4,7 @@ set -euo pipefail
 
 NETWORK=bitbucket-mesh
 
-BITBUCKET_VERSION=8.0.0-eap05
+BITBUCKET_VERSION=latest
 
 mkdir -p bitbucket-cluster/nfs bitbucket-cluster/postgres
 NFS_DIR=$(readlink -f bitbucket-cluster/nfs)
@@ -65,9 +65,9 @@ fi
 :wait-postgres
 
 :start-bitbucket 1
-:start-bitbucket 2
-:start-bitbucket 3
+#:start-bitbucket 2
+#:start-bitbucket 3
 
 _host=$(:ip bitbucket-server-1):7990 bitbucket-wait-startup
-_host=$(:ip bitbucket-server-2):7990 bitbucket-wait-startup
-_host=$(:ip bitbucket-server-3):7990 bitbucket-wait-startup
+#_host=$(:ip bitbucket-server-2):7990 bitbucket-wait-startup
+#_host=$(:ip bitbucket-server-3):7990 bitbucket-wait-startup

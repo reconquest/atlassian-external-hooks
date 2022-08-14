@@ -1,12 +1,13 @@
-FROM alpine:edge
+FROM alpine:3.16
 
-ENV DOCKER_MESH_VERSION=1.0.0
+ENV DOCKER_MESH_VERSION=1.3.0
 ENV MESH_HOME=/srv/mesh/data
 
 RUN apk update && apk add \
     bash \
     ca-certificates \
-    git \
+    'git<2.37.1' \
+    git-daemon \
     openjdk11 \
     && rm -rf /var/cache/apk/*
 

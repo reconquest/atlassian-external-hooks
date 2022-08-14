@@ -4,7 +4,7 @@ set -euo pipefail
 
 NETWORK=bitbucket-mesh
 
-SSL=${SSL:-1}
+SSL=${SSL:-0}
 
 SSL_DIR=$(readlink -f bitbucket-cluster/mesh-ssl)
 
@@ -38,10 +38,10 @@ EOF
 
 if [[ "$SSL" == "1" ]]; then
     :ssl 1
-    #:ssl 2
-    #:ssl 3
+    :ssl 2
+    :ssl 3
 fi
 
 :start-mesh 1
-#:start-mesh 2
-#:start-mesh 3
+:start-mesh 2
+:start-mesh 3
