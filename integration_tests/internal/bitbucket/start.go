@@ -3,6 +3,7 @@ package bitbucket
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,41 +20,43 @@ const (
 
 type StartExistingOpts struct {
 	Container string
+	Replica   *int
+	Volumes   string
 
 	RunOpts
 }
 
 type StartNewOpts struct {
-	ID string
+	ID      string
+	Volumes string
+	Replica *int
 
 	RunOpts
 }
 
 type RunOpts struct {
 	Version string
-	// VolumeData string
 
 	Database database.Database
 	Network  string
 	PortHTTP int
 	PortSSH  int
 
-	AdminUser     string
-	AdminPassword string
+	Properties Properties
 }
 
-type ConfigureOpts struct {
-	License    string
-	AdminEmail string
-}
-
-func StartNew(opts StartNewOpts) (*Bitbucket, error) {
+func StartNew(opts StartNewOpts) (*Node, error) {
 	if opts.ID == "" {
 		panic("opts.ID is empty")
 	}
 
-	instance := newInstance(opts.ID, ensureValidOpts(opts.RunOpts))
+	instance := newInstance(opts.ID, opts.Volumes, opts.Replica, ensureValidOpts(opts.RunOpts))
+
 	instance.container = fmt.Sprintf("%s-bitbucket", opts.ID)
+
+	if opts.Replica != nil {
+		instance.container = fmt.Sprintf("%s-%d", instance.container, *opts.Replica)
+	}
 
 	log.Infof(
 		karma.
@@ -83,7 +86,7 @@ func StartNew(opts StartNewOpts) (*Bitbucket, error) {
 	return New(instance)
 }
 
-func StartExisting(opts StartExistingOpts) (*Bitbucket, error) {
+func StartExisting(opts StartExistingOpts) (*Node, error) {
 	stdout, _, err := exec.New(
 		"docker",
 		"inspect",
@@ -135,6 +138,8 @@ func StartExisting(opts StartExistingOpts) (*Bitbucket, error) {
 
 	instance := newInstance(
 		strings.TrimSuffix(opts.Container, "-bitbucket"),
+		opts.Volumes,
+		opts.Replica,
 		ensureValidOpts(opts.RunOpts),
 	)
 
@@ -144,7 +149,8 @@ func StartExisting(opts StartExistingOpts) (*Bitbucket, error) {
 		karma.
 			Describe("container", instance.container).
 			Describe("opts", opts),
-		"{bitbucket %s} re-using existing container",
+		"{%s %s} re-using existing container",
+		opts.Container,
 		opts.Version,
 	)
 
@@ -173,14 +179,6 @@ func ensureValidOpts(opts RunOpts) RunOpts {
 		opts.PortSSH = 7999
 	}
 
-	if opts.AdminUser == "" {
-		opts.AdminUser = "admin"
-	}
-
-	if opts.AdminPassword == "" {
-		opts.AdminPassword = "admin"
-	}
-
 	if opts.Version == "" {
 		panic("opts.Version is empty")
 	}
@@ -196,15 +194,27 @@ func ensureValidOpts(opts RunOpts) RunOpts {
 	return opts
 }
 
-func newInstance(id string, opts RunOpts) *Instance {
+func newInstance(id string, volumes string, replica *int, opts RunOpts) *Instance {
 	instance := &Instance{
-		id:              id,
-		version:         opts.Version,
-		volumeData:      id + "-bitbucket-data",
-		volumeLibNative: id + "-bitbucket-data-lib-native",
-		database:        opts.Database,
-		network:         opts.Network,
+		id:       id,
+		version:  opts.Version,
+		database: opts.Database,
+		network:  opts.Network,
 	}
+
+	if volumes == "" {
+		panic("volumes is empty")
+	}
+
+	instance.volumes.shared = filepath.Join(volumes, id+"-bitbucket-shared")
+
+	dataDir := id + "-bitbucket"
+	if replica != nil {
+		dataDir = fmt.Sprintf("%s-%d", dataDir, *replica)
+	}
+	dataDir += "-data"
+
+	instance.volumes.data = filepath.Join(volumes, dataDir)
 
 	// this RunOpts should not be used to access the data, it's used only for
 	// logging purposes as "the provided value when creating the instance"
@@ -244,7 +254,8 @@ func waitAndWatch(instance *Instance) error {
 		if message != status.Progress.Message {
 			log.Debugf(
 				nil,
-				"{bitbucket %s} setup: %3d%% %s | %s",
+				"{%s %s} setup: %3d%% %s | %s",
+				instance.container,
 				instance.version,
 				status.Progress.Percentage,
 				strings.ToLower(status.State),

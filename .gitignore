@@ -22,3 +22,4 @@ batch.js
 /dependency-check-report.html
 /*.jar
 /bitbucket-cluster
+/.volumes

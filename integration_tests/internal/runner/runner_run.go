@@ -16,8 +16,8 @@ type RunOpts struct {
 
 func (runner *Runner) Run(opts RunOpts) {
 	runner.run.workdir = opts.Workdir
-	runner.run.container = opts.Container
-	runner.run.database = opts.Database
+	runner.run.identifier = opts.Container
+	runner.run.databaseKind = opts.Database
 
 	log.Debugf(nil, "{run} work dir: %s", runner.run.workdir)
 

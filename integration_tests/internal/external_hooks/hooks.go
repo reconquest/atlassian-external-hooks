@@ -231,6 +231,8 @@ func (addon *Addon) factoryApply() error {
 		time.Sleep(time.Millisecond * 50)
 	}
 
+	log.Debugf(nil, "factory finished")
+
 	return nil
 }
 

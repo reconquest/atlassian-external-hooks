@@ -5,8 +5,10 @@ import (
 	"strconv"
 
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/cog"
+	"github.com/reconquest/pkg/log"
 )
 
 type HookTester struct {
@@ -128,7 +130,11 @@ func (tester *HookTester) TestEnv(
 
 	tester.suite.WaitExternalHookEnabled(tester.hook)
 
-	assert(tester.suite, tester.repository, fmt.Sprintf("[%s]", value))
+	assert(
+		tester.suite,
+		tester.repository,
+		fmt.Sprintf("[%s]", value),
+	)
 }
 
 func (tester *HookTester) TestEnv_BB_HOOK_TRIGGER_ID(
@@ -181,12 +187,22 @@ func (tester *HookTester) TestEnv_BB_REPO_IS_PUBLIC(
 func (tester *HookTester) TestEnv_BB_BASE_URL(
 	assert HookTesterAssert,
 ) {
+	if tester.suite.ClusteringEnabled() {
+		log.Debugf(nil, "skipping BB_BASE_URL test in clustered mode")
+		return
+	}
+
 	tester.TestEnv(assert, "BB_BASE_URL", tester.suite.Bitbucket().URI(""))
 }
 
 func (tester *HookTester) TestEnv_BB_REPO_CLONE_SSH(
 	assert HookTesterAssert,
 ) {
+	if tester.suite.ClusteringEnabled() {
+		log.Debugf(nil, "skipping BB_REPO_CLONE_SSH test in clustered mode")
+		return
+	}
+
 	tester.TestEnv(
 		assert,
 		"BB_REPO_CLONE_SSH",
@@ -200,6 +216,11 @@ func (tester *HookTester) TestEnv_BB_REPO_CLONE_SSH(
 func (tester *HookTester) TestEnv_BB_REPO_CLONE_HTTP(
 	assert HookTesterAssert,
 ) {
+	if tester.suite.ClusteringEnabled() {
+		log.Debugf(nil, "skipping BB_REPO_CLONE_SSH test in clustered mode")
+		return
+	}
+
 	tester.TestEnv(
 		assert,
 		"BB_REPO_CLONE_HTTP",
@@ -216,7 +237,7 @@ func (tester *HookTester) TestEnv_BB_USER_NAME(
 	tester.TestEnv(
 		assert,
 		"BB_USER_NAME",
-		tester.suite.Bitbucket().Opts().AdminUser,
+		bitbucket.ADMIN_USERNAME,
 	)
 }
 
@@ -226,7 +247,7 @@ func (tester *HookTester) TestEnv_BB_USER_EMAIL(
 	tester.TestEnv(
 		assert,
 		"BB_USER_EMAIL",
-		tester.suite.Bitbucket().Opts().AdminEmail,
+		bitbucket.ADMIN_EMAIL,
 	)
 }
 
@@ -236,7 +257,7 @@ func (tester *HookTester) TestEnv_BB_USER_DISPLAY_NAME(
 	tester.TestEnv(
 		assert,
 		"BB_USER_DISPLAY_NAME",
-		tester.suite.Bitbucket().Opts().AdminUser,
+		bitbucket.ADMIN_DISPLAY_NAME,
 	)
 }
 
@@ -314,6 +335,11 @@ func (tester *HookTester) TestEnv_BB_FROM_REPO_CLONE_HTTP(
 	assert HookTesterAssert,
 	pullRequest *stash.PullRequest,
 ) {
+	if tester.suite.ClusteringEnabled() {
+		log.Debugf(nil, "skipping BB_FROM_REPO_CLONE_HTTP test in clustered mode")
+		return
+	}
+
 	tester.TestEnv(
 		assert,
 		"BB_FROM_REPO_CLONE_HTTP",
@@ -328,6 +354,11 @@ func (tester *HookTester) TestEnv_BB_FROM_REPO_CLONE_SSH(
 	assert HookTesterAssert,
 	pullRequest *stash.PullRequest,
 ) {
+	if tester.suite.ClusteringEnabled() {
+		log.Debugf(nil, "skipping BB_FROM_REPO_CLONE_SSH test in clustered mode")
+		return
+	}
+
 	tester.TestEnv(
 		assert,
 		"BB_FROM_REPO_CLONE_SSH",

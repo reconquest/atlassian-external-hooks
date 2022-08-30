@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"strings"
 
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/cog"
 	"github.com/reconquest/pkg/log"
 )
 
 func (suite *Suite) TestGlobalHooks(params TestParams) {
-	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.InstallAddon(params["addon"].(Addon))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
+	suite.InstallAddon(params.Addon)
 	suite.RecordHookScripts()
 
 	var (
@@ -154,9 +156,9 @@ func (suite *Suite) testGlobalHooks_DoubleEnable(
 
 func (suite *Suite) testGlobalHooks_RepositoryDeleted(
 	log *cog.Logger,
-	context *external_hooks.Context,
+	hooks *external_hooks.Context,
 ) {
-	hook := context.PreReceive()
+	hook := hooks.PreReceive()
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		hook,
@@ -170,12 +172,17 @@ func (suite *Suite) testGlobalHooks_RepositoryDeleted(
 		repository = suite.CreateRandomRepository(project)
 	)
 
-	waiter := suite.Bitbucket().WaitLogEntry(func(line string) bool {
-		return strings.Contains(
-			line,
-			"deleted global/repository hook script",
-		)
-	})
+	waiter := suite.Bitbucket().WaitLog(
+		context.Background(),
+		bitbucket.LOGS_TESTCASES,
+		func(line string) bool {
+			return strings.Contains(
+				line,
+				"deleted global/repository hook script",
+			)
+		},
+		bitbucket.DEFAULT_LOG_WAIT_TIMEOUT,
+	)
 
 	err := suite.Bitbucket().Repositories(project.Key).Remove(repository.Slug)
 	suite.NoError(err, "remove repository")

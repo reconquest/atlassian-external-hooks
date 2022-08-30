@@ -16,11 +16,18 @@ SSL_DIR=$(readlink -f bitbucket-cluster/mesh-ssl)
     local MESH_DIR=$(:mesh-dir $1)
     mkdir -p $MESH_DIR
 
+    hookscripts="
+hookscripts.gc.interval=1
+hookscripts.gc.prune=1"
+
     if [[ "$SSL" == "1" ]]; then
         cat > $(:mesh-dir $1)/mesh.properties <<EOF
 grpc.server.ssl.cert-chain-path=/srv/mesh/data/config/ssl/cert.pem
 grpc.server.ssl.private-key-path=/srv/mesh/data/config/ssl/key.pem
+$hookscripts
 EOF
+    else
+        echo "$hookscripts" | sudo tee $(:mesh-dir $1)/mesh.properties
     fi
 
     docker run --detach --network $NETWORK \
@@ -33,7 +40,7 @@ EOF
 
     dir=$(:mesh-dir $1)/config/ssl
 
-    mkcert -cert-file $dir/cert.pem -key-file $dir/key.pem mesh-$1
+    mkcert -cert-file $dir/cert.pem -key-file $dir/key.pem https://mesh-$1:7777
 }
 
 if [[ "$SSL" == "1" ]]; then

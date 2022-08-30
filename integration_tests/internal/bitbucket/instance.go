@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/kovetskiy/stash"
+	cp "github.com/otiai10/copy"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
@@ -45,17 +46,19 @@ type Logs struct {
 }
 
 type Instance struct {
-	id              string
-	version         string
-	container       string
-	database        database.Database
-	volumeData      string
-	volumeLibNative string
-	network         string
-	ip              string
-	opts            struct {
+	id        string
+	version   string
+	container string
+	database  database.Database
+	volumes   struct {
+		data   string
+		shared string
+	}
+	network string
+	ip      string
+	opts    struct {
 		RunOpts
-		ConfigureOpts
+		//ConfigureOpts
 	}
 
 	stacktraceLogs *Logs
@@ -68,7 +71,6 @@ func (instance *Instance) ID() string {
 
 func (instance *Instance) Opts() struct {
 	RunOpts
-	ConfigureOpts
 } {
 	return instance.opts
 }
@@ -77,10 +79,7 @@ func (instance *Instance) ConnectorURI(user *stash.User) string {
 	var auth *url.Userinfo
 
 	if user == nil {
-		auth = url.UserPassword(
-			instance.opts.AdminUser,
-			instance.opts.AdminPassword,
-		)
+		auth = url.UserPassword(ADMIN_USERNAME, ADMIN_PASSWORD)
 	} else {
 		auth = url.UserPassword(user.Name, user.Password)
 	}
@@ -129,6 +128,10 @@ func (instance *Instance) Container() string {
 	return instance.container
 }
 
+func (instance *Instance) IP() string {
+	return instance.ip
+}
+
 func (instance *Instance) Version() string {
 	return instance.version
 }
@@ -168,7 +171,7 @@ func (instance *Instance) ListFiles(path string) ([]string, error) {
 		"cp",
 		fmt.Sprintf("%s:%s",
 			instance.container,
-			filepath.Join(instance.GetApplicationDataDir(), path),
+			filepath.Join(instance.ApplicationDataDir(), path),
 		),
 		"-",
 	)
@@ -238,7 +241,7 @@ func (instance *Instance) ReadFiles(path string) ([]File, error) {
 		"cp",
 		fmt.Sprintf("%s:%s",
 			instance.container,
-			filepath.Join(instance.GetApplicationDataDir(), path),
+			filepath.Join(instance.ApplicationDataDir(), path),
 		),
 		"-",
 	)
@@ -321,7 +324,7 @@ func (instance *Instance) WriteFile(
 		"-",
 		fmt.Sprintf("%s:%s",
 			instance.container,
-			instance.GetApplicationDataDir(),
+			instance.ApplicationDataDir(),
 		),
 	)
 
@@ -409,31 +412,12 @@ func (instance *Instance) RemoveContainer() error {
 	).Run()
 }
 
-func (instance *Instance) RemoveVolumeData() error {
-	return exec.New(
-		"docker",
-		"volume",
-		"rm", "-f",
-		instance.volumeData,
-	).Run()
+func (instance *Instance) RemoveVolumes() error {
+	return nil
+	//return os.RemoveAll(instance.volumes)
 }
 
-func (instance *Instance) RemoveVolumeLibNative() error {
-	return exec.New(
-		"docker",
-		"volume",
-		"rm", "-f",
-		instance.volumeLibNative,
-	).Run()
-}
-
-func (instance *Instance) Configure(opts ConfigureOpts) error {
-	if opts.AdminEmail == "" {
-		opts.AdminEmail = "we@reconquest.io"
-	}
-
-	instance.opts.ConfigureOpts = opts
-
+func (instance *Instance) Configure() error {
 	configured, err := instance.isConfigured()
 	if err != nil {
 		return err
@@ -447,11 +431,6 @@ func (instance *Instance) Configure(opts ConfigureOpts) error {
 	if err != nil {
 		return err
 	}
-
-	// err = instance.configureDatabase(token)
-	// if err != nil {
-	//    return err
-	//}
 
 	err = instance.configureLicense(token)
 	if err != nil {
@@ -467,11 +446,11 @@ func (instance *Instance) Configure(opts ConfigureOpts) error {
 }
 
 func (instance *Instance) VolumeData() string {
-	return instance.volumeData
+	return instance.volumes.data
 }
 
-func (instance *Instance) VolumeLibNative() string {
-	return instance.volumeLibNative
+func (instance *Instance) VolumeShared() string {
+	return instance.volumes.shared
 }
 
 func (instance *Instance) Network() string {
@@ -482,16 +461,29 @@ func (instance *Instance) StacktraceLogs() *Logs {
 	return instance.stacktraceLogs
 }
 
-func (instance *Instance) TestcaseLogs() *Logs {
+func (instance *Instance) Logs(kind LogsKind) *Logs {
+	if kind == LOGS_STACKTRACE {
+		return instance.stacktraceLogs
+	}
+
 	return instance.testcaseLogs
 }
 
-type LogEntryWaiter struct {
-	duration time.Duration
-	group    *sync.WaitGroup
+type LogWaiter interface {
+	Wait(
+		failer func(failureMessage string, msgAndArgs ...interface{}) bool,
+		resource string,
+		state string,
+	)
 }
 
-func (waiter *LogEntryWaiter) Wait(
+type logWaiter struct {
+	duration time.Duration
+	group    *sync.WaitGroup
+	ctx      context.Context
+}
+
+func (waiter *logWaiter) Wait(
 	failer func(failureMessage string, msgAndArgs ...interface{}) bool,
 	resource string,
 	state string,
@@ -510,28 +502,22 @@ func (waiter *LogEntryWaiter) Wait(
 			waiter.duration,
 		)
 	case <-done:
+	case <-waiter.ctx.Done():
 	}
 }
 
-var DefaultWaitLogEntryDuration = time.Second * 10
+const DEFAULT_LOG_WAIT_TIMEOUT = time.Second * 10
 
-func (instance *Instance) WaitLogEntry(fn func(string) bool) *LogEntryWaiter {
-	return instance.WaitLogEntryContext(
-		context.Background(),
-		instance.testcaseLogs,
-		fn,
-		DefaultWaitLogEntryDuration,
-	)
-}
-
-func (instance *Instance) WaitLogEntryContext(
+func (instance *Instance) WaitLog(
 	ctx context.Context,
-	logs *Logs,
+	kind LogsKind,
 	fn func(string) bool,
 	duration time.Duration,
-) *LogEntryWaiter {
+) LogWaiter {
 	waiter := sync.WaitGroup{}
 	waiter.Add(1)
+
+	logs := instance.Logs(kind)
 
 	cursor := 0
 	prev := 0
@@ -577,19 +563,24 @@ func (instance *Instance) WaitLogEntryContext(
 		}
 	}()
 
-	return &LogEntryWaiter{
+	return &logWaiter{
+		ctx:      ctx,
 		group:    &waiter,
 		duration: duration,
 	}
 }
 
-func (instance *Instance) FlushLogs(logs *Logs) {
+func (instance *Instance) flushLogs(logs *Logs) {
 	if instance == nil {
 		return
 	}
 	logs.L.Lock()
 	logs.lines = []string{}
 	logs.L.Unlock()
+}
+
+func (instance *Instance) FlushLogs(kind LogsKind) {
+	instance.flushLogs(instance.Logs(kind))
 }
 
 func (instance *Instance) getAtlToken(
@@ -709,22 +700,10 @@ func (instance *Instance) isConfigured() (bool, error) {
 	}
 }
 
-func (instance *Instance) configureDatabase(
-	token *AtlToken,
-) error {
-	form := url.Values{}
-	form.Set("step", "database")
-	form.Set("internal", "true")
-	form.Set("locale", "en_US")
-	form.Set("type", "postgres")
-
-	return instance.postSetupForm(form, token)
-}
-
 func (instance *Instance) configureLicense(token *AtlToken) error {
 	form := url.Values{}
 	form.Set("step", "settings")
-	form.Set("license", instance.opts.License)
+	form.Set("license", LICENSE_DATACENTER_3H)
 	form.Set("applicationTitle", "Bitbucket")
 	form.Set("baseUrl", instance.URI("/"))
 
@@ -734,21 +713,66 @@ func (instance *Instance) configureLicense(token *AtlToken) error {
 func (instance *Instance) configureAdministrator(token *AtlToken) error {
 	form := url.Values{}
 	form.Set("step", "user")
-	form.Set("username", instance.opts.AdminUser)
-	form.Set("fullname", instance.opts.AdminUser)
-	form.Set("email", instance.opts.AdminEmail)
-	form.Set("password", instance.opts.AdminPassword)
-	form.Set("confirmPassword", instance.opts.AdminPassword)
+	form.Set("username", ADMIN_USERNAME)
+	form.Set("fullname", ADMIN_DISPLAY_NAME)
+	form.Set("email", ADMIN_EMAIL)
+	form.Set("password", ADMIN_PASSWORD)
+	form.Set("confirmPassword", ADMIN_PASSWORD)
 
 	return instance.postSetupForm(form, token)
 }
 
-func (instance *Instance) GetApplicationDataDir() string {
+func (instance *Instance) ApplicationDataDir() string {
 	return BITBUCKET_DATA_DIR
 }
 
 func (instance *Instance) create() error {
 	type M map[string]interface{}
+
+	libNative := filepath.Join(instance.VolumeData(), "lib", "native")
+
+	err := cp.Copy("integration_tests/assets/bitbucket-data-dir-lib", libNative)
+	if err != nil {
+		return karma.Format(err, "copy jdbc drivers to bitbucket volume")
+	}
+
+	for _, dir := range []string{instance.VolumeShared(), instance.VolumeData()} {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return karma.Format(err, "create directory: "+dir)
+		}
+	}
+
+	propertiesPath := filepath.Join(instance.VolumeShared(), "bitbucket.properties")
+
+	_, err = os.Stat(propertiesPath)
+	if os.IsNotExist(err) {
+		log.Debugf(
+			karma.
+				Describe("container", instance.container).
+				Describe("path", propertiesPath).
+				Describe("properties", instance.opts.Properties.String()),
+			"write bitbucket.properties",
+		)
+
+		err = ioutil.WriteFile(
+			propertiesPath,
+			[]byte(instance.opts.Properties.String()),
+			0644,
+		)
+		if err != nil {
+			return karma.Format(err, "write bitbucket.properties")
+		}
+	}
+
+	for _, dir := range []string{instance.VolumeData(), instance.VolumeShared()} {
+		_ = exec.New("chmod", "-R", "0777", dir).NoLog().Run()
+	}
+
+	rootCA, err := getRootCA()
+	if err != nil {
+		return karma.Format(err, "get root CA")
+	}
 
 	springApplicationConfig, _ := json.Marshal(M{
 		"logging": M{
@@ -765,13 +789,6 @@ func (instance *Instance) create() error {
 		jdbcPassword = instance.database.Password()
 	)
 
-	bitbucketDataDirLib, err := filepath.Abs(
-		"./integration_tests/assets/bitbucket-data-dir-lib/",
-	)
-	if err != nil {
-		return err
-	}
-
 	execution := exec.New(
 		"docker", "container", "create",
 		"--add-host=marketplace.atlassian.com:127.0.0.1",
@@ -781,6 +798,7 @@ func (instance *Instance) create() error {
 		"-e", "JDBC_USER="+jdbcUser,
 		"-e", "JDBC_PASSWORD="+jdbcPassword,
 		"-e", "ELASTICSEARCH_ENABLED=false",
+		"-e", "SEARCH_ENABLED=false", // starting with bitbucket 8
 		"-e", fmt.Sprintf(
 			`SPRING_APPLICATION_JSON=%s`,
 			string(springApplicationConfig),
@@ -789,21 +807,23 @@ func (instance *Instance) create() error {
 		"-e", "TZ=Europe/Moscow",
 		"-v", fmt.Sprintf(
 			"%s:%s",
-			instance.volumeData,
-			instance.GetApplicationDataDir(),
+			instance.VolumeData(),
+			instance.ApplicationDataDir(),
 		),
 		"-v", fmt.Sprintf(
 			"%s:%s",
-			bitbucketDataDirLib,
-			instance.GetApplicationDataDir()+"/lib",
+			instance.VolumeShared(),
+			filepath.Join(instance.ApplicationDataDir(), "shared"),
 		),
 		"-v", fmt.Sprintf(
-			"%s:%s/lib/native",
-			instance.volumeLibNative,
-			instance.GetApplicationDataDir(),
+			"%s:%s",
+			rootCA,
+			"/usr/share/ca-certificates/rootCA.pem",
 		),
 		"--name", instance.container,
 		fmt.Sprintf(BITBUCKET_IMAGE, instance.version),
+		"bash", "-c",
+		"echo 'rootCA.pem' >> /etc/ca-certificates.conf && update-ca-certificates && /entrypoint.py",
 	)
 
 	err = execution.Run()
@@ -943,10 +963,7 @@ func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 		for scanner.Scan() {
 			logs.L.Lock()
 
-			logs.lines = append(
-				logs.lines,
-				scanner.Text(),
-			)
+			logs.lines = append(logs.lines, scanner.Text())
 
 			logs.Broadcast()
 
@@ -954,7 +971,8 @@ func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 
 			if output {
 				log.Tracef(
-					nil, "{bitbucket %s} log | %s",
+					nil, "{%s %s} log | %s",
+					instance.container,
 					instance.version,
 					scanner.Text(),
 				)
@@ -967,4 +985,20 @@ func (instance *Instance) startLogReader(output bool) (*Logs, error) {
 	}()
 
 	return logs, nil
+}
+
+func getRootCA() (string, error) {
+	cmd := exec.New("mkcert", "-CAROOT")
+
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	stdout, err := ioutil.ReadAll(cmd.GetStdout())
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(stdout)), nil
 }

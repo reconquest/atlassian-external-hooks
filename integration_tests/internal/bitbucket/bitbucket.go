@@ -1,8 +1,11 @@
 package bitbucket
 
 import (
+	"context"
 	"net/url"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
@@ -10,14 +13,53 @@ import (
 	"github.com/reconquest/pkg/log"
 )
 
-type Bitbucket struct {
+type LogsKind string
+
+const (
+	LOGS_STACKTRACE LogsKind = "stacktrace"
+	LOGS_TESTCASES  LogsKind = "run"
+)
+
+type Bitbucket interface {
+	Projects() *BitbucketProjectsAPI
+	Repositories(project string) *BitbucketRepositoriesAPI
+	Addons() *BitbucketAddonsAPI
+	Admin() *BitbucketAdminAPI
+
+	ID() string
+	Opts() struct {
+		RunOpts
+	}
+	ConnectorURI(user *stash.User) string
+	URI(path string) string
+	ClonePathSSH(repo, project string) string
+	ClonePathHTTP(repo, project string) string
+	Container() string
+	Version() string
+	ReadFile(path string) (string, error)
+	ListFiles(path string) ([]string, error)
+	ReadFiles(path string) ([]File, error)
+	WriteFile(path string, content []byte, mode os.FileMode) error
+	Stop() error
+	RemoveContainer() error
+	RemoveVolumes() error
+	Configure() error
+	VolumeData() string
+	Network() string
+	Logs(kind LogsKind) *Logs
+	WaitLog(ctx context.Context, kind LogsKind, match func(string) bool, duration time.Duration) LogWaiter
+	FlushLogs(kind LogsKind)
+	ApplicationDataDir() string
+}
+
+type Node struct {
 	*Instance
 
 	client stash.Stash
 }
 
-func New(instance *Instance) (*Bitbucket, error) {
-	bitbucket := &Bitbucket{
+func New(instance *Instance) (*Node, error) {
+	bitbucket := &Node{
 		Instance: instance,
 	}
 
@@ -41,13 +83,13 @@ func New(instance *Instance) (*Bitbucket, error) {
 	return bitbucket, nil
 }
 
-func (bitbucket *Bitbucket) Projects() *BitbucketProjectsAPI {
+func (bitbucket *Node) Projects() *BitbucketProjectsAPI {
 	return &BitbucketProjectsAPI{
 		client: bitbucket.client,
 	}
 }
 
-func (bitbucket *Bitbucket) Repositories(
+func (bitbucket *Node) Repositories(
 	project string,
 ) *BitbucketRepositoriesAPI {
 	return &BitbucketRepositoriesAPI{
@@ -56,13 +98,13 @@ func (bitbucket *Bitbucket) Repositories(
 	}
 }
 
-func (bitbucket *Bitbucket) Addons() *BitbucketAddonsAPI {
+func (bitbucket *Node) Addons() *BitbucketAddonsAPI {
 	return &BitbucketAddonsAPI{
 		client: bitbucket.client,
 	}
 }
 
-func (bitbucket *Bitbucket) Admin() *BitbucketAdminAPI {
+func (bitbucket *Node) Admin() *BitbucketAdminAPI {
 	return &BitbucketAdminAPI{
 		client: bitbucket.client,
 	}
@@ -379,6 +421,15 @@ func (api *BitbucketAdminAPI) CreateUser(
 	}
 
 	return &user, nil
+}
+
+func (api *BitbucketAdminAPI) GetCluster() (*stash.Cluster, error) {
+	cluster, err := api.client.GetCluster()
+	if err != nil {
+		return nil, err
+	}
+
+	return &cluster, nil
 }
 
 type BitbucketRepositoryPermissionsAPI struct {

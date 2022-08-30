@@ -4,7 +4,7 @@ set -euo pipefail
 
 NETWORK=bitbucket-mesh
 
-BITBUCKET_VERSION=latest
+BITBUCKET_VERSION=8.1.0
 
 mkdir -p bitbucket-cluster/nfs bitbucket-cluster/postgres
 NFS_DIR=$(readlink -f bitbucket-cluster/nfs)
@@ -41,10 +41,10 @@ cp -v $(dirname $0)/cluster.bitbucket.properties $NFS_DIR/bitbucket.properties
     docker run --name bitbucket-postgres --network $NETWORK \
         --detach \
         -v $POSTGRES_DIR:/var/lib/postgresql/data \
-		-e POSTGRES_DB=bitbucket \
-		-e POSTGRES_USER=bitbucket \
-		-e POSTGRES_PASSWORD=bitbucket \
-		postgres:latest
+        -e POSTGRES_DB=bitbucket \
+        -e POSTGRES_USER=bitbucket \
+        -e POSTGRES_PASSWORD=bitbucket \
+        postgres:latest
 
 }
 

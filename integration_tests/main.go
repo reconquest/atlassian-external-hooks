@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +42,7 @@ Options:
   --no-randomize              Do not randomize tests order.
   --debug                     Set debug log level.
   --trace                     Set trace log level.
+  --volumes <dir>             Directory for volumes. [default: .volumes]
   -h --help                   Show this help.
 `
 
@@ -57,6 +59,7 @@ type Opts struct {
 	ValueRun       string `docopt:"--run"`
 	ValueDatabase  string `docopt:"--database"`
 	ValueSkipUntil string `docopt:"--skip-until"`
+	ValueVolumes   string `docopt:"--volumes"`
 }
 
 func init() {
@@ -95,7 +98,7 @@ func main() {
 	ensureAddons()
 
 	var (
-		baseBitbucket = "6.2.0"
+		baseBitbucket = "8.3.0"
 		latestAddon   = getAddon(getLatestVersionXML())
 	)
 
@@ -125,14 +128,14 @@ func main() {
 	// TODO: add tests for different trigger configurations
 	// TODO: add tests for BB 5.x.x
 
-	run := runner.New(suite.CleanupHooks)
+	run := runner.New(must(filepath.Abs(opts.ValueVolumes)), suite.CleanupHooks)
 
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket":        baseBitbucket,
-				"addon_reproduced": getAddon("10.1.0"),
-				"addon_fixed":      latestAddon,
+				Bitbucket:       baseBitbucket,
+				AddonReproduced: getAddon("10.1.0"),
+				AddonFixed:      latestAddon,
 			},
 
 			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced,
@@ -143,9 +146,9 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket":        baseBitbucket,
-				"addon_reproduced": getAddon("10.0.0"),
-				"addon_fixed":      latestAddon,
+				Bitbucket:       baseBitbucket,
+				AddonReproduced: getAddon("10.0.0"),
+				AddonFixed:      latestAddon,
 			},
 
 			suite.TestBug_ProjectHookCreatedBeforeRepository_Reproduced,
@@ -156,9 +159,9 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket":        baseBitbucket,
-				"addon_reproduced": getAddon("9.1.0"),
-				"addon_fixed":      latestAddon,
+				Bitbucket:       baseBitbucket,
+				AddonReproduced: getAddon("9.1.0"),
+				AddonFixed:      latestAddon,
 			},
 
 			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced,
@@ -169,8 +172,8 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket": baseBitbucket,
-				"addon":     latestAddon,
+				Bitbucket: baseBitbucket,
+				Addon:     latestAddon,
 			},
 			suite.TestProjectHooks_DoNotCreateDisabledHooks,
 
@@ -181,9 +184,9 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket":        baseBitbucket,
-				"addon_reproduced": getAddon("10.2.1"),
-				"addon_fixed":      latestAddon,
+				Bitbucket:       baseBitbucket,
+				AddonReproduced: getAddon("10.2.1"),
+				AddonFixed:      latestAddon,
 			},
 
 			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced,
@@ -194,9 +197,9 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket":        baseBitbucket,
-				"addon_reproduced": getAddon("11.1.0"),
-				"addon_fixed":      latestAddon,
+				Bitbucket:       baseBitbucket,
+				AddonReproduced: getAddon("11.1.0"),
+				AddonFixed:      latestAddon,
 			},
 
 			suite.TestBug_RepositoryHookCreatedBeforeProject_Reproduced,
@@ -207,8 +210,8 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket": baseBitbucket,
-				"addon":     latestAddon,
+				Bitbucket: baseBitbucket,
+				Addon:     getAddon("12.0.1"),
 			},
 			suite.TestGlobalHooks,
 			suite.TestGlobalHooks_PersonalRepositoriesFilter,
@@ -221,21 +224,34 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket_from": baseBitbucket,
-				"bitbucket_to":   "6.9.0",
-				"addon":          latestAddon,
+				Bitbucket: baseBitbucket,
+				Cluster:   true,
+				Addon:     latestAddon,
+			},
+			suite.TestGlobalHooks,
+			suite.TestGlobalHooks_PersonalRepositoriesFilter,
+			suite.TestProjectHooks,
+			suite.TestRepositoryHooks,
+			suite.TestPersonalRepositoriesHooks,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				BitbucketFrom: baseBitbucket,
+				BitbucketTo:   "6.9.0",
+				Addon:         latestAddon,
 			},
 			suite.TestBitbucketUpgrade,
 		),
 	)
 
-	_ = baseBitbucket
-
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				"bitbucket": "7.0.0",
-				"addon":     latestAddon,
+				Bitbucket: "7.0.0",
+				Addon:     latestAddon,
 			},
 			suite.TestProjectHooks,
 			suite.TestRepositoryHooks,
@@ -268,11 +284,22 @@ func main() {
 	} else {
 		if run.Bitbucket() != nil {
 			facts := karma.
-				Describe("container/bitbucket", run.Bitbucket().Container()).
-				Describe("volume/bitbucket", run.Bitbucket().VolumeData()).
-				Describe("volume/bitbucket/lib-native", run.Bitbucket().VolumeLibNative()).
-				Describe("container/database", run.Database().Container()).
-				Describe("volume/database", run.Database().Volume())
+				Describe("work_dir", workdir)
+			nodes := run.Bitbuckets()
+			if len(nodes) > 0 {
+				facts = facts.Describe("shared/network", nodes[0].Network())
+
+				for _, node := range nodes {
+					facts = facts.Describe(node.Container()+"/container", node.Container()).
+						Describe(node.Container()+"/volume", node.VolumeData())
+				}
+			}
+
+			if run.Database() != nil {
+				facts = facts.
+					Describe("shared/database/container", run.Database().Container()).
+					Describe("shared/database/volume", run.Database().Volume())
+			}
 
 			log.Infof(facts, "{run} following resources can be reused")
 		}
@@ -384,4 +411,12 @@ func getLatestVersionXML() string {
 
 func text(lines ...string) []byte {
 	return []byte(strings.Join(lines, "\n"))
+}
+
+func must[T any](value T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+
+	return value
 }
