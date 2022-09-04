@@ -27,10 +27,12 @@ var usage = `external-hooks-tests - run external hooks test suites.
 Usage:
   external-hooks-test [options] --container=<container>
   external-hooks-test [options] [--keep]
+  external-hooks-test [options] --clean
   external-hooks-test -h | --help
 
 Options:
   -l --list                   List testcases.
+  --clean                     Clean Docker resources.
   -C --container <container>  Use specified container.  
   -K --keep                   Keep work dir & bitbucket instance.
   -D --database <type>        Type of database to use.
@@ -48,6 +50,7 @@ Options:
 
 type Opts struct {
 	FlagKeep        bool `docopt:"--keep"`
+	FlagClean       bool `docopt:"--clean"`
 	FlagTrace       bool `docopt:"--trace"`
 	FlagDebug       bool `docopt:"--debug"`
 	FlagNoUpgrade   bool `docopt:"--no-upgrade"`
@@ -86,6 +89,12 @@ func main() {
 		log.SetLevel(log.LevelDebug)
 	case opts.FlagTrace:
 		log.SetLevel(log.LevelTrace)
+	case opts.FlagClean:
+		err := clean()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -419,4 +428,87 @@ func must[T any](value T, err error) T {
 	}
 
 	return value
+}
+
+func clean() error {
+	const prefix = "aeh-"
+
+	filter := func(items []string) []string {
+		dst := []string{}
+		for _, item := range items {
+			if strings.HasPrefix(item, prefix) {
+				dst = append(dst, item)
+			}
+		}
+		return dst
+	}
+
+	resources := struct {
+		containers []string
+		networks   []string
+		volumes    []string
+	}{}
+
+	stdout, _, err := exec.New(
+		"docker", "ps", "-a", "--format", "{{.Names}}",
+	).NoStdLog().Output()
+	if err != nil {
+		return karma.Format(err, "get docker containers")
+	}
+
+	resources.containers = filter(strings.Split(strings.TrimSpace(string(stdout)), "\n"))
+
+	stdout, _, err = exec.New(
+		"docker", "volume", "ls", "--format", "{{.Name}}",
+	).NoStdLog().Output()
+	if err != nil {
+		return karma.Format(err, "get docker volumes")
+	}
+
+	resources.volumes = filter(strings.Split(strings.TrimSpace(string(stdout)), "\n"))
+
+	stdout, _, err = exec.New(
+		"docker", "network", "ls", "--format", "{{.Name}}",
+	).NoStdLog().Output()
+	if err != nil {
+		return karma.Format(err, "get docker volumes")
+	}
+
+	resources.networks = filter(strings.Split(strings.TrimSpace(string(stdout)), "\n"))
+
+	context := karma.
+		Describe("containers", resources.containers).
+		Describe("volumes", resources.volumes).
+		Describe("networks", resources.networks)
+
+	log.Infof(context, "cleaning up resources")
+
+	for _, container := range resources.containers {
+		log.Infof(nil, "remove container %q", container)
+
+		err = exec.New("docker", "rm", "-f", container).Run()
+		if err != nil {
+			log.Errorf(err, "remove container %q", container)
+		}
+	}
+
+	for _, volume := range resources.volumes {
+		log.Infof(nil, "remove volume %q", volume)
+
+		err = exec.New("docker", "volume", "rm", volume).Run()
+		if err != nil {
+			log.Errorf(err, "remove volume %q", volume)
+		}
+	}
+
+	for _, network := range resources.networks {
+		log.Infof(nil, "remove network %q", network)
+
+		err = exec.New("docker", "network", "rm", network).Run()
+		if err != nil {
+			log.Errorf(err, "remove network %q", network)
+		}
+	}
+
+	return nil
 }
