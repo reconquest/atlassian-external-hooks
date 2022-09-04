@@ -2,7 +2,6 @@ package runner
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
@@ -82,7 +81,6 @@ func (runner *Runner) UseBitbucket(version string, cluster bool) {
 }
 
 func (runner *Runner) ready() {
-	fmt.Fprintf(os.Stderr, "XXXXXX bitbucket.go:83 SEND READY\n")
 	select {
 	case runner.run.ready <- struct{}{}:
 	default:

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -427,11 +426,7 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 		func(line string) bool {
 			switch {
 			case isV10:
-				matched := strings.Contains(line, "Finished job for creating HookScripts")
-				if matched {
-					fmt.Fprintf(os.Stderr, "XXXXXX suite.go:430 MATCHED \n")
-				}
-				return matched
+				return strings.Contains(line, "Finished job for creating HookScripts")
 
 			case isV9:
 				return strings.Contains(line, "HookScripts created successfully")
@@ -447,9 +442,7 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 
 	log.Debugf(nil, "{add-on} waiting for add-on startup process to finish")
 
-	fmt.Fprintf(os.Stderr, "XXXXXX suite.go:451 waiting start\n")
 	waiter.Wait(suite.FailNow, "hook scripts", "created (after installing add-on)")
-	fmt.Fprintf(os.Stderr, "XXXXXX suite.go:453 waiting end\n")
 
 	return key
 }
@@ -485,6 +478,8 @@ func (suite *Suite) WaitExternalHookEnabled(hook interface {
 		bitbucket.DEFAULT_LOG_WAIT_TIMEOUT,
 	)
 
+	log.Debugf(nil, "{add-on} waiting for external hook to become enabled")
+
 	waiter.Wait(suite.FailNow, "external hook", "enabled")
 }
 
@@ -504,6 +499,8 @@ func (suite *Suite) WaitExternalHookDisabled(hook interface {
 		},
 		bitbucket.DEFAULT_LOG_WAIT_TIMEOUT,
 	)
+
+	log.Debugf(nil, "{add-on} waiting for external hook to become disabled")
 
 	waiter.Wait(suite.FailNow, "external hook", "disabled")
 }
@@ -539,6 +536,8 @@ func (suite *Suite) WaitExternalHookUnconfigured() {
 		bitbucket.DEFAULT_LOG_WAIT_TIMEOUT,
 	)
 
+	log.Debugf(nil, "{add-on} waiting for external hook to become unconfigured")
+
 	waiter.Wait(suite.FailNow, "external hook", "unconfigured")
 }
 
@@ -561,6 +560,8 @@ func (suite *Suite) WaitHookScriptsCreated() {
 		bitbucket.DEFAULT_LOG_WAIT_TIMEOUT,
 	)
 
+	log.Debugf(nil, "{add-on} waiting for hook scripts to be created")
+
 	waiter.Wait(suite.FailNow, "hook scripts", "created")
 }
 
@@ -582,6 +583,8 @@ func (suite *Suite) WaitHookScriptsInherited() {
 		},
 		bitbucket.DEFAULT_LOG_WAIT_TIMEOUT,
 	)
+
+	log.Debugf(nil, "{add-on} waiting for hook scripts to be inherited")
 
 	waiter.Wait(suite.FailNow, "hook scripts", "inherited")
 }

@@ -223,7 +223,6 @@ func (cluster *Cluster) WaitLog(
 	duration time.Duration,
 ) bitbucket.LogWaiter {
 	ctx, cancel := context.WithCancel(ctx)
-	_ = cancel
 
 	clusterWaiter := &ClusterLogWaiter{
 		context: ctx,

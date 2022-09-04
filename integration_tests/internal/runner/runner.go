@@ -2,7 +2,6 @@ package runner
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -53,7 +52,6 @@ func New(volumes string, cleanup func()) *Runner {
 }
 
 func (runner *Runner) WaitBitbucket() []bitbucket.Bitbucket {
-	fmt.Fprintf(os.Stderr, "XXXXXX runner.go:54 WAIT READY\n")
 	<-runner.run.ready
 	return runner.Bitbuckets()
 }

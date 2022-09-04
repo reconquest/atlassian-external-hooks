@@ -23,3 +23,4 @@ batch.js
 /*.jar
 /bitbucket-cluster
 /.volumes
+/integration_tests/external-hooks-test

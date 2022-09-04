@@ -1,0 +1,56 @@
+#!/bin/bash
+
+set -euo pipefail
+
+pkgs=(
+    mkcert
+    go-task-bin
+    atlassian-plugin-sdk
+)
+
+programs=(
+    task
+    atlas-mvn
+)
+
+basedir="$(readlink -f "$(dirname "$0")")"
+
+broken=false
+
+for pkg in "${pkgs}"; do
+    if ! pacman -Q $pkg >/dev/null; then
+        echo "$pkg package is not installed" >&2
+        broken=true
+    fi
+done
+
+if $broken; then
+    echo "Please install the missing packages" >&2
+    exit 1
+fi
+
+for program in "${programs}"; do
+    if ! command -v $program >/dev/null; then
+        echo "$program is not in PATH" >&2
+        broken=true
+    fi
+done
+
+if $broken; then
+    echo "Please fix the PATH to find required programs" >&2
+    exit 1
+fi
+
+cd $basedir/integration_tests
+go build -o external-hooks-test -v ./
+
+cd $basedir
+
+if [[ ! -d target ]]; then
+    task atlas:package
+fi
+
+export PATH=/opt/atlassian/plugin-sdk/bin:/home/operator/deadfiles/bin:$HOME/go/bin:$PATH
+
+runner=$basedir/integration_tests/external-hooks-test
+$runner "${@}"

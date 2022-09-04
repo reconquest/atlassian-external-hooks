@@ -47,7 +47,12 @@ type Bitbucket interface {
 	VolumeData() string
 	Network() string
 	Logs(kind LogsKind) *Logs
-	WaitLog(ctx context.Context, kind LogsKind, match func(string) bool, duration time.Duration) LogWaiter
+	WaitLog(
+		ctx context.Context,
+		kind LogsKind,
+		match func(string) bool,
+		duration time.Duration,
+	) LogWaiter
 	FlushLogs(kind LogsKind)
 	ApplicationDataDir() string
 }
