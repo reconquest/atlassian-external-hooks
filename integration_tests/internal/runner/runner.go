@@ -250,14 +250,16 @@ func (runner *Runner) Cleanup() error {
 		}
 	}
 
-	err := runner.run.database.Stop()
-	if err != nil {
-		return karma.Format(err, "stop database")
-	}
+	if runner.run.database != nil {
+		err := runner.run.database.Stop()
+		if err != nil {
+			return karma.Format(err, "stop database")
+		}
 
-	err = runner.run.database.RemoveContainer()
-	if err != nil {
-		return karma.Format(err, "remove database container")
+		err = runner.run.database.RemoveContainer()
+		if err != nil {
+			return karma.Format(err, "remove database container")
+		}
 	}
 
 	return nil

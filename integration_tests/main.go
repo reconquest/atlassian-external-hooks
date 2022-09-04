@@ -98,7 +98,7 @@ func main() {
 	ensureAddons()
 
 	var (
-		baseBitbucket = "8.3.0"
+		baseBitbucket = "6.2.0"
 		latestAddon   = getAddon(getLatestVersionXML())
 	)
 
@@ -224,21 +224,6 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				Bitbucket: baseBitbucket,
-				Cluster:   true,
-				Addon:     latestAddon,
-			},
-			suite.TestGlobalHooks,
-			suite.TestGlobalHooks_PersonalRepositoriesFilter,
-			suite.TestProjectHooks,
-			suite.TestRepositoryHooks,
-			suite.TestPersonalRepositoriesHooks,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
 				BitbucketFrom: baseBitbucket,
 				BitbucketTo:   "6.9.0",
 				Addon:         latestAddon,
@@ -253,6 +238,21 @@ func main() {
 				Bitbucket: "7.0.0",
 				Addon:     latestAddon,
 			},
+			suite.TestProjectHooks,
+			suite.TestRepositoryHooks,
+			suite.TestPersonalRepositoriesHooks,
+		),
+	)
+
+	run.Suite(
+		suite.WithParams(
+			TestParams{
+				Bitbucket: "8.3.0",
+				Cluster:   true,
+				Addon:     latestAddon,
+			},
+			suite.TestGlobalHooks,
+			suite.TestGlobalHooks_PersonalRepositoriesFilter,
 			suite.TestProjectHooks,
 			suite.TestRepositoryHooks,
 			suite.TestPersonalRepositoriesHooks,
