@@ -32,6 +32,7 @@ type StartOpts struct {
 func StartNew(opts StartOpts) (*Cluster, error) {
 	opts.RunOpts.Properties = bitbucket.NewProperties().
 		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
+		WithSidecarMeshEnabled(false).
 		WithHazelcast()
 
 	return clusterize(
@@ -49,6 +50,7 @@ func StartNew(opts StartOpts) (*Cluster, error) {
 func StartExisting(opts StartOpts) (*Cluster, error) {
 	opts.RunOpts.Properties = bitbucket.NewProperties().
 		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
+		WithSidecarMeshEnabled(false).
 		WithHazelcast()
 
 	return clusterize(
