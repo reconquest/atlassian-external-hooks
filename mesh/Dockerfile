@@ -1,6 +1,7 @@
 FROM alpine:3.16
 
-ENV DOCKER_MESH_VERSION=1.3.0
+ARG DOCKER_MESH_VERSION=1.3.1
+
 ENV MESH_HOME=/srv/mesh/data
 
 RUN apk update && apk add \
