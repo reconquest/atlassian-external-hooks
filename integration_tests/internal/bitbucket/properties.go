@@ -3,7 +3,6 @@ package bitbucket
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -43,29 +42,21 @@ func NewProperties() Properties {
 //    return properties
 //}
 
-func (props Properties) WithSidecarMeshEnabled(value bool) Properties {
-	props["plugin.bitbucket-git.mesh.sidecar.enabled"] = strconv.FormatBool(
-		value,
-	)
-
-	return props
+func (properties Properties) WithLicense(license string) Properties {
+	properties["setup.license"] = license
+	return properties
 }
 
-func (props Properties) WithLicense(license string) Properties {
-	props["setup.license"] = license
-	return props
+func (properties Properties) WithHazelcast() Properties {
+	properties["hazelcast.network.multicast"] = "true"
+	properties["hazelcast.group.name"] = "bitbucket"
+	properties["hazelcast.group.password"] = "bitbucket"
+	return properties
 }
 
-func (props Properties) WithHazelcast() Properties {
-	props["hazelcast.network.multicast"] = "true"
-	props["hazelcast.group.name"] = "bitbucket"
-	props["hazelcast.group.password"] = "bitbucket"
-	return props
-}
-
-func (props Properties) String() string {
+func (properties Properties) String() string {
 	var keys []string
-	for key := range props {
+	for key := range properties {
 		keys = append(keys, key)
 	}
 
@@ -73,7 +64,7 @@ func (props Properties) String() string {
 
 	var lines []string
 	for _, key := range keys {
-		lines = append(lines, fmt.Sprintf("%s=%s", key, props[key]))
+		lines = append(lines, fmt.Sprintf("%s=%s", key, properties[key]))
 	}
 
 	return strings.Join(lines, "\n")

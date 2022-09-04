@@ -27,8 +27,7 @@ func (runner *Runner) UseBitbucket(version string, cluster bool) {
 	}
 
 	properties := bitbucket.NewProperties().
-		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
-		WithSidecarMeshEnabled(false)
+		WithLicense(bitbucket.LICENSE_DATACENTER_3H)
 
 	switch {
 	case runner.run.bitbucket != nil:
