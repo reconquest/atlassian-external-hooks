@@ -2,7 +2,6 @@ package bitbucket
 
 import (
 	"archive/tar"
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,12 +14,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/kovetskiy/stash"
 	cp "github.com/otiai10/copy"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
@@ -39,12 +38,6 @@ type AtlToken struct {
 	cookies []*http.Cookie
 }
 
-type Logs struct {
-	*sync.Cond
-
-	lines []string
-}
-
 type Instance struct {
 	id        string
 	version   string
@@ -61,8 +54,8 @@ type Instance struct {
 		//ConfigureOpts
 	}
 
-	stacktraceLogs *Logs
-	testcaseLogs   *Logs
+	stacktraceLogs *docker.Logs
+	testcaseLogs   *docker.Logs
 }
 
 func (instance *Instance) ID() string {
@@ -137,32 +130,7 @@ func (instance *Instance) Version() string {
 }
 
 func (instance *Instance) ReadFile(path string) (string, error) {
-	execution := exec.New(
-		"docker", "exec", instance.container, "cat", path,
-	)
-
-	stdout, err := execution.StdoutPipe()
-	if err != nil {
-		return "", karma.Format(
-			err,
-			"get stdout pipe for docker exec",
-		)
-	}
-
-	err = execution.Start()
-	if err != nil {
-		return "", karma.Format(
-			err,
-			"start docker cp",
-		)
-	}
-
-	data, err := ioutil.ReadAll(stdout)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), execution.Wait()
+	return docker.ReadFile(instance.container, path)
 }
 
 func (instance *Instance) ListFiles(path string) ([]string, error) {
@@ -318,73 +286,13 @@ func (instance *Instance) WriteFile(
 	content []byte,
 	mode os.FileMode,
 ) error {
-	execution := exec.New(
-		"docker",
-		"cp",
-		"-",
-		fmt.Sprintf("%s:%s",
-			instance.container,
-			instance.ApplicationDataDir(),
-		),
+	return docker.WriteFile(
+		instance.container,
+		instance.ApplicationDataDir(),
+		path,
+		content,
+		mode,
 	)
-
-	err := execution.Start()
-	if err != nil {
-		return karma.Format(
-			err,
-			"start docker cp",
-		)
-	}
-
-	stdin := execution.GetStdin()
-
-	writer := tar.NewWriter(stdin)
-
-	err = writer.WriteHeader(&tar.Header{
-		Name: path,
-		Mode: int64(mode),
-		Size: int64(len(content)),
-	})
-	if err != nil {
-		return karma.Format(
-			err,
-			"write file header",
-		)
-	}
-
-	_, err = writer.Write(content)
-	if err != nil {
-		return karma.Format(
-			err,
-			"write file contents",
-		)
-	}
-
-	err = writer.Close()
-	if err != nil {
-		return karma.Format(
-			err,
-			"close file",
-		)
-	}
-
-	err = stdin.Close()
-	if err != nil {
-		return karma.Format(
-			err,
-			"close docker cp stdin",
-		)
-	}
-
-	err = execution.Wait()
-	if err != nil {
-		return karma.Format(
-			err,
-			"complete docker cp",
-		)
-	}
-
-	return nil
 }
 
 func (instance *Instance) Stop() error {
@@ -457,11 +365,11 @@ func (instance *Instance) Network() string {
 	return instance.network
 }
 
-func (instance *Instance) StacktraceLogs() *Logs {
+func (instance *Instance) StacktraceLogs() *docker.Logs {
 	return instance.stacktraceLogs
 }
 
-func (instance *Instance) Logs(kind LogsKind) *Logs {
+func (instance *Instance) Logs(kind LogsKind) *docker.Logs {
 	if kind == LOGS_STACKTRACE {
 		return instance.stacktraceLogs
 	}
@@ -469,118 +377,17 @@ func (instance *Instance) Logs(kind LogsKind) *Logs {
 	return instance.testcaseLogs
 }
 
-type LogWaiter interface {
-	Wait(
-		failer func(failureMessage string, msgAndArgs ...interface{}) bool,
-		resource string,
-		state string,
-	)
-}
-
-type logWaiter struct {
-	duration time.Duration
-	group    *sync.WaitGroup
-	ctx      context.Context
-}
-
-func (waiter *logWaiter) Wait(
-	failer func(failureMessage string, msgAndArgs ...interface{}) bool,
-	resource string,
-	state string,
-) {
-	done := make(chan struct{})
-	go func() {
-		waiter.group.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-time.After(waiter.duration):
-		failer(
-			resource+" should be "+state+" but no such log message occurred",
-			"duration: %s",
-			waiter.duration,
-		)
-	case <-done:
-	case <-waiter.ctx.Done():
-	}
-}
-
-const DEFAULT_LOG_WAIT_TIMEOUT = time.Second * 10
-
 func (instance *Instance) WaitLog(
 	ctx context.Context,
 	kind LogsKind,
 	fn func(string) bool,
 	duration time.Duration,
-) LogWaiter {
-	waiter := sync.WaitGroup{}
-	waiter.Add(1)
-
-	logs := instance.Logs(kind)
-
-	cursor := 0
-	prev := 0
-
-	go func() {
-		defer waiter.Done()
-
-		for {
-			logs.L.Lock()
-
-			for {
-				now := len(logs.lines)
-				if now == prev {
-					logs.Wait()
-					continue
-				}
-
-				prev = now
-				break
-			}
-
-			// FlushLogs() was called before
-			if cursor > len(logs.lines)-1 {
-				cursor = 0
-			}
-
-			lines := logs.lines[cursor:]
-			logs.L.Unlock()
-
-			cursor += len(lines)
-
-			for _, line := range lines {
-				if fn(line) {
-					return
-				}
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-	}()
-
-	return &logWaiter{
-		ctx:      ctx,
-		group:    &waiter,
-		duration: duration,
-	}
-}
-
-func (instance *Instance) flushLogs(logs *Logs) {
-	if instance == nil {
-		return
-	}
-	logs.L.Lock()
-	logs.lines = []string{}
-	logs.L.Unlock()
+) docker.LogWaiter {
+	return docker.WaitLog(ctx, instance.Logs(kind), fn, duration)
 }
 
 func (instance *Instance) FlushLogs(kind LogsKind) {
-	instance.flushLogs(instance.Logs(kind))
+	instance.Logs(kind).Flush()
 }
 
 func (instance *Instance) getAtlToken(
@@ -736,14 +543,20 @@ func (instance *Instance) create() error {
 		return karma.Format(err, "copy jdbc drivers to bitbucket volume")
 	}
 
-	for _, dir := range []string{instance.VolumeShared(), instance.VolumeData()} {
+	for _, dir := range []string{
+		instance.VolumeShared(),
+		instance.VolumeData(),
+	} {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
 			return karma.Format(err, "create directory: "+dir)
 		}
 	}
 
-	propertiesPath := filepath.Join(instance.VolumeShared(), "bitbucket.properties")
+	propertiesPath := filepath.Join(
+		instance.VolumeShared(),
+		"bitbucket.properties",
+	)
 
 	_, err = os.Stat(propertiesPath)
 	if os.IsNotExist(err) {
@@ -817,7 +630,7 @@ func (instance *Instance) create() error {
 		),
 		"-v", fmt.Sprintf(
 			"%s:%s",
-			rootCA,
+			filepath.Join(rootCA, "rootCA.pem"),
 			"/usr/share/ca-certificates/rootCA.pem",
 		),
 		"--name", instance.container,
@@ -921,70 +734,6 @@ func (instance *Instance) getStartupStatus() (*StartupStatus, error) {
 	}
 
 	return &status, nil
-}
-
-func (instance *Instance) startLogReader(output bool) (*Logs, error) {
-	log.Debugf(
-		nil,
-		"{bitbucket} starting log reader for container %q",
-		instance.container,
-	)
-
-	execution := exec.New(
-		"docker",
-		"logs", "-f",
-		"--tail", "0",
-		instance.container,
-	)
-
-	stdout, err := execution.StdoutPipe()
-	if err != nil {
-		return nil, karma.Format(
-			err,
-			"get stdout pipe for docker logs",
-		)
-	}
-
-	err = execution.Start()
-	if err != nil {
-		return nil, karma.Format(
-			err,
-			"start docker logs",
-		)
-	}
-
-	logs := &Logs{
-		Cond: sync.NewCond(&sync.Mutex{}),
-	}
-
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-
-		for scanner.Scan() {
-			logs.L.Lock()
-
-			logs.lines = append(logs.lines, scanner.Text())
-
-			logs.Broadcast()
-
-			logs.L.Unlock()
-
-			if output {
-				log.Tracef(
-					nil, "{%s %s} log | %s",
-					instance.container,
-					instance.version,
-					scanner.Text(),
-				)
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			log.Errorf(nil, "error while reading bitbucket instance logs")
-		}
-	}()
-
-	return logs, nil
 }
 
 func getRootCA() (string, error) {

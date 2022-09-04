@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"sync/atomic"
 
+	"github.com/reconquest/karma-go"
 	"github.com/reconquest/lexec-go"
 	"github.com/reconquest/pkg/log"
 )
@@ -14,6 +15,14 @@ var (
 )
 
 func New(command string, args ...string) *lexec.Execution {
+	return NewContext(nil, command, args...)
+}
+
+func NewContext(
+	context *karma.Context,
+	command string,
+	args ...string,
+) *lexec.Execution {
 	id := atomic.AddInt32(&counter, 1)
 
 	return lexec.NewExec(
@@ -21,7 +30,7 @@ func New(command string, args ...string) *lexec.Execution {
 			func(message string, args ...interface{}) {
 				log.NewChildWithPrefix(
 					fmt.Sprintf("{exec} (#%04d) %s:", id, command),
-				).Tracef(nil, message, args...)
+				).Tracef(context, message, args...)
 			},
 		),
 		exec.Command(command, args...),

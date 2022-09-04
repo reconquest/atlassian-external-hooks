@@ -64,6 +64,9 @@ func (runner *Runner) UseCluster(version string, replicas int) {
 	err = runner.run.cluster.Verify()
 	runner.assert.NoError(err, "unable to verify bitbucket cluster state")
 
+	err = runner.run.cluster.Configure()
+	runner.assert.NoError(err, "unable to configure bitbucket cluster")
+
 	runner.ready()
 
 	runner.run.cleanup()

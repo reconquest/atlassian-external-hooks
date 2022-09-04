@@ -724,20 +724,20 @@ func (suite *Suite) CleanupHooks() {
 	context := suite.ExternalHooks().OnGlobal()
 
 	if err := context.PreReceive().Disable(); err != nil {
-		log.Errorf(err, "{suite:cleanup} disable pre-receive")
+		log.Warningf(err, "{suite:cleanup} disable pre-receive")
 	}
 
 	if err := context.PostReceive().Disable(); err != nil {
-		log.Errorf(err, "{suite:cleanup} disable post-receive")
+		log.Warningf(err, "{suite:cleanup} disable post-receive")
 	}
 
 	if err := context.MergeCheck().Disable(); err != nil {
-		log.Errorf(err, "{suite:cleanup} disable merge-check")
+		log.Warningf(err, "{suite:cleanup} disable merge-check")
 	}
 
 	err := context.Addon.Wait(context)
 	if err != nil {
-		log.Errorf(err, "{suite:cleanup} apply hooks factory")
+		log.Warningf(err, "{suite:cleanup} apply hooks factory")
 	}
 }
 

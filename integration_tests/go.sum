@@ -17,8 +17,8 @@ github.com/go-chi/chi v4.1.2+incompatible/go.mod h1:eB3wogJHnLi3x/kFX2A+IbTBlXxm
 github.com/kovetskiy/lorg v0.0.0-20200107130803-9a7136a95634/go.mod h1:B8HeKAukXULNzWWsW5k/SQyDkiQZPn7lTBJDB46MZ9I=
 github.com/kovetskiy/lorg v1.0.0 h1:GpbanSqdWweDT1OOXWTZ01uC+AQlweEIFvvlJdMKi1Q=
 github.com/kovetskiy/lorg v1.0.0/go.mod h1:rdiamaIRUCkX9HtFZd0D9dQqUbad21hipHk+sat7Z6s=
-github.com/kovetskiy/stash v1.2.3 h1:8OcHrc+psP+4NPjvZq7q26BrPie8DCWqGS8SF7lDJL0=
-github.com/kovetskiy/stash v1.2.3/go.mod h1:7+u85RrTwrYs9QZjGQ4Ezceqly9+LINtEhYayf/uMsU=
+github.com/kovetskiy/stash v1.2.4 h1:Zgg/VcPvrdHz+eXe+XZVND+NgJM6Tm/N2mU7jHWdwes=
+github.com/kovetskiy/stash v1.2.4/go.mod h1:7+u85RrTwrYs9QZjGQ4Ezceqly9+LINtEhYayf/uMsU=
 github.com/otiai10/copy v1.7.0 h1:hVoPiN+t+7d2nzzwMiDHPSOogsWAStewq3TwU05+clE=
 github.com/otiai10/copy v1.7.0/go.mod h1:rmRl6QPdJj6EiUqXQ/4Nn2lLXoNQjFCQbbNrxgc/t3U=
 github.com/otiai10/curr v0.0.0-20150429015615-9b4961190c95/go.mod h1:9qAhocn7zKJG+0mI8eUu6xqkFDYS2kb2saOteoSB3cE=

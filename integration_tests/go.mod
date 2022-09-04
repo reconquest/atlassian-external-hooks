@@ -6,7 +6,7 @@ require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/kovetskiy/lorg v1.0.0
-	github.com/kovetskiy/stash v1.2.3
+	github.com/kovetskiy/stash v1.2.4
 	github.com/otiai10/copy v1.7.0
 	github.com/reconquest/barely v0.0.0-20211011075640-c4e789dc39f8
 	github.com/reconquest/cog v0.0.0-20210820140837-c5c4e8f49c65

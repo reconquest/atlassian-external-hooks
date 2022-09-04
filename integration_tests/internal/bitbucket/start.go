@@ -8,10 +8,13 @@ import (
 	"time"
 
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
 )
+
+const DEFAULT_LOG_WAIT_TIMEOUT = time.Second * 10
 
 const (
 	BITBUCKET_IMAGE    = "atlassian/bitbucket-server:%s"
@@ -50,12 +53,21 @@ func StartNew(opts StartNewOpts) (*Node, error) {
 		panic("opts.ID is empty")
 	}
 
-	instance := newInstance(opts.ID, opts.Volumes, opts.Replica, ensureValidOpts(opts.RunOpts))
+	instance := newInstance(
+		opts.ID,
+		opts.Volumes,
+		opts.Replica,
+		ensureValidOpts(opts.RunOpts),
+	)
 
 	instance.container = fmt.Sprintf("%s-bitbucket", opts.ID)
 
 	if opts.Replica != nil {
-		instance.container = fmt.Sprintf("%s-%d", instance.container, *opts.Replica)
+		instance.container = fmt.Sprintf(
+			"%s-%d",
+			instance.container,
+			*opts.Replica,
+		)
 	}
 
 	log.Infof(
@@ -226,12 +238,22 @@ func newInstance(id string, volumes string, replica *int, opts RunOpts) *Instanc
 func waitAndWatch(instance *Instance) error {
 	var err error
 
-	instance.stacktraceLogs, err = instance.startLogReader(false)
+	instance.stacktraceLogs, err = docker.ReadLogs(
+		docker.ReadOpts{
+			Container: instance.container,
+			Trace:     false,
+		},
+	)
 	if err != nil {
 		return karma.Format(err, "start log reader")
 	}
 
-	instance.testcaseLogs, err = instance.startLogReader(true)
+	instance.testcaseLogs, err = docker.ReadLogs(
+		docker.ReadOpts{
+			Container: instance.container,
+			Trace:     true,
+		},
+	)
 	if err != nil {
 		return karma.Format(err, "start log reader")
 	}

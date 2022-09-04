@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kovetskiy/stash"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
@@ -46,13 +47,13 @@ type Bitbucket interface {
 	Configure() error
 	VolumeData() string
 	Network() string
-	Logs(kind LogsKind) *Logs
+	Logs(kind LogsKind) *docker.Logs
 	WaitLog(
 		ctx context.Context,
 		kind LogsKind,
 		match func(string) bool,
 		duration time.Duration,
-	) LogWaiter
+	) docker.LogWaiter
 	FlushLogs(kind LogsKind)
 	ApplicationDataDir() string
 }
@@ -435,6 +436,30 @@ func (api *BitbucketAdminAPI) GetCluster() (*stash.Cluster, error) {
 	}
 
 	return &cluster, nil
+}
+
+func (api *BitbucketAdminAPI) GetMeshNodes() ([]stash.MeshNode, error) {
+	nodes, err := api.client.GetMeshNodes()
+	if err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
+}
+
+func (api *BitbucketAdminAPI) CreateMeshNode(address string) (*stash.MeshNode, error) {
+	node, err := api.client.CreateMeshNode(address)
+	if err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+func (api *BitbucketAdminAPI) EnableMesh() error {
+	return api.client.UpdateGitMeshSettings(stash.GitMeshSettings{
+		RepositoryCreationEnabled: true,
+	})
 }
 
 type BitbucketRepositoryPermissionsAPI struct {

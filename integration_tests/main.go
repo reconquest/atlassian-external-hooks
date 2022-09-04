@@ -256,7 +256,7 @@ func main() {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				Bitbucket: "8.3.0",
+				Bitbucket: "8.4.1",
 				Cluster:   true,
 				Addon:     latestAddon,
 			},
