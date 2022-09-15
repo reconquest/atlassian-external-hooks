@@ -7,8 +7,8 @@ import (
 )
 
 func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
-	suite.UseBitbucket(params["bitbucket_from"].(string))
-	suite.InstallAddon(params["addon"].(Addon))
+	suite.UseBitbucket(params.BitbucketFrom, params.Cluster)
+	suite.InstallAddon(params.Addon)
 
 	var cases struct {
 		public, personal struct {
@@ -48,7 +48,7 @@ func (suite *Suite) TestBitbucketUpgrade(params TestParams) {
 		)
 	}
 
-	suite.UseBitbucket(params["bitbucket_to"].(string))
+	suite.UseBitbucket(params.BitbucketTo, params.Cluster)
 	suite.RecordHookScripts()
 
 	suite.testBitbucketUpgrade_After(

@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -euo pipefail
+
+NETWORK=bitbucket-mesh
+
+SSL=${SSL:-0}
+
+SSL_DIR=$(readlink -f bitbucket-cluster/mesh-ssl)
+
+:mesh-dir() {
+    readlink -f bitbucket-cluster/mesh-$1
+}
+
+:start-mesh() {
+    local MESH_DIR=$(:mesh-dir $1)
+    mkdir -p $MESH_DIR
+
+    hookscripts="
+hookscripts.gc.interval=1
+hookscripts.gc.prune=1"
+
+    if [[ "$SSL" == "1" ]]; then
+        cat > $(:mesh-dir $1)/mesh.properties <<EOF
+grpc.server.ssl.cert-chain-path=/srv/mesh/data/config/ssl/cert.pem
+grpc.server.ssl.private-key-path=/srv/mesh/data/config/ssl/key.pem
+$hookscripts
+EOF
+    else
+        echo "$hookscripts" | sudo tee $(:mesh-dir $1)/mesh.properties
+    fi
+
+    docker run --detach --network $NETWORK \
+        -v $MESH_DIR:/srv/mesh/data \
+        --name mesh-$1 kovetskiy/bitbucket-mesh
+}
+
+:ssl() {
+    mkdir -p $(:mesh-dir $1)/config/ssl
+
+    dir=$(:mesh-dir $1)/config/ssl
+
+    mkcert -cert-file $dir/cert.pem -key-file $dir/key.pem https://mesh-$1:7777
+}
+
+if [[ "$SSL" == "1" ]]; then
+    :ssl 1
+    :ssl 2
+    :ssl 3
+fi
+
+:start-mesh 1
+:start-mesh 2
+:start-mesh 3

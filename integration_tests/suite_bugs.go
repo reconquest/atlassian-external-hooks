@@ -12,7 +12,7 @@ import (
 func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	var (
 		project    = suite.CreateRandomProject()
@@ -27,10 +27,10 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
+		params.AddonReproduced.Version,
 	)
 
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
+	suite.InstallAddon(params.AddonReproduced)
 
 	suite.ConfigureSampleHook_FailWithMessage(
 		context.PreReceive(),
@@ -49,7 +49,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced(
 func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	var (
 		project    = suite.CreateRandomProject()
@@ -64,10 +64,10 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
+		params.AddonFixed.Version,
 	)
 
-	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.InstallAddon(params.AddonFixed)
 	suite.RecordHookScripts()
 
 	suite.ConfigureSampleHook_FailWithMessage(
@@ -93,7 +93,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed(
 func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	project := suite.CreateRandomProject()
 
@@ -105,10 +105,10 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
+		params.AddonReproduced.Version,
 	)
 
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
+	suite.InstallAddon(params.AddonReproduced)
 	suite.RecordHookScripts()
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
@@ -135,7 +135,7 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Reproduced(
 func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	project := suite.CreateRandomProject()
 
@@ -149,10 +149,10 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
+		params.AddonFixed.Version,
 	)
 
-	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.InstallAddon(params.AddonFixed)
 	suite.RecordHookScripts()
 
 	preReceive := suite.ConfigureSampleHook_FailWithMessage(
@@ -174,7 +174,7 @@ func (suite *Suite) TestBug_ProjectHookCreatedBeforeRepository_Fixed(
 func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	var (
 		project        = suite.CreateRandomProject()
@@ -192,10 +192,10 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
+		params.AddonReproduced.Version,
 	)
 
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
+	suite.InstallAddon(params.AddonReproduced)
 	suite.RecordHookScripts()
 
 	// repository first and project second
@@ -227,7 +227,7 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Reproduced(
 func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Fixed(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	var (
 		project        = suite.CreateRandomProject()
@@ -245,10 +245,10 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Fixed(
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
+		params.AddonFixed.Version,
 	)
 
-	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.InstallAddon(params.AddonFixed)
 	suite.RecordHookScripts()
 
 	// repository first and project second
@@ -276,7 +276,7 @@ func (suite *Suite) TestBug_RepositoryHookCreatedBeforeProject_Fixed(
 func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	project := suite.CreateRandomProject()
 
@@ -289,10 +289,10 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
+		params.AddonReproduced.Version,
 	)
 
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
+	suite.InstallAddon(params.AddonReproduced)
 
 	repository := suite.CreateRandomRepository(project)
 
@@ -331,7 +331,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced(
 func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	project := suite.CreateRandomProject()
 
@@ -344,10 +344,10 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
+		params.AddonFixed.Version,
 	)
 
-	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.InstallAddon(params.AddonFixed)
 
 	repository := suite.CreateRandomRepository(project)
 
@@ -388,7 +388,7 @@ func (suite *Suite) TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed(
 func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	project := suite.CreateRandomProject()
 
@@ -401,10 +401,10 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 	log.Infof(
 		nil,
 		"> reproducing bug on add-on version %s",
-		params["addon_reproduced"].(Addon).Version,
+		params.AddonReproduced.Version,
 	)
 
-	suite.InstallAddon(params["addon_reproduced"].(Addon))
+	suite.InstallAddon(params.AddonReproduced)
 
 	repository := suite.CreateRandomRepository(project)
 
@@ -458,7 +458,7 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reprod
 func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
 
 	project := suite.CreateRandomProject()
 
@@ -471,10 +471,10 @@ func (suite *Suite) TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed(
 	log.Infof(
 		nil,
 		"> validating fix on add-on version %s",
-		params["addon_fixed"].(Addon).Version,
+		params.AddonFixed.Version,
 	)
 
-	suite.InstallAddon(params["addon_fixed"].(Addon))
+	suite.InstallAddon(params.AddonFixed)
 
 	repository := suite.CreateRandomRepository(project)
 

@@ -11,8 +11,8 @@ import (
 func (suite *Suite) TestGlobalHooks_PersonalRepositoriesFilter(
 	params TestParams,
 ) {
-	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.InstallAddon(params["addon"].(Addon))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
+	suite.InstallAddon(params.Addon)
 	suite.RecordHookScripts()
 
 	context := suite.ExternalHooks().OnGlobal()

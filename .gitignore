@@ -21,3 +21,6 @@ batch.js
 /dependency-check
 /dependency-check-report.html
 /*.jar
+/bitbucket-cluster
+/.volumes
+/integration_tests/external-hooks-test

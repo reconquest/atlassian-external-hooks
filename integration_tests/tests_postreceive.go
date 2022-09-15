@@ -56,7 +56,7 @@ func (suite *Suite) testPostReceiveHook_AfterMerge(
 
 	Assert_MergeCheckPassed(pullRequest, suite, tester.repository)
 
-	_, err := suite.Bitbucket().Instance.ReadFile(name)
+	_, err := suite.Bitbucket().ReadFile(name)
 	suite.NoError(err, "should have file")
 }
 

@@ -1,5 +1,10 @@
 ## Bitbucket 6.2.0 and higher
 
+### 13.0.0 (2022-09-15)
+
+* Add support for Bitbucket 8
+* Add support for Bitbucket Mesh
+
 ### 12.0.1 (2021-11-05)
 
 * Fix compatibility of the global hooks feature and Oracle/Postgers databases.

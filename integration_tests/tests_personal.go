@@ -8,8 +8,8 @@ import (
 )
 
 func (suite *Suite) TestPersonalRepositoriesHooks(params TestParams) {
-	suite.UseBitbucket(params["bitbucket"].(string))
-	suite.InstallAddon(params["addon"].(Addon))
+	suite.UseBitbucket(params.Bitbucket, params.Cluster)
+	suite.InstallAddon(params.Addon)
 	suite.RecordHookScripts()
 
 	project := &stash.Project{

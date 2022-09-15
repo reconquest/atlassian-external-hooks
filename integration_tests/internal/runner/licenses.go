@@ -2,17 +2,6 @@ package runner
 
 // https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/
 const (
-	BITBUCKET_DC_LICENSE_3H = `` +
-		`AAABrQ0ODAoPeNp9kVFvmzAQx9/9KSztLZIJZIu0RkJqA6yNViAK0G3d+uDApXgjNrKPbPn2dYG0a` +
-		`6fuwS8+393v//O7vAMa8yN1PerOFrPZYn5GL+OczlzvI0m6/RZ0uisMaON7LgmURF5iwvfgVy3XW` +
-		`pj6nGPDjRFcOqXaE4Pc1M61KEEayI8t9I+DNI6jTbC6uP73wd/FdafLmhsIOYL/yMDcOXM98p95Y` +
-		`yn60wp97PvW769OpFHMRfMWagb6AHoV+svLs5x9LW4+sM+3t1ds6XpfRkw7jwcgEbSPugOSdVtTa` +
-		`tGiUHK4mUwmSZqzT+mGrTdpWAT5Kk1YkUW24AcaLFBFt0eKNdARlUayVBVo2mr1E0qk32vE9sdiO` +
-		`r1XzgvEaTN0MBg67hwaKioV0koY1GLbIdjJwlBUtOwMqr39KYfY1JZZclm+9jLEsmbEAZ4CBJvoI` +
-		`o9Ctvz2CP2GrRHe6irkL6l+S5JFiW8Pm7suSfU9l8LwXkwIB2hUaxPmYPAUm/Q2bP315w5MGXL95` +
-		`DmEZ839jFEE3SlNedvS6rTCkOjAm25YvOON3fMAVTj4nTAtAhRH4o+fI5MQ7xSh2mtA1bPJrq0WA` +
-		`gIVAIGperR8m2N0fl/GfUUJfQnd+T1aX02kk`
-
 	ADDON_LICENSE_3H = `` +
 		`AAABrw0ODAoPeNp9kl9vmzAUxd/9KSztLZIJpKvURUJaA7SNViAKsD9d++DATeKN2JZ9yZZvPxeSZ` +
 		`a3UPfjFx/f4d479ruyApvxA/YD6k+nkYjq5ordpSSd+cEWybrcCk68rC8aGgU8iJZHXmPEdhI3mx` +

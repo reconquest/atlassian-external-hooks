@@ -16,14 +16,14 @@ tasks:
     cmds:
       - >
         curl -s -u admin:admin -X PUT -d "" -H "Content-Type: application/json" \
-          http://localhost:7990/rest/api/latest/logs/logger/com.ngs.stash.externalhooks/debug
+         http://bitbucket.local:7990/rest/api/latest/logs/logger/com.ngs.stash.externalhooks/debug
 
   install:
     desc: compile and install current version
     cmds:
       - task: package
       - task: enable_debug
-      - stacket --uri http://admin:admin@localhost:7990/ addons install target/{{ .name }}.jar
+      - stacket --uri http://admin:admin@bitbucket.local:7990/ addons install target/{{ .name }}.jar
 
   eclipse:
     desc: prepare eclipse project

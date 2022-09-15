@@ -2,16 +2,15 @@ package runner
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/cluster"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
-	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/lexec-go"
 	"github.com/reconquest/pkg/log"
@@ -28,40 +27,41 @@ type Runner struct {
 
 	suites []Suite
 
-	database string
-
 	run struct {
-		workdir           string
-		container         string
-		database          string
-		instanceBitbucket *bitbucket.Bitbucket
-		instanceDatabase  database.Database
-		cleanupPrepare    func()
-		gotBitbucket      chan struct{}
+		volumes      string
+		workdir      string
+		identifier   string
+		databaseKind string
+		cluster      *cluster.Cluster
+		bitbucket    bitbucket.Bitbucket
+		database     database.Database
+		cleanup      func()
+		ready        chan struct{}
 	}
 }
 
-func New(cleanupPrepare func()) *Runner {
+func New(volumes string, cleanup func()) *Runner {
 	var runner Runner
 
 	runner.assert = assert.New(&runner)
-	runner.run.gotBitbucket = make(chan struct{})
-	runner.run.cleanupPrepare = cleanupPrepare
+	runner.run.ready = make(chan struct{}, 1)
+	runner.run.cleanup = cleanup
+	runner.run.volumes = volumes
 
 	return &runner
 }
 
-func (runner *Runner) WaitBitbucket() *bitbucket.Bitbucket {
-	<-runner.run.gotBitbucket
-	return runner.run.instanceBitbucket
+func (runner *Runner) WaitBitbucket() []bitbucket.Bitbucket {
+	<-runner.run.ready
+	return runner.Bitbuckets()
 }
 
 func (runner *Runner) useDatabase(id string) {
-	if runner.run.instanceDatabase == nil {
-		database, err := database.Start(runner.run.database, id)
-		runner.assert.NoError(err, "start database: %q", runner.run.database)
+	if runner.run.database == nil {
+		database, err := database.Start(runner.run.databaseKind, id)
+		runner.assert.NoError(err, "start database: %q", runner.run.databaseKind)
 
-		runner.run.instanceDatabase = database
+		runner.run.database = database
 	}
 
 	execution := exec.New("docker", "network", "inspect", id)
@@ -76,13 +76,13 @@ func (runner *Runner) useDatabase(id string) {
 		runner.assert.NoError(err, "docker network create")
 	}
 
-	runner.connect(id, runner.run.instanceDatabase.Container())
+	runner.connect(id, runner.run.database.Container())
 }
 
 func (runner *Runner) connect(network string, container string) {
 	err := exec.New(
 		"docker", "network", "connect",
-		network, runner.run.instanceDatabase.Container(),
+		network, runner.run.database.Container(),
 	).Run()
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists in network") {
@@ -93,67 +93,9 @@ func (runner *Runner) connect(network string, container string) {
 	runner.assert.NoError(err, "connect database to the docker network")
 }
 
-func (runner *Runner) UseBitbucket(version string) {
-	var err error
-
-	// the id is used as network domain, containers' prefix and volumes' prefix
-	id := fmt.Sprintf("aeh-%s", lojban.GetRandomID(5))
-	if runner.run.container != "" {
-		id = strings.TrimSuffix(runner.run.container, "-bitbucket")
-	}
-
-	switch {
-	case runner.run.instanceBitbucket != nil:
-		runner.upgrade(runner.run.instanceBitbucket.ID(), version)
-
-	case runner.run.container != "":
-		runner.useDatabase(id)
-
-		runner.run.instanceBitbucket, err = bitbucket.StartExisting(
-			bitbucket.StartExistingOpts{
-				Container: runner.run.container,
-				RunOpts: bitbucket.RunOpts{
-					Version:  version,
-					Database: runner.run.instanceDatabase,
-					Network:  id,
-				},
-			},
-		)
-		runner.assert.NoError(err, "start existing container")
-
-	default:
-		runner.useDatabase(id)
-
-		runner.run.instanceBitbucket, err = bitbucket.StartNew(
-			bitbucket.StartNewOpts{
-				ID: string(id),
-				RunOpts: bitbucket.RunOpts{
-					Version:  version,
-					Database: runner.run.instanceDatabase,
-					Network:  id,
-				},
-			},
-		)
-		runner.assert.NoError(err, "start new bitbucket container")
-	}
-
-	runner.run.container = runner.run.instanceBitbucket.Container()
-
-	err = runner.run.instanceBitbucket.Configure(bitbucket.ConfigureOpts{
-		License: BITBUCKET_DC_LICENSE_3H,
-	})
-	if err == nil {
-		runner.notifyGotBitbucket()
-	}
-
-	runner.run.cleanupPrepare()
-
-	runner.assert.NoError(err, "unable configure bitbucket")
-}
-
 func (runner *Runner) upgrade(id string, version string) {
 	var (
-		running   = semver.New(runner.run.instanceBitbucket.Version())
+		running   = semver.New(runner.run.bitbucket.Version())
 		requested = semver.New(version)
 	)
 
@@ -166,18 +108,18 @@ func (runner *Runner) upgrade(id string, version string) {
 				requested,
 			)
 
-			err := runner.run.instanceBitbucket.Stop()
+			err := runner.run.bitbucket.Stop()
 			runner.assert.NoError(err, "stop bitbucket")
 
-			err = runner.run.instanceBitbucket.RemoveContainer()
+			err = runner.run.bitbucket.RemoveContainer()
 			runner.assert.NoError(err, "remove previous container")
 
-			runner.run.instanceBitbucket, err = bitbucket.StartNew(
+			runner.run.bitbucket, err = bitbucket.StartNew(
 				bitbucket.StartNewOpts{
 					ID: string(id),
 					RunOpts: bitbucket.RunOpts{
 						Version:  version,
-						Database: runner.run.instanceDatabase,
+						Database: runner.run.database,
 						Network:  id,
 					},
 				},
@@ -197,18 +139,11 @@ func (runner *Runner) upgrade(id string, version string) {
 	}
 }
 
-func (runner *Runner) notifyGotBitbucket() {
-	select {
-	case runner.run.gotBitbucket <- struct{}{}:
-	default:
-	}
-}
-
 func (runner *Runner) InstallAddon(version string, path string) string {
-	key, err := runner.run.instanceBitbucket.Addons().Install(path)
+	key, err := runner.Bitbucket().Addons().Install(path)
 	runner.assert.NoError(err, "install addon")
 
-	addon, err := runner.run.instanceBitbucket.Addons().Get(key)
+	addon, err := runner.Bitbucket().Addons().Get(key)
 	runner.assert.NoError(err, "get addon information")
 
 	if addon.Version != version {
@@ -219,14 +154,14 @@ func (runner *Runner) InstallAddon(version string, path string) string {
 			version,
 		)
 
-		err := runner.run.instanceBitbucket.Addons().Uninstall(key)
+		err := runner.Bitbucket().Addons().Uninstall(key)
 		runner.assert.NoError(err, "uninstall add-on for downgrade")
 
-		_, err = runner.run.instanceBitbucket.Addons().Install(path)
+		_, err = runner.Bitbucket().Addons().Install(path)
 		runner.assert.NoError(err, "install addon")
 	}
 
-	err = runner.run.instanceBitbucket.Addons().SetLicense(
+	err = runner.Bitbucket().Addons().SetLicense(
 		key,
 		ADDON_LICENSE_3H,
 	)
@@ -236,7 +171,7 @@ func (runner *Runner) InstallAddon(version string, path string) string {
 }
 
 func (runner *Runner) UninstallAddon(key string) {
-	err := runner.run.instanceBitbucket.Addons().Uninstall(key)
+	err := runner.Bitbucket().Addons().Uninstall(key)
 	runner.assert.NoError(err, "install addon")
 }
 
@@ -244,65 +179,85 @@ func (runner *Runner) Suite(suite Suite) {
 	runner.suites = append(runner.suites, suite)
 }
 
-func (runner *Runner) Bitbucket() *bitbucket.Bitbucket {
-	return runner.run.instanceBitbucket
+func (runner *Runner) ClusteringEnabled() bool {
+	return runner.run.cluster != nil
+}
+
+func (runner *Runner) Bitbucket() bitbucket.Bitbucket {
+	if runner.run.cluster != nil {
+		return runner.run.cluster
+	}
+
+	return runner.run.bitbucket
 }
 
 func (runner *Runner) Database() database.Database {
-	return runner.run.instanceDatabase
+	return runner.run.database
+}
+
+func (runner *Runner) Bitbuckets() []bitbucket.Bitbucket {
+	if runner.run.cluster != nil {
+		nodes := []bitbucket.Bitbucket{}
+		for _, node := range runner.run.cluster.Nodes {
+			nodes = append(nodes, node)
+		}
+		return nodes
+	}
+
+	if runner.run.bitbucket != nil {
+		return []bitbucket.Bitbucket{runner.run.bitbucket}
+	}
+
+	return nil
 }
 
 func (runner *Runner) Cleanup() error {
-	log.Infof(
-		karma.
-			Describe("container/database", runner.run.instanceDatabase.Container()).
-			Describe("container/bitbucket", runner.run.instanceBitbucket.Container()).
-			Describe("volume/bitbucket", runner.run.instanceBitbucket.VolumeData()).
-			Describe("volume/bitbucket/lib-native", runner.run.instanceBitbucket.VolumeLibNative()).
-			Describe("volume/database", runner.run.instanceDatabase.Volume()),
-		"{bitbucket} cleaning up resources",
-	)
-
-	err := runner.run.instanceBitbucket.Stop()
-	if err != nil {
-		return karma.Format(
-			err,
-			"stop bitbucket",
+	nodes := runner.Bitbuckets()
+	for _, node := range nodes {
+		log.Infof(
+			karma.
+				Describe(node.Container()+"/container", node.Container()).
+				Describe(node.Container()+"/volume", node.VolumeData()).
+				Describe("shared/database/container", runner.run.database.Container()).
+				Describe("shared/database/volume", runner.run.database.Volume()),
+			"{bitbucket} cleaning up resources",
 		)
+
+		err := node.Stop()
+		if err != nil {
+			return karma.Format(
+				err,
+				"stop bitbucket",
+			)
+		}
+
+		err = node.RemoveContainer()
+		if err != nil {
+			return karma.Format(
+				err,
+				"remove bitbucket container",
+			)
+		}
+
+		err = node.RemoveVolumes()
+		if err != nil {
+			return karma.Format(
+				err,
+				"remove bitbucket volumes",
+			)
+		}
 	}
 
-	err = runner.run.instanceBitbucket.RemoveContainer()
-	if err != nil {
-		return karma.Format(
-			err,
-			"remove bitbucket container",
-		)
-	}
+	if runner.run.database != nil {
+		err := runner.run.database.Stop()
+		if err != nil {
+			return karma.Format(err, "stop database")
+		}
 
-	err = runner.run.instanceBitbucket.RemoveVolumeData()
-	if err != nil {
-		return karma.Format(
-			err,
-			"remove bitbucket data volume",
-		)
-	}
-
-	err = runner.run.instanceBitbucket.RemoveVolumeLibNative()
-	if err != nil {
-		return karma.Format(
-			err,
-			"remove bitbucket lib-native volume",
-		)
-	}
-
-	err = runner.run.instanceDatabase.Stop()
-	if err != nil {
-		return karma.Format(err, "stop database")
-	}
-
-	err = runner.run.instanceDatabase.RemoveContainer()
-	if err != nil {
-		return karma.Format(err, "remove database container")
+		err = runner.run.database.RemoveContainer()
+		if err != nil {
+			return karma.Format(err, "remove database container")
+		}
 	}
 
 	return nil
@@ -328,28 +283,23 @@ func (runner *Runner) Errorf(format string, args ...interface{}) {
 
 	log.Errorf(err, format, args...)
 
-	volumeData := ""
-
-	volumeLibNative := ""
-	if runner.run.instanceBitbucket != nil {
-		volumeLibNative = runner.run.instanceBitbucket.VolumeLibNative()
-	}
-
 	facts := karma.
 		Describe("work_dir", runner.run.workdir)
 
-	if runner.run.instanceBitbucket != nil {
-		facts = facts.
-			Describe("network", runner.run.instanceBitbucket.Network()).
-			Describe("container/bitbucket", runner.run.container).
-			Describe("volume/bitbucket", volumeData).
-			Describe("volume/bitbucket/lib-native", volumeLibNative)
+	nodes := runner.Bitbuckets()
+	if len(nodes) > 0 {
+		facts = facts.Describe("shared/network", nodes[0].Network())
+
+		for _, node := range nodes {
+			facts = facts.Describe(node.Container()+"/container", node.Container()).
+				Describe(node.Container()+"/volume", node.VolumeData())
+		}
 	}
 
-	if runner.run.instanceDatabase != nil {
+	if runner.run.database != nil {
 		facts = facts.
-			Describe("container/database", runner.run.instanceDatabase.Container()).
-			Describe("volume/database", runner.run.instanceDatabase.Volume())
+			Describe("shared/database/container", runner.run.database.Container()).
+			Describe("shared/database/volume", runner.run.database.Volume())
 	}
 
 	log.Infof(
