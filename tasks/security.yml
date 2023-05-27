@@ -1,0 +1,30 @@
+version: '3'
+
+vars:
+  name: { sh: pom-name }
+  dep_check_ver: 8.2.1
+  dep_check_suppressions: https://dcapt-downloads.s3.amazonaws.com/atlassian-security-scanner-dc-apps-suppressions.xml
+  dep_check_flags:
+
+tasks:
+  dep-check-download:
+    desc: download OWASP dependency-check tool
+    cmds:
+      - echo '> downloading dependency-check v{{ .dep_check_ver }}'
+      - mkdir -p target/dependency-check-{{ .dep_check_ver }}
+      - curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v{{ .dep_check_ver }}/dependency-check-{{ .dep_check_ver }}-release.zip \
+          | bsdtar --strip-components 1 -C target/dependency-check-{{ .dep_check_ver }} -xf -
+    status:
+      - test -f target/dependency-check-{{ .dep_check_ver }}/bin/dependency-check.sh
+
+  dep-check:
+    desc: run OWASP dependency-check tool
+    cmds:
+      - echo '> running dependency-check on {{ .name }} (specify dep_check_flags=-n to avoid db update)'
+      - |
+          sh target/dependency-check-{{ .dep_check_ver }}/bin/dependency-check.sh \
+            {{ .dep_check_flags }} \
+            -s target/{{ .name }}.jar \
+            -o target \
+            --suppression {{ .dep_check_suppressions }}
+    deps: [dep-check-download, ":atlas:package"]

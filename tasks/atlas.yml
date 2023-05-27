@@ -42,3 +42,7 @@ tasks:
     cmds:
       - atlas-mvn compile
 
+  deps-tree:
+    desc: output dependency tree
+    cmds:
+      - mvn dependency:tree -DoutputType=dot -DoutputFile=target/{{ .name }}.deps.gv

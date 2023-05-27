@@ -7,7 +7,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ngs.stash.externalhooks</groupId>
     <artifactId>external-hooks</artifactId>
-    <version>13.1.0</version>
+    <version>13.1.1</version>
     <organization>
         <name>reconquest</name>
         <url>https://external-hooks.reconquest.io/</url>
@@ -140,7 +140,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20220924</version>
+            <version>20230227</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>

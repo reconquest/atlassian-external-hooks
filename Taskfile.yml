@@ -12,6 +12,7 @@ includes:
   atlas: tasks/atlas.yml
   frontend: tasks/frontend.yml
   nginx: tasks/nginx.yml
+  security: tasks/security.yml
 
 tasks:
   i:
