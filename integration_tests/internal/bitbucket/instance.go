@@ -602,9 +602,22 @@ func (instance *Instance) create() error {
 		jdbcPassword = instance.database.Password()
 	)
 
+	var userName = "integration_tester";
+
+	var initScript = []string{
+		"set -euo pipefail",
+		"echo 'rootCA.pem' >> /etc/ca-certificates.conf",
+		"update-ca-certificates",
+		// we need same UID/GID so we can access shared & data BB dirs from host during ugprade process
+		fmt.Sprintf("groupadd -g %d %s", os.Getgid(), userName),
+		fmt.Sprintf("useradd -u %d -g %d %s", os.Getuid(), os.Getgid(), userName),
+		fmt.Sprintf("export RUN_USER=%s", userName),
+		"exec /entrypoint.py", // exec is required to propagate INT signal from docker kill
+	}
+
 	execution := exec.New(
 		"docker", "container", "create",
-		"--add-host=marketplace.atlassian.com:127.0.0.1",
+		// "--add-host=marketplace.atlassian.com:127.0.0.1",
 		"--network", instance.opts.Network,
 		"-e", "JDBC_DRIVER="+jdbcDriver,
 		"-e", "JDBC_URL="+jdbcURL,
@@ -636,7 +649,7 @@ func (instance *Instance) create() error {
 		"--name", instance.container,
 		fmt.Sprintf(BITBUCKET_IMAGE, instance.version),
 		"bash", "-c",
-		"echo 'rootCA.pem' >> /etc/ca-certificates.conf && update-ca-certificates && /entrypoint.py",
+		strings.Join(initScript, ";"),
 	)
 
 	err = execution.Run()

@@ -117,6 +117,7 @@ func (runner *Runner) upgrade(id string, version string) {
 			runner.run.bitbucket, err = bitbucket.StartNew(
 				bitbucket.StartNewOpts{
 					ID: string(id),
+					Volumes: runner.run.volumes,
 					RunOpts: bitbucket.RunOpts{
 						Version:  version,
 						Database: runner.run.database,
