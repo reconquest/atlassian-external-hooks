@@ -1,3 +1,19 @@
+## Bitbucket 8.18.0 and higher
+
+https://developer.atlassian.com/server/bitbucket/how-tos/register-maintain-hook-scripts/
+
+Starting from Bitbucket Data Center 8.18, hook script support is disabled by default. However, you
+can enable the feature at any time.
+
+If hook script support is an integral part of your workflow, we strongly recommend setting the
+relevant property to enable the feature prior to the upgrade.
+
+To do this, in the bitbucket.properties file, set the property feature.hook.scripts=true. Then,
+restart Bitbucket for the changes to take effect. If you run a Bitbucket cluster, a rolling restart
+is enough to pick up the configuration properties you set to enable the features.
+
+Without enabling hook script support, you can not use any of the add-on features.
+
 ## Bitbucket 6.2.0 and higher
 
 ### 13.0.0 (2022-09-15)
