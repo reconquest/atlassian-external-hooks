@@ -15,6 +15,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.inject.Inject;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
 import com.atlassian.bitbucket.auth.AuthenticationContext;
@@ -84,6 +85,7 @@ public class Rest implements JobRunner {
   private HookInstaller hookInstaller;
   private HooksFactory hooksFactory;
 
+  @Inject
   public Rest(
       @ComponentImport AuthenticationContext authenticationContext,
       @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,

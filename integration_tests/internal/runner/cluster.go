@@ -9,7 +9,7 @@ import (
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 )
 
-func (runner *Runner) UseCluster(version string, replicas int) {
+func (runner *Runner) UseCluster(version bitbucket.Version, replicas int) {
 	var err error
 
 	// the id is used as network domain, containers' prefix and volumes' prefix
@@ -19,20 +19,23 @@ func (runner *Runner) UseCluster(version string, replicas int) {
 	}
 
 	if runner.run.bitbucket != nil {
-		runner.assert.Fail("cluster doesn't support upgrade operation yet")
-	}
-
-	if runner.run.cluster != nil {
-		runner.ready()
-		// we do not support upgrade yet
-		return
+		err := runner.run.bitbucket.Stop()
+		runner.assert.NoError(err, "stopping bitbucket server instance")
+		err = runner.run.bitbucket.RemoveContainer()
+		runner.assert.NoError(err, "removing bitbucket server instance")
+		runner.run.bitbucket = nil
 	}
 
 	runner.useDatabase(id)
 
-	var started *cluster.Cluster
-	if runner.run.identifier != "" {
-		started, err = cluster.StartExisting(cluster.StartOpts{
+	switch {
+	case runner.run.cluster != nil:
+		err = runner.run.cluster.Upgrade(version)
+		runner.assert.NoError(err, "upgrading bitbucket cluster")
+		id = runner.run.cluster.ID()
+
+	case runner.run.identifier != "":
+		runner.run.cluster, err = cluster.StartExisting(cluster.StartOpts{
 			ID:      id,
 			Volumes: runner.run.volumes,
 			RunOpts: bitbucket.RunOpts{
@@ -42,8 +45,8 @@ func (runner *Runner) UseCluster(version string, replicas int) {
 			},
 		})
 		runner.assert.NoError(err, "start existing bitbucket cluster")
-	} else {
-		started, err = cluster.StartNew(cluster.StartOpts{
+	default:
+		runner.run.cluster, err = cluster.StartNew(cluster.StartOpts{
 			ID:      id,
 			Volumes: runner.run.volumes,
 			RunOpts: bitbucket.RunOpts{
@@ -56,7 +59,6 @@ func (runner *Runner) UseCluster(version string, replicas int) {
 	}
 
 	runner.run.identifier = id
-	runner.run.cluster = started
 
 	err = runner.run.cluster.Configure()
 	runner.assert.NoError(err, "unable to configure bitbucket")
@@ -64,8 +66,8 @@ func (runner *Runner) UseCluster(version string, replicas int) {
 	err = runner.run.cluster.Verify()
 	runner.assert.NoError(err, "unable to verify bitbucket cluster state")
 
-	err = runner.run.cluster.Configure()
-	runner.assert.NoError(err, "unable to configure bitbucket cluster")
+	// err = runner.run.cluster.Configure()
+	// runner.assert.NoError(err, "unable to configure bitbucket cluster")
 
 	runner.ready()
 

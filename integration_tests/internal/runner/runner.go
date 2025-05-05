@@ -93,10 +93,10 @@ func (runner *Runner) connect(network string, container string) {
 	runner.assert.NoError(err, "connect database to the docker network")
 }
 
-func (runner *Runner) upgrade(id string, version string) {
+func (runner *Runner) upgrade(id string, version bitbucket.Version) {
 	var (
 		running   = semver.New(runner.run.bitbucket.Version())
-		requested = semver.New(version)
+		requested = semver.New(version.App)
 	)
 
 	if !running.Equal(*requested) {
@@ -116,7 +116,7 @@ func (runner *Runner) upgrade(id string, version string) {
 
 			runner.run.bitbucket, err = bitbucket.StartNew(
 				bitbucket.StartNewOpts{
-					ID: string(id),
+					ID:      string(id),
 					Volumes: runner.run.volumes,
 					RunOpts: bitbucket.RunOpts{
 						Version:  version,

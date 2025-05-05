@@ -17,8 +17,9 @@ import (
 const DEFAULT_LOG_WAIT_TIMEOUT = time.Second * 10
 
 const (
-	BITBUCKET_IMAGE    = "atlassian/bitbucket-server:%s"
-	BITBUCKET_DATA_DIR = "/var/atlassian/application-data/bitbucket"
+	BITBUCKET_SERVER_IMAGE = "atlassian/bitbucket-server:%s"
+	BITBUCKET_DC_IMAGE     = "atlassian/bitbucket:%s"
+	BITBUCKET_DATA_DIR     = "/var/atlassian/application-data/bitbucket"
 )
 
 type StartExistingOpts struct {
@@ -37,8 +38,13 @@ type StartNewOpts struct {
 	RunOpts
 }
 
+type Version struct {
+	App  string
+	Mesh string
+}
+
 type RunOpts struct {
-	Version string
+	Version Version
 
 	Database database.Database
 	Network  string
@@ -135,7 +141,7 @@ func StartExisting(opts StartExistingOpts) (*Node, error) {
 		)
 	}
 
-	image := fmt.Sprintf(BITBUCKET_IMAGE, opts.Version)
+	image := getImageRepo(opts.Version)
 
 	if image != inspect.Config.Image {
 		return nil, karma.
@@ -191,7 +197,7 @@ func ensureValidOpts(opts RunOpts) RunOpts {
 		opts.PortSSH = 7999
 	}
 
-	if opts.Version == "" {
+	if opts.Version.App == "" {
 		panic("opts.Version is empty")
 	}
 
@@ -295,4 +301,13 @@ func waitAndWatch(instance *Instance) error {
 	}
 
 	return nil
+}
+
+func getImageRepo(version Version) string {
+	switch version.App[0] {
+	case '9':
+		return fmt.Sprintf(BITBUCKET_DC_IMAGE, version.App)
+	default:
+		return fmt.Sprintf(BITBUCKET_SERVER_IMAGE, version.App)
+	}
 }
