@@ -54,10 +54,19 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.17.0</version>
+        </dependency>
+        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
             <version>2.6</version>
-            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.4.8-jre</version>
         </dependency>
 
         <dependency>
@@ -156,7 +165,11 @@
             <groupId>org.codehaus.jackson</groupId>
             <artifactId>jackson-mapper-asl</artifactId>
             <version>1.9.14-atlassian-6</version>
-            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.1</version>
         </dependency>
     </dependencies>
     <build>
@@ -242,7 +255,6 @@
         <plugin.testrunner.version>1.1.4</plugin.testrunner.version>
         <ao.version>1.2.2</ao.version>
         <atlassian.spring.scanner.version>1.2.13</atlassian.spring.scanner.version>
-        <commons.lang3.version>3.5</commons.lang3.version>
         <reconquest.batch.js>batch.js</reconquest.batch.js>
     </properties>
 

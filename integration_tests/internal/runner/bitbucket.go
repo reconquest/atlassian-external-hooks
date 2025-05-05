@@ -12,7 +12,7 @@ const (
 	ClusterSize = 3
 )
 
-func (runner *Runner) UseBitbucket(version string, cluster bool) {
+func (runner *Runner) UseBitbucket(version bitbucket.Version, cluster bool) {
 	if cluster {
 		runner.UseCluster(version, ClusterSize)
 		return

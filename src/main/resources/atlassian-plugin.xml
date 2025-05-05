@@ -245,4 +245,7 @@
     <component-import
             key="securityService"
             interface="com.atlassian.bitbucket.user.SecurityService" />
+    <component-import
+            key="loginUriProvider"
+            interface="com.atlassian.sal.api.auth.LoginUriProvider"/>
 </atlassian-plugin>

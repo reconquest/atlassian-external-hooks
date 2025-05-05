@@ -40,7 +40,7 @@ type AtlToken struct {
 
 type Instance struct {
 	id        string
-	version   string
+	version   Version
 	container string
 	database  database.Database
 	volumes   struct {
@@ -126,7 +126,7 @@ func (instance *Instance) IP() string {
 }
 
 func (instance *Instance) Version() string {
-	return instance.version
+	return instance.version.App
 }
 
 func (instance *Instance) ReadFile(path string) (string, error) {
@@ -602,7 +602,7 @@ func (instance *Instance) create() error {
 		jdbcPassword = instance.database.Password()
 	)
 
-	var userName = "integration_tester";
+	var userName = "integration_tester"
 
 	var initScript = []string{
 		"set -euo pipefail",
@@ -610,10 +610,12 @@ func (instance *Instance) create() error {
 		"update-ca-certificates",
 		// we need same UID/GID so we can access shared & data BB dirs from host during ugprade process
 		fmt.Sprintf("groupadd -g %d %s", os.Getgid(), userName),
-		fmt.Sprintf("useradd -u %d -g %d %s", os.Getuid(), os.Getgid(), userName),
+		fmt.Sprintf("useradd -g %d %s", os.Getgid(), userName),
 		fmt.Sprintf("export RUN_USER=%s", userName),
 		"exec /entrypoint.py", // exec is required to propagate INT signal from docker kill
 	}
+
+	image := getImageRepo(instance.version)
 
 	execution := exec.New(
 		"docker", "container", "create",
@@ -647,7 +649,7 @@ func (instance *Instance) create() error {
 			"/usr/share/ca-certificates/rootCA.pem",
 		),
 		"--name", instance.container,
-		fmt.Sprintf(BITBUCKET_IMAGE, instance.version),
+		image,
 		"bash", "-c",
 		strings.Join(initScript, ";"),
 	)

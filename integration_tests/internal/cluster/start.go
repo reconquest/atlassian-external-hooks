@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket/mesh"
@@ -32,6 +33,7 @@ type StartOpts struct {
 	ID      string
 	Volumes string
 	RunOpts bitbucket.RunOpts
+	NoMesh  bool
 }
 
 func StartNew(opts StartOpts) (*Cluster, error) {
@@ -68,6 +70,62 @@ func StartExisting(opts StartOpts) (*Cluster, error) {
 			})
 		},
 	)
+}
+
+func (cluster *Cluster) Upgrade(version bitbucket.Version) error {
+	var (
+		running   = semver.New(cluster.Version())
+		requested = semver.New(version.App)
+	)
+
+	if !running.Equal(*requested) {
+		if running.Compare(*requested) == -1 {
+			log.Infof(
+				nil,
+				"{bitbucket} upgrading cluster: %s -> %s",
+				running,
+				requested,
+			)
+
+			for _, node := range cluster.Nodes {
+				err := node.Stop()
+				if err != nil {
+					return err
+				}
+			}
+
+			for _, node := range cluster.Nodes {
+				err := node.RemoveContainer()
+				if err != nil {
+					return err
+				}
+			}
+
+			started, err := StartNew(StartOpts{
+				ID:      cluster.ID(),
+				Volumes: cluster.VolumeShared(),
+				NoMesh:  true,
+				RunOpts: bitbucket.RunOpts{
+					Version:  version,
+					Database: cluster.Opts().Database,
+					Network:  cluster.ID(),
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			*cluster = *started
+		} else {
+			return fmt.Errorf(
+				"bitbucket cluster cannot be downgraded: %s -> %s",
+				running,
+				requested,
+			)
+		}
+	}
+
+	return nil
 }
 
 func clusterize[T any](
@@ -130,6 +188,11 @@ func clusterizeBitbucket(
 
 	cluster.Node = cluster.Nodes[0]
 
+	// For upgrading version: do not touch mesh.
+	if opts.NoMesh {
+		return &cluster, nil
+	}
+
 	err = cluster.startMesh(opts)
 	if err != nil {
 		return nil, karma.Format(err, "unable to start mesh")
@@ -147,6 +210,7 @@ func (cluster *Cluster) startMesh(opts StartOpts) error {
 				Replica: replica,
 				Volumes: opts.Volumes,
 				Network: opts.RunOpts.Network,
+				Version: opts.RunOpts.Version.Mesh,
 			})
 		},
 	)

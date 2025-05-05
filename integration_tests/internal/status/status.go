@@ -1,6 +1,7 @@
 package status
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -55,18 +56,20 @@ func SetLastTest(name string) {
 }
 
 func SetLastDuration(duration time.Duration) {
-	status.LastDuration = duration.String()
+	status.LastDuration = fmt.Sprintf(
+		"%03dm %02ds",
+		duration/time.Minute,
+		(duration%time.Minute)/time.Second,
+	)
 	render()
 }
 
 func init() {
 	format, err := loreley.CompileWithReset(
-		` {bg 3}{fg 70}  {.Done}{fg 0}/{.Total} `+
-			`{bg 4}{fg 233}{bold} {.CurrentTest} `+
-			`{bg 5}{fg 233}{bold} {.LastTest} {bg 6} {.LastDuration} `+
-			`{bg 7} {.TotalDuration}`+
-			`{bg 253}{fg 0} `+
-			``,
+		` {bold}{bg 235}{fg 70}  {.Done}{fg 7}/{.Total} `+
+			`{if .TotalDuration}{bg 7}{fg 16} {.TotalDuration} {end}`+
+			`{bg 4}{fg 233} {.CurrentTest} `+
+			`{if .LastTest}{reset}{bold} {.LastTest} {reset}({.LastDuration}){end}`,
 		nil,
 	)
 	if err != nil {
@@ -110,7 +113,12 @@ func render() {
 			started := time.Now()
 			for {
 				time.Sleep(time.Second)
-				status.TotalDuration = time.Since(started).String()
+				elapsed := time.Since(started)
+				status.TotalDuration = fmt.Sprintf(
+					"%03dm %02ds",
+					elapsed/time.Minute,
+					(elapsed%time.Minute)/time.Second,
+				)
 			}
 		}()
 	}

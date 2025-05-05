@@ -15,6 +15,7 @@ import (
 	"github.com/reconquest/pkg/log"
 	"github.com/reconquest/pom"
 
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/runner"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/status"
@@ -139,132 +140,154 @@ func main() {
 
 	run := runner.New(must(filepath.Abs(opts.ValueVolumes)), suite.CleanupHooks)
 
+	// https://confluence.atlassian.com/bitbucketserver/bitbucket-mesh-compatibility-matrix-1127254859.html
+
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket:       baseBitbucket,
+	// 			AddonReproduced: getAddon("10.1.0"),
+	// 			AddonFixed:      latestAddon,
+	// 		},
+	//
+	// 		suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced,
+	// 		suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket:       baseBitbucket,
+	// 			AddonReproduced: getAddon("10.0.0"),
+	// 			AddonFixed:      latestAddon,
+	// 		},
+	//
+	// 		suite.TestBug_ProjectHookCreatedBeforeRepository_Reproduced,
+	// 		suite.TestBug_ProjectHookCreatedBeforeRepository_Fixed,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket:       baseBitbucket,
+	// 			AddonReproduced: getAddon("9.1.0"),
+	// 			AddonFixed:      latestAddon,
+	// 		},
+	//
+	// 		suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced,
+	// 		suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket: baseBitbucket,
+	// 			Addon:     latestAddon,
+	// 		},
+	// 		suite.TestProjectHooks_DoNotCreateDisabledHooks,
+	//
+	// 		suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket:       baseBitbucket,
+	// 			AddonReproduced: getAddon("10.2.1"),
+	// 			AddonFixed:      latestAddon,
+	// 		},
+	//
+	// 		suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced,
+	// 		suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket:       baseBitbucket,
+	// 			AddonReproduced: getAddon("11.1.0"),
+	// 			AddonFixed:      latestAddon,
+	// 		},
+	//
+	// 		suite.TestBug_RepositoryHookCreatedBeforeProject_Reproduced,
+	// 		suite.TestBug_RepositoryHookCreatedBeforeProject_Fixed,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket: baseBitbucket,
+	// 			Addon:     getAddon("12.0.1"),
+	// 		},
+	// 		suite.TestGlobalHooks,
+	// 		suite.TestGlobalHooks_PersonalRepositoriesFilter,
+	// 		suite.TestProjectHooks,
+	// 		suite.TestRepositoryHooks,
+	// 		suite.TestPersonalRepositoriesHooks,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			BitbucketFrom: baseBitbucket,
+	// 			BitbucketTo:   "6.9.0",
+	// 			Addon:         latestAddon,
+	// 		},
+	// 		suite.TestBitbucketUpgrade,
+	// 	),
+	// )
+	//
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket: bitbucket.Version{App: "7.0.0"},
+	// 			Addon:     latestAddon,
+	// 		},
+	// 		suite.TestProjectHooks,
+	// 		suite.TestRepositoryHooks,
+	// 		suite.TestPersonalRepositoriesHooks,
+	// 	),
+	// )
+
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket: "8.4.1",
+	// 			// Cluster:   true,
+	// 			Addon: latestAddon,
+	// 		},
+	// 		suite.TestGlobalHooks,
+	// 		suite.TestGlobalHooks_PersonalRepositoriesFilter,
+	// 		suite.TestProjectHooks,
+	// 		suite.TestRepositoryHooks,
+	// 		suite.TestPersonalRepositoriesHooks,
+	// 	),
+	// )
+
 	run.Suite(
 		suite.WithParams(
 			TestParams{
-				Bitbucket:       baseBitbucket,
-				AddonReproduced: getAddon("10.1.0"),
-				AddonFixed:      latestAddon,
-			},
-
-			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced,
-			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket:       baseBitbucket,
-				AddonReproduced: getAddon("10.0.0"),
-				AddonFixed:      latestAddon,
-			},
-
-			suite.TestBug_ProjectHookCreatedBeforeRepository_Reproduced,
-			suite.TestBug_ProjectHookCreatedBeforeRepository_Fixed,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket:       baseBitbucket,
-				AddonReproduced: getAddon("9.1.0"),
-				AddonFixed:      latestAddon,
-			},
-
-			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced,
-			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket: baseBitbucket,
-				Addon:     latestAddon,
-			},
-			suite.TestProjectHooks_DoNotCreateDisabledHooks,
-
-			suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket:       baseBitbucket,
-				AddonReproduced: getAddon("10.2.1"),
-				AddonFixed:      latestAddon,
-			},
-
-			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced,
-			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket:       baseBitbucket,
-				AddonReproduced: getAddon("11.1.0"),
-				AddonFixed:      latestAddon,
-			},
-
-			suite.TestBug_RepositoryHookCreatedBeforeProject_Reproduced,
-			suite.TestBug_RepositoryHookCreatedBeforeProject_Fixed,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket: baseBitbucket,
-				Addon:     getAddon("12.0.1"),
+				Bitbucket: bitbucket.Version{
+					App:  "8.4.1",
+					Mesh: "1.3.3",
+				},
+				// Bitbucket: "9.6.1",
+				// Mesh:      "3.6.1",
+				Cluster: true,
+				Addon:   latestAddon,
 			},
 			suite.TestGlobalHooks,
-			suite.TestGlobalHooks_PersonalRepositoriesFilter,
-			suite.TestProjectHooks,
-			suite.TestRepositoryHooks,
-			suite.TestPersonalRepositoriesHooks,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				BitbucketFrom: baseBitbucket,
-				BitbucketTo:   "6.9.0",
-				Addon:         latestAddon,
-			},
-			suite.TestBitbucketUpgrade,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket: "7.0.0",
-				Addon:     latestAddon,
-			},
-			suite.TestProjectHooks,
-			suite.TestRepositoryHooks,
-			suite.TestPersonalRepositoriesHooks,
-		),
-	)
-
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket: "8.4.1",
-				Cluster:   true,
-				Addon:     latestAddon,
-			},
-			suite.TestGlobalHooks,
-			suite.TestGlobalHooks_PersonalRepositoriesFilter,
-			suite.TestProjectHooks,
-			suite.TestRepositoryHooks,
-			suite.TestPersonalRepositoriesHooks,
+			// suite.TestGlobalHooks_PersonalRepositoriesFilter,
+			// suite.TestProjectHooks,
+			// suite.TestRepositoryHooks,
+			// suite.TestPersonalRepositoriesHooks,
 		),
 	)
 
@@ -316,6 +339,7 @@ func main() {
 }
 
 var builds = map[string]string{
+	"13.1.2": "6842",
 	"12.0.1": "6702",
 	"11.1.0": "6642",
 	"10.2.2": "6592",

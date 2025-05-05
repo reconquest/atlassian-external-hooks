@@ -142,6 +142,7 @@ type ReadOpts struct {
 	Container string
 	Trace     bool
 	Tail      int
+	File      string
 }
 
 func ReadLogs(opts ReadOpts) (*Logs, error) {
@@ -151,12 +152,20 @@ func ReadLogs(opts ReadOpts) (*Logs, error) {
 		opts.Container,
 	)
 
-	execution := exec.New(
-		"docker",
+	args := []string{
 		"logs", "-f",
 		"--tail", strconv.Itoa(opts.Tail),
 		opts.Container,
-	)
+	}
+	if opts.File != "" {
+		args = []string{
+			"exec", opts.Container,
+			"tail", "-F", opts.File,
+			"-n", strconv.Itoa(opts.Tail),
+		}
+	}
+
+	execution := exec.New("docker", args...)
 
 	stdout, err := execution.StdoutPipe()
 	if err != nil {

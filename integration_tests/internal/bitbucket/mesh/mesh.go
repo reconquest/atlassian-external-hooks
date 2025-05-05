@@ -17,15 +17,15 @@ import (
 )
 
 const (
-	MESH_IMAGE    = `kovetskiy/atlassian-bitbucket-mesh`
-	MESH_VERSION  = `1.3.1-1`
-	MESH_DATA_DIR = `/srv/mesh/data`
+	MESH_IMAGE    = `atlassian/bitbucket-mesh`
+	MESH_DATA_DIR = `/var/atlassian/application-data/mesh`
 
 	MESH_PROPERTIES = `# mesh.properties provided by external-hooks-test
 hookscripts.gc.interval=1
 hookscripts.gc.prune=1
-#grpc.server.ssl.cert-chain-path=/srv/mesh/data/config/ssl/cert.pem
-#grpc.server.ssl.private-key-path=/srv/mesh/data/config/ssl/key.pem
+mesh.logging.logger.com.atlassian.bitbucket.mesh=DEBUG
+#grpc.server.ssl.cert-chain-path=` + MESH_DATA_DIR + `/config/ssl/cert.pem
+#grpc.server.ssl.private-key-path=` + MESH_DATA_DIR + `/config/ssl/key.pem
 `
 )
 
@@ -59,6 +59,7 @@ type StartOpts struct {
 	Replica int
 	Volumes string
 	Network string
+	Version string
 }
 
 func Start(opts StartOpts) (*Node, error) {
@@ -76,7 +77,7 @@ func Start(opts StartOpts) (*Node, error) {
 	err := mesh.inspect()
 	switch {
 	case err == errContainerNotFound:
-		err := mesh.create()
+		err := mesh.create(opts.Version)
 		if err != nil {
 			return nil, karma.Format(err, "create mesh node")
 		}
@@ -98,7 +99,7 @@ func Start(opts StartOpts) (*Node, error) {
 	return mesh, nil
 }
 
-func (node *Node) create() error {
+func (node *Node) create(version string) error {
 	err := node.writeSSL()
 	if err != nil {
 		return karma.Format(err, "write ssl")
@@ -109,12 +110,21 @@ func (node *Node) create() error {
 		return karma.Format(err, "write properties")
 	}
 
+	var initScript = []string{
+		"set -euo pipefail",
+		"apt update",
+		"apt install -y git", // for whatever reason atlassian-provided mesh images come with incorrect git
+		"exec /opt/atlassian/mesh/bin/start-mesh.sh -fg", // exec is required to propagate INT signal from docker kill
+	}
+
 	execution := exec.New(
 		"docker", "container", "create",
 		"--network", node.Network,
 		"--name", node.container,
 		"-v", fmt.Sprintf("%s:%s", node.volumes.data, MESH_DATA_DIR),
-		MESH_IMAGE+":"+MESH_VERSION,
+		"--entrypoint", "/bin/bash",
+		MESH_IMAGE+":"+version,
+		"-c", strings.Join(initScript, ";"),
 	)
 
 	err = execution.Run()
@@ -193,6 +203,7 @@ func (node *Node) wait() error {
 			Container: node.container,
 			Trace:     true,
 			Tail:      1000,
+			File:      MESH_DATA_DIR + "/log/atlassian-mesh.log",
 		},
 	)
 	if err != nil {
@@ -228,7 +239,7 @@ func (node *Node) inspect() error {
 		node.container,
 	).NoStdLog().Output()
 	if err != nil {
-		if strings.Contains(err.Error(), "Error: No such container:") {
+		if strings.Contains(err.Error(), "No such container:") {
 			return errContainerNotFound
 		}
 

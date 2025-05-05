@@ -28,7 +28,10 @@ const (
 type Properties map[string]string
 
 func NewProperties() Properties {
-	return make(Properties)
+	properties := make(Properties)
+	properties["upm.plugin.upload.enabled"] = "true"
+	properties["feature.hook.scripts"] = "true"
+	return properties
 }
 
 // This method doesn't really work because we can't figure out baseURL before

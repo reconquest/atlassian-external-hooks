@@ -48,12 +48,12 @@ type HookScript struct {
 
 type (
 	TestParams struct {
-		Bitbucket string
+		Bitbucket bitbucket.Version
 		Addon     Addon
 		Cluster   bool
 
-		BitbucketFrom   string
-		BitbucketTo     string
+		BitbucketFrom   bitbucket.Version
+		BitbucketTo     bitbucket.Version
 		AddonReproduced Addon
 		AddonFixed      Addon
 	}
@@ -143,11 +143,11 @@ func (suite *Suite) WithParams(
 
 		if !suite.filter.upgrade {
 			version := params.Bitbucket
-			if version == "" {
+			if version.App == "" {
 				version = params.BitbucketTo
 			}
 
-			if version != suite.baseBitbucket {
+			if version.App != suite.baseBitbucket {
 				log.Debugf(
 					nil,
 					"{test} skip %s because --no-upgrade specified",
@@ -325,6 +325,8 @@ func (suite *Suite) ConfigureHook(
 	settings external_hooks.Settings,
 	script []byte,
 ) *external_hooks.Hook {
+	hook.Disable()
+
 	path := filepath.Join("shared", "external-hooks", settings.Exe())
 
 	log.Debugf(

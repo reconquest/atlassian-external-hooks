@@ -35,8 +35,6 @@ cp -v $(dirname $0)/cluster.bitbucket.properties $NFS_DIR/bitbucket.properties
         bash -c "echo 'rootCA.pem' >> /etc/ca-certificates.conf && update-ca-certificates && /entrypoint.py --log=DEBUG"
 }
 
-
-
 :start-postgres() {
     docker run --name bitbucket-postgres --network $NETWORK \
         --detach \
