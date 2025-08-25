@@ -222,6 +222,8 @@ func newInstance(id string, volumes string, replica *int, opts RunOpts) *Instanc
 
 	if volumes == "" {
 		panic("volumes is empty")
+	} else {
+		instance.volumes.prefix = volumes
 	}
 
 	instance.volumes.shared = filepath.Join(volumes, id+"-bitbucket-shared")

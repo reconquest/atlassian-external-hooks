@@ -36,9 +36,12 @@ import com.ngs.stash.externalhooks.dao.ExternalHooksSettingsDao;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
 import com.ngs.stash.externalhooks.util.Walker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HookInstaller {
   private RepositoryHookService repositoryHookService;
+  private static Logger log = LoggerFactory.getLogger(HookInstaller.class);
 
   private Map<String, ExternalHookScript> scripts = new HashMap<>();
   private Walker walker;
@@ -157,6 +160,8 @@ public class HookInstaller {
     if (script == null) {
       return;
     }
+
+    log.error("Disabling hook script in scope {}: {}", scope, script.getHookId());
 
     if (scope.getType().equals(ScopeType.REPOSITORY)) {
       disable((RepositoryScope) scope, script, globalScope);

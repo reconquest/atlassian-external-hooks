@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/kovetskiy/stash"
+	"github.com/reconquest/stash-go"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/git"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"

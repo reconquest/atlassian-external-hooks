@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,8 +16,9 @@ import (
 )
 
 const (
-	MESH_IMAGE    = `atlassian/bitbucket-mesh`
-	MESH_DATA_DIR = `/var/atlassian/application-data/mesh`
+	MESH_IMAGE      = `atlassian/bitbucket-mesh`
+	MESH_DATA_DIR   = `/var/atlassian/application-data/mesh`
+	MESH_SHARED_DIR = "/var/atlassian/application-data/bitbucket"
 
 	MESH_PROPERTIES = `# mesh.properties provided by external-hooks-test
 hookscripts.gc.interval=1
@@ -40,7 +40,8 @@ type Node struct {
 	logs *docker.Logs
 
 	volumes struct {
-		data string
+		data   string
+		shared string
 	}
 
 	StartOpts
@@ -74,6 +75,8 @@ func Start(opts StartOpts) (*Node, error) {
 		fmt.Sprintf("%s-mesh-%d-data", opts.ID, opts.Replica),
 	)
 
+	mesh.volumes.shared = filepath.Join(mesh.Volumes, opts.ID+"-bitbucket-shared")
+
 	err := mesh.inspect()
 	switch {
 	case err == errContainerNotFound:
@@ -99,13 +102,37 @@ func Start(opts StartOpts) (*Node, error) {
 	return mesh, nil
 }
 
-func (node *Node) create(version string) error {
-	err := node.writeSSL()
+func (node *Node) Stop() error {
+	err := exec.New(
+		"docker",
+		"kill",
+		node.container,
+	).Run()
 	if err != nil {
-		return karma.Format(err, "write ssl")
+		return karma.Format(
+			err,
+			"send docker stop",
+		)
 	}
 
-	err = node.writeProperties()
+	return exec.New("docker", "wait", node.container).Run()
+}
+
+func (node *Node) RemoveContainer() error {
+	return exec.New(
+		"docker",
+		"rm", "-f",
+		node.container,
+	).Run()
+}
+
+func (node *Node) create(version string) error {
+	// err := node.writeSSL()
+	// if err != nil {
+	// 	return karma.Format(err, "write ssl")
+	// }
+
+	err := node.writeProperties()
 	if err != nil {
 		return karma.Format(err, "write properties")
 	}
@@ -114,6 +141,9 @@ func (node *Node) create(version string) error {
 		"set -euo pipefail",
 		"apt update",
 		"apt install -y git", // for whatever reason atlassian-provided mesh images come with incorrect git
+		"cd " + MESH_DATA_DIR,
+		"test -a mesh.mv.db && mv mesh.mv.db{,.bak}", // Workaround for Mesh H2 mandatory manual upgrade between versions
+		"test -a mesh.trace.db && mv mesh.trace.db{,.bak}",
 		"exec /opt/atlassian/mesh/bin/start-mesh.sh -fg", // exec is required to propagate INT signal from docker kill
 	}
 
@@ -122,6 +152,11 @@ func (node *Node) create(version string) error {
 		"--network", node.Network,
 		"--name", node.container,
 		"-v", fmt.Sprintf("%s:%s", node.volumes.data, MESH_DATA_DIR),
+		"-v", fmt.Sprintf(
+			"%s:%s",
+			node.volumes.shared,
+			filepath.Join(MESH_SHARED_DIR, "shared"),
+		),
 		"--entrypoint", "/bin/bash",
 		MESH_IMAGE+":"+version,
 		"-c", strings.Join(initScript, ";"),
@@ -176,8 +211,15 @@ func (node *Node) writeProperties() error {
 		)
 	}
 
-	err = ioutil.WriteFile(
-		filepath.Join(node.volumes.data, "mesh.properties"),
+	path := filepath.Join(node.volumes.data, "mesh.properties")
+
+	// Do not overwrite existing mesh config.
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	err = os.WriteFile(
+		path,
 		[]byte(MESH_PROPERTIES),
 		0644,
 	)

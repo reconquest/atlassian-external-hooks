@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/lojban"
@@ -22,6 +21,7 @@ import (
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/status"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/stash-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -440,11 +440,9 @@ func (suite *Suite) InstallAddon(addon Addon) string {
 		time.Second*60,
 	)
 
-	key := suite.Runner.InstallAddon(addon.Version, addon.Path)
+	key := suite.Runner.InstallAddon(addon.Version, addon.Path, waiter)
 
-	log.Debugf(nil, "{add-on} waiting for add-on startup process to finish")
-
-	waiter.Wait(suite.FailNow, "hook scripts", "created (after installing add-on)")
+	// waiter.Wait(suite.FailNow, "hook scripts", "created (after installing add-on)")
 
 	return key
 }

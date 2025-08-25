@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/cog"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/stash-go"
 )
 
 func (suite *Suite) TestGlobalHooks(params TestParams) {

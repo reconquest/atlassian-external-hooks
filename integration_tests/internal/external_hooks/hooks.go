@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -49,15 +49,14 @@ type Addon struct {
 func (addon *Addon) call(
 	method string,
 	path string,
-	payload interface{},
-	response interface{},
-) error {
+	payload any,
+	response any,
+) (found bool, err error) {
 	var encoded []byte
-	var err error
 	if payload != nil {
 		encoded, err = json.Marshal(payload)
 		if err != nil {
-			return karma.Format(err, "json marshal")
+			return false, karma.Format(err, "json marshal")
 		}
 	}
 
@@ -74,19 +73,24 @@ func (addon *Addon) call(
 		buffer,
 	)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	request.Header.Add("Content-Type", "application/json")
 
 	reply, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	body, err := ioutil.ReadAll(reply.Body)
+	if reply.StatusCode >= 400 && reply.StatusCode < 500 {
+		log.Warningf(nil, "{http response} %d %s %s", reply.StatusCode, method, path)
+		return false, nil
+	}
+
+	body, err := io.ReadAll(reply.Body)
 	if err != nil {
-		return karma.Format(err, "read response body")
+		return true, karma.Format(err, "read response body")
 	}
 
 	defer reply.Body.Close()
@@ -100,13 +104,13 @@ func (addon *Addon) call(
 
 	err = json.Unmarshal(body, response)
 	if err != nil {
-		return karma.
+		return true, karma.
 			Describe("body", string(body)).
 			Describe("status", reply.StatusCode).
 			Format(err, "json unmarshal")
 	}
 
-	return nil
+	return true, nil
 }
 
 func (addon *Addon) Register(
@@ -144,7 +148,7 @@ func (addon *Addon) Register(
 	}
 
 	var reply ResponseGlobalHooksSetup
-	err := addon.call(
+	_, err := addon.call(
 		"PUT",
 		"/rest/external-hooks/1.0/global-hooks/"+key,
 		RequestGlobalHooks{
@@ -195,7 +199,7 @@ func (addon *Addon) Wait(context *Context) error {
 
 func (addon *Addon) factoryApply() error {
 	var reply ResponseFactoryHooks
-	err := addon.call(
+	found, err := addon.call(
 		"POST",
 		"/rest/external-hooks/1.0/factory/hooks",
 		nil,
@@ -205,8 +209,12 @@ func (addon *Addon) factoryApply() error {
 		return err
 	}
 
+	if !found {
+		return nil
+	}
+
 	for !reply.Finished {
-		err := addon.call(
+		found, err := addon.call(
 			"GET",
 			"/rest/external-hooks/1.0/factory/state/"+fmt.Sprint(reply.ID),
 			nil,
@@ -214,6 +222,10 @@ func (addon *Addon) factoryApply() error {
 		)
 		if err != nil {
 			return err
+		}
+
+		if !found {
+			return nil
 		}
 
 		log.Debugf(
@@ -242,7 +254,7 @@ func (addon *Addon) Disable(key string, context *Context) error {
 	}
 
 	var reply ResponseGlobalHooksSetup
-	err := addon.call(
+	_, err := addon.call(
 		"PUT",
 		"/rest/external-hooks/1.0/global-hooks/"+key,
 		RequestGlobalHooks{

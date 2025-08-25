@@ -234,6 +234,20 @@ func WriteFile(
 		Describe("path", path).
 		Describe("container", container)
 
+	for range 5 {
+		err := exec.NewContext(
+			context,
+			"docker", "exec", container,
+			"stat", dir,
+		).Run()
+		if err != nil {
+			log.Errorf(err, "bitbucket dir is not found, probably not initialized yet")
+			time.Sleep(time.Second)
+		} else {
+			break
+		}
+	}
+
 	err := exec.NewContext(
 		context,
 		"docker", "exec", container,

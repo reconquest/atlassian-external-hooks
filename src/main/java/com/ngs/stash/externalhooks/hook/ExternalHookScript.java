@@ -290,6 +290,7 @@ public class ExternalHookScript {
 
   private void delete(String path, CallbackLogDelete logger) {
     Optional<Long> id = readHookScriptId(path);
+    log.debug("deleting hook script {} with id [{}]", path, id);
     if (id.isPresent()) {
       boolean deleted = deleteHookScript(id.get());
       if (deleted) {

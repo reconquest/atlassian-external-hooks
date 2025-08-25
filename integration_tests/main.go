@@ -271,23 +271,42 @@ func main() {
 	// 	),
 	// )
 
+	// run.Suite(
+	// 	suite.WithParams(
+	// 		TestParams{
+	// 			Bitbucket: bitbucket.Version{
+	// 				App:  "8.4.1",
+	// 				Mesh: "1.3.3",
+	// 			},
+	// 			// Bitbucket: "9.6.1",
+	// 			// Mesh:      "3.6.1",
+	// 			Cluster: true,
+	// 			Addon:   latestAddon,
+	// 		},
+	// 		suite.TestGlobalHooks,
+	// 		// suite.TestGlobalHooks_PersonalRepositoriesFilter,
+	// 		// suite.TestProjectHooks,
+	// 		// suite.TestRepositoryHooks,
+	// 		// suite.TestPersonalRepositoriesHooks,
+	// 	),
+	// )
+
+	// Cluster upgrade tests are currently broken because of instability in BB startup process.
 	run.Suite(
 		suite.WithParams(
 			TestParams{
 				Bitbucket: bitbucket.Version{
-					App:  "8.4.1",
-					Mesh: "1.3.3",
+					App:  "9.6.5",
+					Mesh: "3.6.6",
 				},
-				// Bitbucket: "9.6.1",
-				// Mesh:      "3.6.1",
 				Cluster: true,
 				Addon:   latestAddon,
 			},
 			suite.TestGlobalHooks,
-			// suite.TestGlobalHooks_PersonalRepositoriesFilter,
-			// suite.TestProjectHooks,
-			// suite.TestRepositoryHooks,
-			// suite.TestPersonalRepositoriesHooks,
+			suite.TestGlobalHooks_PersonalRepositoriesFilter,
+			suite.TestProjectHooks,
+			suite.TestRepositoryHooks,
+			suite.TestPersonalRepositoriesHooks,
 		),
 	)
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kovetskiy/stash"
+	"github.com/reconquest/stash-go"
 )
 
 func Assert_PushRejected(

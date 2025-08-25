@@ -10,6 +10,7 @@ import com.atlassian.bitbucket.scope.ProjectScope;
 import com.atlassian.bitbucket.scope.RepositoryScope;
 import com.atlassian.bitbucket.scope.Scope;
 import com.atlassian.event.api.EventListener;
+import com.atlassian.event.api.EventPublisher;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.ngs.stash.externalhooks.dao.GlobalHookSettingsDao;
 import com.ngs.stash.externalhooks.hook.ExternalHookScript;
@@ -18,19 +19,40 @@ import com.ngs.stash.externalhooks.util.ScopeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 public class BitbucketEventListener {
   private static Logger log = LoggerFactory.getLogger(BitbucketEventListener.class);
 
   private GlobalHookSettingsDao globalHookSettingsDao;
   private HookInstaller hookInstaller;
+  private final EventPublisher eventPublisher;
 
+  @Inject
   public BitbucketEventListener(
       @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
       @ComponentImport HooksFactory hooksFactory,
-      @ComponentImport HookInstaller hookInstaller) {
+      @ComponentImport HookInstaller hookInstaller,
+      @ComponentImport EventPublisher eventPublisher) {
     this.hookInstaller = hookInstaller;
     this.globalHookSettingsDao = globalHookSettingsDao;
+    this.eventPublisher = eventPublisher;
   }
+
+    @PostConstruct
+    public void init() {
+        log.info("BitbucketEventListener: register");
+        eventPublisher.register(this);
+    }
+
+    @PreDestroy
+    public void destroy() {
+        log.info("BitbucketEventListener: unregister");
+        eventPublisher.unregister(this);
+    }
+
 
   @EventListener
   public void onHookEnabled(RepositoryHookEnabledEvent event) {

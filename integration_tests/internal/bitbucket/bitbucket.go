@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/users"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/stash-go"
 )
 
 type LogsKind string
@@ -454,6 +454,15 @@ func (api *BitbucketAdminAPI) CreateMeshNode(address string) (*stash.MeshNode, e
 	}
 
 	return &node, nil
+}
+
+func (api *BitbucketAdminAPI) DeleteMeshNode(id int) error {
+	err := api.client.DeleteMeshNode(id, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (api *BitbucketAdminAPI) EnableMesh() error {
