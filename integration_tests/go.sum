@@ -1,5 +1,6 @@
 github.com/BurntSushi/toml v0.4.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/toml v1.2.0 h1:Rt8g24XnyGTyglgET/PRUNlrUeu9F5L+7FilkXfZgs0=
+github.com/BurntSushi/toml v1.2.0/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d h1:licZJFw2RwpHMqeKTCYkitsPqHNxTmd4SNR5r94FGM8=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d/go.mod h1:asat636LX7Bqt5lYEZ27JNDcqxfjdBQuJ/MM4CN/Lzo=
@@ -56,6 +57,14 @@ github.com/reconquest/pom v0.0.0-20200813113936-ef77426fdaee h1:FD6Wwqe73i9eTQE5
 github.com/reconquest/pom v0.0.0-20200813113936-ef77426fdaee/go.mod h1:WwzfklKtBLQEK0GYOSx7t772SDEiRRF5vQcT3MlqfMo=
 github.com/reconquest/sign-go v0.0.0-20210627120830-00d3acffbdfe h1:GGB7SjyQzC1uMu3g7U3EhCvFvuFTai6b3+aUwLBnr2E=
 github.com/reconquest/sign-go v0.0.0-20210627120830-00d3acffbdfe/go.mod h1:TbtAnIiclRWuwBjRoyRf699a4l46c3rMlNU2EnV04xM=
+github.com/reconquest/stash-go v0.0.0-20250825042116-86bae8b5e798 h1:I7FrgPldRF4y2EvBsS+WZkV1h8AAau3OQESFKx1EU30=
+github.com/reconquest/stash-go v0.0.0-20250825042116-86bae8b5e798/go.mod h1:r5By14btfJEsFfhFEMczI6CYzD3+P97weJecGUYCsYI=
+github.com/reconquest/stash-go v0.0.0-20250825043023-96c457a18461 h1:03nwoXA9YPZes1S4ytHLqFEe8F/rKUfT/UEfZBpsIoE=
+github.com/reconquest/stash-go v0.0.0-20250825043023-96c457a18461/go.mod h1:r5By14btfJEsFfhFEMczI6CYzD3+P97weJecGUYCsYI=
+github.com/reconquest/stash-go v0.0.0-20250825043130-34478af53cf4 h1:fS0tkL6ld2hhWObXwaErfWLwGarS2+/xU0Yx2Cs5xbU=
+github.com/reconquest/stash-go v0.0.0-20250825043130-34478af53cf4/go.mod h1:r5By14btfJEsFfhFEMczI6CYzD3+P97weJecGUYCsYI=
+github.com/reconquest/stash-go v0.0.0-20250825043233-85793e484347 h1:bpjVxZmgFF8990FHsY+Qdwc9TKQo/EDHk/hzE4qeOOw=
+github.com/reconquest/stash-go v0.0.0-20250825043233-85793e484347/go.mod h1:r5By14btfJEsFfhFEMczI6CYzD3+P97weJecGUYCsYI=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=

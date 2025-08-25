@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/kovetskiy/stash"
+	"github.com/reconquest/stash-go"
 )
 
 func init() {

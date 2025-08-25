@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/kovetskiy/stash"
+	"github.com/reconquest/stash-go"
 	"github.com/reconquest/pkg/log"
 )
 

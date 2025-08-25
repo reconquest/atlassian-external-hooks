@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/kovetskiy/stash"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket/mesh"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/stash-go"
 )
 
 const (
@@ -41,8 +41,7 @@ func StartNew(opts StartOpts) (*Cluster, error) {
 		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
 		WithHazelcast()
 
-	return clusterizeBitbucket(
-		opts,
+	nodes, err := clusterize(
 		func(replica int) (*bitbucket.Node, error) {
 			return bitbucket.StartNew(bitbucket.StartNewOpts{
 				ID:      opts.ID,
@@ -52,15 +51,30 @@ func StartNew(opts StartOpts) (*Cluster, error) {
 			})
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster := &Cluster{Nodes: nodes, Node: nodes[0]}
+	if !opts.NoMesh {
+		cluster.StartMesh(opts)
+	}
+
+	return cluster, nil
 }
 
-func StartExisting(opts StartOpts) (*Cluster, error) {
+func StartExisting(cluster *Cluster, opts StartOpts) (*Cluster, error) {
 	opts.RunOpts.Properties = bitbucket.NewProperties().
 		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
 		WithHazelcast()
 
-	return clusterizeBitbucket(
-		opts,
+	// Restart (upgrade) mesh first to avoid connection exceptions.
+	err := cluster.StartMesh(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err := clusterize(
 		func(replica int) (*bitbucket.Node, error) {
 			return bitbucket.StartExisting(bitbucket.StartExistingOpts{
 				Container: fmt.Sprintf("%s-bitbucket-%d", opts.ID, replica),
@@ -70,6 +84,13 @@ func StartExisting(opts StartOpts) (*Cluster, error) {
 			})
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster = &Cluster{Nodes: nodes, Node: nodes[0]}
+
+	return cluster, nil
 }
 
 func (cluster *Cluster) Upgrade(version bitbucket.Version) error {
@@ -101,16 +122,38 @@ func (cluster *Cluster) Upgrade(version bitbucket.Version) error {
 				}
 			}
 
-			started, err := StartNew(StartOpts{
+			for _, node := range cluster.MeshNodes {
+				err := node.Stop()
+				if err != nil {
+					return err
+				}
+			}
+
+			for _, node := range cluster.MeshNodes {
+				err := node.RemoveContainer()
+				if err != nil {
+					return err
+				}
+			}
+
+			opts := StartOpts{
 				ID:      cluster.ID(),
-				Volumes: cluster.VolumeShared(),
-				NoMesh:  true,
+				Volumes: cluster.Volumes(),
 				RunOpts: bitbucket.RunOpts{
 					Version:  version,
 					Database: cluster.Opts().Database,
 					Network:  cluster.ID(),
 				},
-			})
+				NoMesh: true,
+			}
+
+			// Upgrade mesh first to avoid connection exceptions.
+			err := cluster.StartMesh(opts)
+			if err != nil {
+				return err
+			}
+
+			started, err := StartNew(opts)
 			if err != nil {
 				return err
 			}
@@ -174,34 +217,7 @@ func clusterize[T any](
 	return cluster, nil
 }
 
-func clusterizeBitbucket(
-	opts StartOpts,
-	start func(replica int) (*bitbucket.Node, error),
-) (*Cluster, error) {
-	var cluster Cluster
-	var err error
-
-	cluster.Nodes, err = clusterize(start)
-	if err != nil {
-		return nil, err
-	}
-
-	cluster.Node = cluster.Nodes[0]
-
-	// For upgrading version: do not touch mesh.
-	if opts.NoMesh {
-		return &cluster, nil
-	}
-
-	err = cluster.startMesh(opts)
-	if err != nil {
-		return nil, karma.Format(err, "unable to start mesh")
-	}
-
-	return &cluster, nil
-}
-
-func (cluster *Cluster) startMesh(opts StartOpts) error {
+func (cluster *Cluster) StartMesh(opts StartOpts) error {
 	var err error
 	cluster.MeshNodes, err = clusterize(
 		func(replica int) (*mesh.Node, error) {
@@ -286,27 +302,34 @@ func (cluster *Cluster) WriteFile(
 	content []byte,
 	mode os.FileMode,
 ) error {
-	var mutex sync.Mutex
-	var errs []karma.Reason
+	// var mutex sync.Mutex
+	// var errs []karma.Reason
 
-	cluster.EachContainer(func(container string) {
-		err := docker.WriteFile(
-			container,
-			bitbucket.BITBUCKET_DATA_DIR,
-			path,
-			content,
-			mode,
-		)
-		if err != nil {
-			mutex.Lock()
-			errs = append(errs, err)
-			mutex.Unlock()
-		}
-	})
-
-	if len(errs) > 0 {
-		return karma.Push("write file for each container", errs...)
+	container := cluster.AnyNode().Container()
+	// cluster.EachContainer(func(container string) {
+	err := docker.WriteFile(
+		container,
+		bitbucket.BITBUCKET_DATA_DIR,
+		path,
+		content,
+		mode,
+	)
+	if err != nil {
+		return karma.
+			Describe("container", container).
+			Describe("path", path).
+			Format(err, "write file failer")
 	}
+	// 	if err != nil {
+	// 		mutex.Lock()
+	// 		errs = append(errs, err)
+	// 		mutex.Unlock()
+	// 	}
+	// })
+
+	// if len(errs) > 0 {
+	// 	return karma.Push("write file for each container", errs...)
+	// }
 
 	return nil
 }
@@ -395,19 +418,28 @@ func (cluster *Cluster) Configure() error {
 		return karma.Format(err, "unable to get mesh nodes")
 	}
 
-	alreadyRegistered := func(container string) bool {
+	getNodeIDByName := func(container string) int {
 		for _, node := range meshNodes {
 			if node.Name == container {
-				return true
+				return node.ID
 			}
 		}
 
-		return false
+		return 0
 	}
 
 	for _, node := range cluster.MeshNodes {
-		if alreadyRegistered(node.Container()) {
-			log.Infof(nil, "mesh node %s already registered", node.Container())
+		if id := getNodeIDByName(node.Container()); id > 0 {
+			log.Infof(nil, "mesh node %s already registered: %v", node.Container(), id)
+			err := cluster.Admin().DeleteMeshNode(id)
+			if err != nil {
+				return karma.Format(
+					err,
+					"unable to delete mesh node for %s",
+					node.Container(),
+				)
+			}
+
 			continue
 		}
 
@@ -502,9 +534,13 @@ func (cluster *Cluster) WaitLog(
 		cancel:  cancel,
 	}
 
+	mutex := &sync.Mutex{}
+
 	cluster.EachNode(func(node *bitbucket.Node) {
 		waiter := node.WaitLog(ctx, kind, fn, duration)
 
+		mutex.Lock()
+		defer mutex.Unlock()
 		clusterWaiter.waiters = append(
 			clusterWaiter.waiters,
 			waiter,

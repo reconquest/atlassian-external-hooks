@@ -10,6 +10,7 @@ import (
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/cluster"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
+	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/lexec-go"
@@ -140,26 +141,38 @@ func (runner *Runner) upgrade(id string, version bitbucket.Version) {
 	}
 }
 
-func (runner *Runner) InstallAddon(version string, path string) string {
+func (runner *Runner) InstallAddon(version string, path string, waiter docker.LogWaiter) string {
 	key, err := runner.Bitbucket().Addons().Install(path)
 	runner.assert.NoError(err, "install addon")
 
-	addon, err := runner.Bitbucket().Addons().Get(key)
-	runner.assert.NoError(err, "get addon information")
+	verify := func(node bitbucket.Bitbucket) {
+		addon, err := node.Addons().Get(key)
+		runner.assert.NoError(err, "get addon information")
 
-	if addon.Version != version {
-		log.Debugf(
-			nil,
-			"{add-on} version downgrade requested: %s -> %s",
-			addon.Version,
-			version,
-		)
+		if addon.Version != version {
+			log.Debugf(
+				nil,
+				"{add-on} version version mismatch: %s -> %s",
+				addon.Version,
+				version,
+			)
 
-		err := runner.Bitbucket().Addons().Uninstall(key)
-		runner.assert.NoError(err, "uninstall add-on for downgrade")
+			err := node.Addons().Uninstall(key)
+			runner.assert.NoError(err, "uninstall add-on")
 
-		_, err = runner.Bitbucket().Addons().Install(path)
-		runner.assert.NoError(err, "install addon")
+			_, err = node.Addons().Install(path)
+			runner.assert.NoError(err, "install addon")
+		}
+	}
+
+	runner.assert.True(waiter.Await(), "unable to match addon installation log event")
+
+	if runner.run.cluster != nil {
+		runner.run.cluster.EachNode(func(node *bitbucket.Node) {
+			verify(node)
+		})
+	} else {
+		verify(runner.Bitbucket())
 	}
 
 	err = runner.Bitbucket().Addons().SetLicense(
@@ -173,7 +186,7 @@ func (runner *Runner) InstallAddon(version string, path string) string {
 
 func (runner *Runner) UninstallAddon(key string) {
 	err := runner.Bitbucket().Addons().Uninstall(key)
-	runner.assert.NoError(err, "install addon")
+	runner.assert.NoError(err, "uninstall addon")
 }
 
 func (runner *Runner) Suite(suite Suite) {

@@ -35,7 +35,7 @@ func (runner *Runner) UseCluster(version bitbucket.Version, replicas int) {
 		id = runner.run.cluster.ID()
 
 	case runner.run.identifier != "":
-		runner.run.cluster, err = cluster.StartExisting(cluster.StartOpts{
+		runner.run.cluster, err = cluster.StartExisting(runner.run.cluster, cluster.StartOpts{
 			ID:      id,
 			Volumes: runner.run.volumes,
 			RunOpts: bitbucket.RunOpts{
@@ -65,9 +65,6 @@ func (runner *Runner) UseCluster(version bitbucket.Version, replicas int) {
 
 	err = runner.run.cluster.Verify()
 	runner.assert.NoError(err, "unable to verify bitbucket cluster state")
-
-	// err = runner.run.cluster.Configure()
-	// runner.assert.NoError(err, "unable to configure bitbucket cluster")
 
 	runner.ready()
 

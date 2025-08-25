@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kovetskiy/stash"
+	"github.com/reconquest/stash-go"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/external_hooks"
 	"github.com/reconquest/cog"
 )

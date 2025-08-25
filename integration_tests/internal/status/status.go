@@ -68,7 +68,7 @@ func init() {
 	format, err := loreley.CompileWithReset(
 		` {bold}{bg 235}{fg 70}  {.Done}{fg 7}/{.Total} `+
 			`{if .TotalDuration}{bg 7}{fg 16} {.TotalDuration} {end}`+
-			`{bg 4}{fg 233} {.CurrentTest} `+
+			`{if .CurrentTest}{bg 4}{fg 233} {.CurrentTest} {end}`+
 			`{if .LastTest}{reset}{bold} {.LastTest} {reset}({.LastDuration}){end}`,
 		nil,
 	)

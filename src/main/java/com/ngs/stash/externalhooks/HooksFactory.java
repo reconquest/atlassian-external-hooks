@@ -45,7 +45,8 @@ public class HooksFactory {
     Page<RepositoryHook> page = repositoryHookService.search(
         searchBuilder.build(), new PageRequestImpl(0, PageRequest.MAX_PAGE_LIMIT));
 
-    Integer created = 0;
+    Integer createdScope = 0;
+    Integer createdGlobal = 0;
     Integer deleted = 0;
     for (RepositoryHook hook : page.getValues()) {
       String hookKey = hook.getDetails().getKey();
@@ -70,7 +71,7 @@ public class HooksFactory {
         try {
           hookInstaller.enable(scope, hookKey);
 
-          created++;
+          createdScope++;
         } catch (Exception e) {
           e.printStackTrace();
 
@@ -82,7 +83,7 @@ public class HooksFactory {
         try {
           if (globalHooks.isEnabled(hookKey) && globalHooks.isEligible(hookKey, (RepositoryScope)scope)) {
             if (hookInstaller.enable(scope, hookKey, globalHooks)) {
-              created++;
+              createdGlobal++;
             }
           } else {
             hookInstaller.disable(scope, hookKey, new GlobalScope());
@@ -94,12 +95,20 @@ public class HooksFactory {
           log.error("Unable to apply global hook script {}: {}", hookKey, e.toString());
         }
       }
+
+      if (scope.getType() == ScopeType.PROJECT) {
+          if (scopeSkip) {
+            hookInstaller.disable(scope, hookKey, new GlobalScope());
+            deleted++;
+          }
+      }
     }
 
     log.info(
-        "Applied hook scripts on scope {}: created={} deleted={}",
+        "Applied hook scripts on scope {}: created:scope={} created:global={} deleted={}",
         ScopeUtil.toString(scope),
-        created,
+        createdScope,
+        createdGlobal,
         deleted);
   }
 }

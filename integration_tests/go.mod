@@ -1,12 +1,13 @@
 module github.com/reconquest/atlassian-external-hooks/integration_tests
 
-go 1.19
+go 1.23
+
+toolchain go1.24.6
 
 require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/kovetskiy/lorg v1.0.0
-	github.com/kovetskiy/stash v1.2.4
 	github.com/otiai10/copy v1.7.0
 	github.com/reconquest/barely v0.0.0-20211011075640-c4e789dc39f8
 	github.com/reconquest/cog v0.0.0-20210820140837-c5c4e8f49c65
@@ -28,6 +29,7 @@ require (
 	github.com/reconquest/colorgful v0.0.0-20190805091748-28d18b838c4a // indirect
 	github.com/reconquest/lineflushwriter-go v0.0.0-20200921103343-b9b8d10a6851 // indirect
 	github.com/reconquest/nopio-go v0.0.0-20161213101805-20796acb207f // indirect
+	github.com/reconquest/stash-go v0.0.0-20250825043233-85793e484347 // indirect
 	github.com/zazab/zhash v0.0.0-20210630080733-6e809466f8d3 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect

@@ -16,13 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kovetskiy/stash"
 	cp "github.com/otiai10/copy"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/exec"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
+	"github.com/reconquest/stash-go"
 )
 
 type StartupStatus struct {
@@ -44,6 +44,7 @@ type Instance struct {
 	container string
 	database  database.Database
 	volumes   struct {
+		prefix string
 		data   string
 		shared string
 	}
@@ -335,7 +336,7 @@ func (instance *Instance) Configure() error {
 		return nil
 	}
 
-	token, err := instance.getAtlToken(nil)
+	token, err := instance.getAtlToken()
 	if err != nil {
 		return err
 	}
@@ -351,6 +352,10 @@ func (instance *Instance) Configure() error {
 	}
 
 	return nil
+}
+
+func (instance *Instance) Volumes() string {
+	return instance.volumes.prefix
 }
 
 func (instance *Instance) VolumeData() string {
@@ -390,12 +395,12 @@ func (instance *Instance) FlushLogs(kind LogsKind) {
 	instance.Logs(kind).Flush()
 }
 
-func (instance *Instance) getAtlToken(
-	response *http.Response,
-) (*AtlToken, error) {
-	if response == nil {
-		var err error
+func (instance *Instance) getAtlToken() (*AtlToken, error) {
+	var body []byte
+	var response *http.Response
+	var err error
 
+	for {
 		response, err = http.Get(instance.URI("/setup"))
 		if err != nil {
 			return nil, karma.Format(
@@ -403,14 +408,24 @@ func (instance *Instance) getAtlToken(
 				"request setup page for bitbucket instance",
 			)
 		}
-	}
 
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, karma.Format(
-			err,
-			"read response body from bitbucket setup page",
+		body, err = io.ReadAll(response.Body)
+		if err != nil {
+			return nil, karma.Format(
+				err,
+				"read response body from bitbucket setup page",
+			)
+		}
+		if len(body) != 0 {
+			break
+		}
+
+		log.Debugf(
+			karma.Describe("container", instance.container).Describe("status", response.Status),
+			"setup page is empty, retrying",
 		)
+
+		time.Sleep(time.Second)
 	}
 
 	matches := regexp.MustCompile(
@@ -418,8 +433,8 @@ func (instance *Instance) getAtlToken(
 	).FindStringSubmatch(string(body))
 
 	if len(matches) == 0 {
-		return nil, karma.Format(
-			err,
+		return nil, karma.Describe("body", string(body)).Format(
+			nil,
 			"match atl_token from bitbucket setup page",
 		)
 	}
@@ -568,7 +583,7 @@ func (instance *Instance) create() error {
 			"write bitbucket.properties",
 		)
 
-		err = ioutil.WriteFile(
+		err = os.WriteFile(
 			propertiesPath,
 			[]byte(instance.opts.Properties.String()),
 			0644,
@@ -610,7 +625,7 @@ func (instance *Instance) create() error {
 		"update-ca-certificates",
 		// we need same UID/GID so we can access shared & data BB dirs from host during ugprade process
 		fmt.Sprintf("groupadd -g %d %s", os.Getgid(), userName),
-		fmt.Sprintf("useradd -g %d %s", os.Getgid(), userName),
+		fmt.Sprintf("useradd -o -g %d -u %d %s", os.Getgid(), os.Getuid(), userName),
 		fmt.Sprintf("export RUN_USER=%s", userName),
 		"exec /entrypoint.py", // exec is required to propagate INT signal from docker kill
 	}
