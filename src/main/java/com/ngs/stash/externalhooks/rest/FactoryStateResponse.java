@@ -1,25 +1,22 @@
 package com.ngs.stash.externalhooks.rest;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ngs.stash.externalhooks.ao.FactoryState;
 
-@XmlRootElement
 public class FactoryStateResponse {
-  @XmlElement
+  @JsonProperty
   private int id;
 
-  @XmlElement
+  @JsonProperty
   private boolean started;
 
-  @XmlElement
+  @JsonProperty
   private boolean finished;
 
-  @XmlElement
+  @JsonProperty
   private int current;
 
-  @XmlElement
+  @JsonProperty
   private int total;
 
   public FactoryStateResponse(FactoryState state) {

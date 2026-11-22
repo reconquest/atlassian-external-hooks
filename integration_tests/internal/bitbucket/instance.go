@@ -405,6 +405,8 @@ func (instance *Instance) getAtlToken(
 		}
 	}
 
+	defer response.Body.Close()
+
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, karma.Format(
@@ -462,7 +464,9 @@ func (instance *Instance) postSetupForm(
 		)
 	}
 
-	if response.StatusCode != 200 {
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
 		return karma.
 			Describe("code", response.StatusCode).
 			Reason(
@@ -500,11 +504,17 @@ func (instance *Instance) isConfigured() (bool, error) {
 		)
 	}
 
+	defer response.Body.Close()
+
 	if response.StatusCode >= 300 && response.StatusCode < 400 {
 		return true, nil
-	} else {
-		return false, nil
 	}
+
+	if response.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("check bitbucket setup: %s", response.Status)
+	}
+
+	return false, nil
 }
 
 func (instance *Instance) configureLicense(token *AtlToken) error {
@@ -544,7 +554,7 @@ func (instance *Instance) create() error {
 	}
 
 	for _, dir := range []string{
-		instance.VolumeShared(),
+		filepath.Join(instance.VolumeShared(), "external-hooks"),
 		instance.VolumeData(),
 	} {
 		err = os.MkdirAll(dir, 0755)
@@ -602,16 +612,17 @@ func (instance *Instance) create() error {
 		jdbcPassword = instance.database.Password()
 	)
 
-	var userName = "integration_tester";
+	var userName = "integration_tester"
 
 	var initScript = []string{
 		"set -euo pipefail",
 		"echo 'rootCA.pem' >> /etc/ca-certificates.conf",
 		"update-ca-certificates",
 		// we need same UID/GID so we can access shared & data BB dirs from host during ugprade process
-		fmt.Sprintf("groupadd -g %d %s", os.Getgid(), userName),
-		fmt.Sprintf("useradd -u %d -g %d %s", os.Getuid(), os.Getgid(), userName),
+		fmt.Sprintf("groupadd -o -g %d %s", os.Getgid(), userName),
+		fmt.Sprintf("useradd -o -u %d -g %d %s", os.Getuid(), os.Getgid(), userName),
 		fmt.Sprintf("export RUN_USER=%s", userName),
+		fmt.Sprintf(`export SETUP_BASEURL="http://$(hostname -i):%d"`, instance.opts.PortHTTP),
 		"exec /entrypoint.py", // exec is required to propagate INT signal from docker kill
 	}
 
@@ -623,8 +634,14 @@ func (instance *Instance) create() error {
 		"-e", "JDBC_URL="+jdbcURL,
 		"-e", "JDBC_USER="+jdbcUser,
 		"-e", "JDBC_PASSWORD="+jdbcPassword,
+		"-e", "SETUP_DISPLAYNAME=Bitbucket",
+		"-e", "SETUP_SYSADMIN_USERNAME="+ADMIN_USERNAME,
+		"-e", "SETUP_SYSADMIN_PASSWORD="+ADMIN_PASSWORD,
+		"-e", "SETUP_SYSADMIN_DISPLAYNAME="+ADMIN_DISPLAY_NAME,
+		"-e", "SETUP_SYSADMIN_EMAILADDRESS="+ADMIN_EMAIL,
 		"-e", "ELASTICSEARCH_ENABLED=false",
 		"-e", "SEARCH_ENABLED=false", // starting with bitbucket 8
+		"-e", "JVM_SUPPORT_RECOMMENDED_ARGS=-Dcom.atlassian.plugins.authentication.basic.auth.filter.force.allow=true -Dupm.plugin.upload.enabled=true",
 		"-e", fmt.Sprintf(
 			`SPRING_APPLICATION_JSON=%s`,
 			string(springApplicationConfig),
@@ -647,7 +664,7 @@ func (instance *Instance) create() error {
 			"/usr/share/ca-certificates/rootCA.pem",
 		),
 		"--name", instance.container,
-		fmt.Sprintf(BITBUCKET_IMAGE, instance.version),
+		bitbucketImage(instance.version),
 		"bash", "-c",
 		strings.Join(initScript, ";"),
 	)

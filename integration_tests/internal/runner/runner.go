@@ -18,8 +18,10 @@ import (
 )
 
 type Suite struct {
-	Size int
-	Run  func(*Runner, *assert.Assertions)
+	Bitbucket string
+	Cluster   bool
+	Size      int
+	Run       func(*Runner, *assert.Assertions)
 }
 
 type Runner struct {
@@ -116,7 +118,7 @@ func (runner *Runner) upgrade(id string, version string) {
 
 			runner.run.bitbucket, err = bitbucket.StartNew(
 				bitbucket.StartNewOpts{
-					ID: string(id),
+					ID:      string(id),
 					Volumes: runner.run.volumes,
 					RunOpts: bitbucket.RunOpts{
 						Version:  version,
@@ -249,6 +251,15 @@ func (runner *Runner) Cleanup() error {
 		}
 	}
 
+	if cluster := runner.run.cluster; cluster != nil {
+		for _, node := range cluster.MeshNodes {
+			err := exec.New("docker", "rm", "-f", node.Container()).Run()
+			if err != nil {
+				return karma.Format(err, "remove mesh container %s", node.Container())
+			}
+		}
+	}
+
 	if runner.run.database != nil {
 		err := runner.run.database.Stop()
 		if err != nil {
@@ -284,6 +295,11 @@ func (runner *Runner) Errorf(format string, args ...interface{}) {
 
 	log.Errorf(err, format, args...)
 
+	runner.logKeptResources()
+	os.Exit(1)
+}
+
+func (runner *Runner) logKeptResources() {
 	facts := karma.
 		Describe("work_dir", runner.run.workdir)
 
@@ -307,8 +323,6 @@ func (runner *Runner) Errorf(format string, args ...interface{}) {
 		facts,
 		"{run} following run resources were kept",
 	)
-
-	os.Exit(1)
 }
 
 func getFrame(skipFrames int) runtime.Frame {

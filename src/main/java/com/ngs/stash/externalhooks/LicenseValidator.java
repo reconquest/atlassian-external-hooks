@@ -13,8 +13,12 @@ import java.security.SignatureException;
 import java.security.interfaces.DSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
 import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.server.StorageService;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.upm.api.license.PluginLicenseManager;
 import com.atlassian.upm.api.license.entity.PluginLicense;
 import com.atlassian.upm.api.util.Option;
@@ -24,6 +28,7 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Named
 public class LicenseValidator {
   private static Logger log = LoggerFactory.getLogger(LicenseValidator.class);
   private PluginLicenseManager pluginLicenseManager;
@@ -51,10 +56,11 @@ public class LicenseValidator {
       + "ZJXFZ3lnW1fqyDe7KIaTZw3sGrBZ/4IhpvnvGHVxBYz1rBahL3KpYt1b6E6N65t4\n"
       + "2nOMzOgp6Glhr++St20VeNwfwV2PTN5Je80=";
 
+  @Inject
   public LicenseValidator(
-      PluginLicenseManager pluginLicenseManager,
-      StorageService storageService,
-      ClusterService clusterService) {
+      @ComponentImport PluginLicenseManager pluginLicenseManager,
+      @ComponentImport StorageService storageService,
+      @ComponentImport ClusterService clusterService) {
     this.pluginLicenseManager = pluginLicenseManager;
     this.storageService = storageService;
     this.clusterService = clusterService;

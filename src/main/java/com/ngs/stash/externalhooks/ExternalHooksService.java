@@ -3,7 +3,8 @@ package com.ngs.stash.externalhooks;
 import java.io.IOException;
 import java.util.Date;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
@@ -39,6 +40,7 @@ import com.ngs.stash.externalhooks.util.Walker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Named
 public class ExternalHooksService implements JobRunner {
   private static Logger log = LoggerFactory.getLogger(ExternalHooksService.class);
 
@@ -71,7 +73,7 @@ public class ExternalHooksService implements JobRunner {
       @ComponentImport("permissions") PermissionService permissionService,
       @ComponentImport PluginLicenseManager pluginLicenseManager,
       @ComponentImport ClusterService clusterService,
-      @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
+      GlobalHookSettingsDao globalHookSettingsDao,
       @ComponentImport StorageService storageService)
       throws IOException {
     this.globalHookSettingsDao = globalHookSettingsDao;

@@ -104,11 +104,10 @@ type Filter struct {
 }
 
 type SuiteOpts struct {
-	baseBitbucket string
-	randomize     bool
-	mode          SuiteMode
-	filter        Filter
-	skipUntil     string
+	randomize bool
+	mode      SuiteMode
+	filter    Filter
+	skipUntil string
 }
 
 func NewSuite(opts SuiteOpts) *Suite {
@@ -141,20 +140,9 @@ func (suite *Suite) WithParams(
 			}
 		}
 
-		if !suite.filter.upgrade {
-			version := params.Bitbucket
-			if version == "" {
-				version = params.BitbucketTo
-			}
-
-			if version != suite.baseBitbucket {
-				log.Debugf(
-					nil,
-					"{test} skip %s because --no-upgrade specified",
-					name,
-				)
-				continue
-			}
+		if !suite.filter.upgrade && params.BitbucketFrom != "" {
+			log.Debugf(nil, "{test} skip %s because --no-upgrade specified", name)
+			continue
 		}
 
 		if !suite.filter.reproduce &&
@@ -175,8 +163,15 @@ func (suite *Suite) WithParams(
 		toRun = append(toRun, test)
 	}
 
+	startVersion := params.Bitbucket
+	if startVersion == "" {
+		startVersion = params.BitbucketFrom
+	}
+
 	return runner.Suite{
-		Size: len(toRun),
+		Bitbucket: startVersion,
+		Cluster:   params.Cluster,
+		Size:      len(toRun),
 		Run: func(run *runner.Runner, assert *assert.Assertions) {
 			suite.Runner = run
 			suite.Assertions = assert

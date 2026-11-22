@@ -28,19 +28,11 @@ const (
 type Properties map[string]string
 
 func NewProperties() Properties {
-	return make(Properties)
+	return Properties{
+		"feature.hook.scripts":                   "true",
+		"atlassian.upm.signature.check.disabled": "true",
+	}
 }
-
-// This method doesn't really work because we can't figure out baseURL before
-// starting the container
-//func (properties Properties) WithSysadmin() Properties {
-//    properties["setup.displayName"] = "Bitbucket"
-//    properties["setup.sysadmin.username"] = ADMIN_USERNAME
-//    properties["setup.sysadmin.password"] = ADMIN_PASSWORD
-//    properties["setup.sysadmin.displayName"] = ADMIN_DISPLAY_NAME
-//    properties["setup.sysadmin.emailAddress"] = ADMIN_EMAIL
-//    return properties
-//}
 
 func (properties Properties) WithLicense(license string) Properties {
 	properties["setup.license"] = license

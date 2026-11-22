@@ -104,13 +104,6 @@ func main() {
 		log.Fatalf(err, "create work dir")
 	}
 
-	ensureAddons()
-
-	var (
-		baseBitbucket = "6.2.0"
-		latestAddon   = getAddon(getLatestVersionXML())
-	)
-
 	mode := ModeRun
 	if opts.FlagList {
 		mode = ModeList
@@ -122,10 +115,9 @@ func main() {
 
 	suite := NewSuite(
 		SuiteOpts{
-			baseBitbucket: baseBitbucket,
-			randomize:     mode == ModeRun && !opts.FlagNoRandomize,
-			mode:          mode,
-			skipUntil:     opts.ValueSkipUntil,
+			randomize: mode == ModeRun && !opts.FlagNoRandomize,
+			mode:      mode,
+			skipUntil: opts.ValueSkipUntil,
 			filter: Filter{
 				upgrade:   !opts.FlagNoUpgrade,
 				reproduce: !opts.FlagNoReproduce,
@@ -134,17 +126,65 @@ func main() {
 		},
 	)
 
-	// TODO: add tests for different trigger configurations
-	// TODO: add tests for BB 5.x.x
-
 	run := runner.New(must(filepath.Abs(opts.ValueVolumes)), suite.CleanupHooks)
 
+	ensureAddons()
+	registerReleasedSuites(run, suite, "6.2.0", getAddon("13.1.2"))
+
+	currentAddon := getBuiltAddon(getLatestVersionXML())
+	for _, bitbucket := range []string{"10.2.8", "10.3.2", "10.4.3", "10.5.2"} {
+		run.Suite(
+			suite.WithParams(
+				TestParams{
+					Bitbucket:  bitbucket,
+					Addon:      currentAddon,
+					AddonFixed: currentAddon,
+				},
+				suite.TestAdministration,
+				suite.TestGlobalHooks,
+				suite.TestGlobalHooks_PersonalRepositoriesFilter,
+				suite.TestProjectHooks,
+				suite.TestRepositoryHooks,
+				suite.TestPersonalRepositoriesHooks,
+				suite.TestProjectHooks_DoNotCreateDisabledHooks,
+				suite.TestHookScriptsLeak_NoLeakAfterRepositoryDelete,
+				suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Fixed,
+				suite.TestBug_ProjectHookCreatedBeforeRepository_Fixed,
+				suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Fixed,
+				suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Fixed,
+				suite.TestBug_RepositoryHookCreatedBeforeProject_Fixed,
+			),
+		)
+	}
+
+	run.Run(runner.RunOpts{
+		Keep:      opts.FlagKeep,
+		Workdir:   workdir,
+		Database:  opts.ValueDatabase,
+		Randomize: mode == ModeRun && !opts.FlagNoRandomize,
+		Container: opts.ValueContainer,
+	})
+
+	if !opts.FlagList {
+		log.Infof(nil, "{run} all tests passed")
+	}
+
+	if opts.FlagList || (!opts.FlagKeep && opts.ValueContainer == "") {
+		log.Debugf(nil, "{run} removing work dir: %s", workdir)
+		err = os.RemoveAll(workdir)
+		if err != nil {
+			log.Errorf(err, "remove work dir")
+		}
+	}
+}
+
+func registerReleasedSuites(run *runner.Runner, suite *Suite, baseBitbucket string, releasedAddon Addon) {
 	run.Suite(
 		suite.WithParams(
 			TestParams{
 				Bitbucket:       baseBitbucket,
 				AddonReproduced: getAddon("10.1.0"),
-				AddonFixed:      latestAddon,
+				AddonFixed:      releasedAddon,
 			},
 
 			suite.TestBug_ProjectEnabledRepositoryOverriddenHooks_Reproduced,
@@ -157,7 +197,7 @@ func main() {
 			TestParams{
 				Bitbucket:       baseBitbucket,
 				AddonReproduced: getAddon("10.0.0"),
-				AddonFixed:      latestAddon,
+				AddonFixed:      releasedAddon,
 			},
 
 			suite.TestBug_ProjectHookCreatedBeforeRepository_Reproduced,
@@ -170,7 +210,7 @@ func main() {
 			TestParams{
 				Bitbucket:       baseBitbucket,
 				AddonReproduced: getAddon("9.1.0"),
-				AddonFixed:      latestAddon,
+				AddonFixed:      releasedAddon,
 			},
 
 			suite.TestBug_ProjectEnabledRepositoryDisabledHooks_Reproduced,
@@ -182,7 +222,7 @@ func main() {
 		suite.WithParams(
 			TestParams{
 				Bitbucket: baseBitbucket,
-				Addon:     latestAddon,
+				Addon:     releasedAddon,
 			},
 			suite.TestProjectHooks_DoNotCreateDisabledHooks,
 
@@ -195,7 +235,7 @@ func main() {
 			TestParams{
 				Bitbucket:       baseBitbucket,
 				AddonReproduced: getAddon("10.2.1"),
-				AddonFixed:      latestAddon,
+				AddonFixed:      releasedAddon,
 			},
 
 			suite.TestBug_UserWithoutProjectAccessModifiesInheritedHook_Reproduced,
@@ -208,7 +248,7 @@ func main() {
 			TestParams{
 				Bitbucket:       baseBitbucket,
 				AddonReproduced: getAddon("11.1.0"),
-				AddonFixed:      latestAddon,
+				AddonFixed:      releasedAddon,
 			},
 
 			suite.TestBug_RepositoryHookCreatedBeforeProject_Reproduced,
@@ -235,7 +275,7 @@ func main() {
 			TestParams{
 				BitbucketFrom: baseBitbucket,
 				BitbucketTo:   "6.9.0",
-				Addon:         latestAddon,
+				Addon:         releasedAddon,
 			},
 			suite.TestBitbucketUpgrade,
 		),
@@ -245,7 +285,7 @@ func main() {
 		suite.WithParams(
 			TestParams{
 				Bitbucket: "7.0.0",
-				Addon:     latestAddon,
+				Addon:     releasedAddon,
 			},
 			suite.TestProjectHooks,
 			suite.TestRepositoryHooks,
@@ -258,7 +298,7 @@ func main() {
 			TestParams{
 				Bitbucket: "8.4.1",
 				Cluster:   true,
-				Addon:     latestAddon,
+				Addon:     releasedAddon,
 			},
 			suite.TestGlobalHooks,
 			suite.TestGlobalHooks_PersonalRepositoriesFilter,
@@ -267,56 +307,11 @@ func main() {
 			suite.TestPersonalRepositoriesHooks,
 		),
 	)
-
-	run.Run(runner.RunOpts{
-		Workdir:   workdir,
-		Database:  opts.ValueDatabase,
-		Randomize: mode == ModeRun && !opts.FlagNoRandomize,
-		Container: opts.ValueContainer,
-	})
-
-	if !opts.FlagList {
-		log.Infof(nil, "{run} all tests passed")
-	}
-
-	log.Debugf(nil, "{run} removing work dir: %s", workdir)
-	err = os.RemoveAll(workdir)
-	if err != nil {
-		log.Errorf(err, "remove work dir")
-	}
-
-	if !opts.FlagKeep && opts.ValueContainer == "" {
-		err := run.Cleanup()
-		if err != nil {
-			log.Fatalf(err, "cleanup runner")
-		}
-	} else {
-		if run.Bitbucket() != nil {
-			facts := karma.
-				Describe("work_dir", workdir)
-			nodes := run.Bitbuckets()
-			if len(nodes) > 0 {
-				facts = facts.Describe("shared/network", nodes[0].Network())
-
-				for _, node := range nodes {
-					facts = facts.Describe(node.Container()+"/container", node.Container()).
-						Describe(node.Container()+"/volume", node.VolumeData())
-				}
-			}
-
-			if run.Database() != nil {
-				facts = facts.
-					Describe("shared/database/container", run.Database().Container()).
-					Describe("shared/database/volume", run.Database().Volume())
-			}
-
-			log.Infof(facts, "{run} following resources can be reused")
-		}
-	}
 }
 
 var builds = map[string]string{
-	"12.0.1": "6702",
+	"13.1.2": "6842",
+	"12.0.1": "6682",
 	"11.1.0": "6642",
 	"10.2.2": "6592",
 	"10.2.1": "6572",
@@ -361,7 +356,7 @@ func getAddon(version string) Addon {
 		)
 
 		cmd := exec.New(
-			"wget", "-O", buildsPath,
+			"wget", "-O", buildsPath+".part",
 			fmt.Sprintf(
 				"https://marketplace.atlassian.com/download/apps/1211631/version/%v",
 				build,
@@ -369,6 +364,9 @@ func getAddon(version string) Addon {
 		)
 
 		err := cmd.Run()
+		if err == nil {
+			err = os.Rename(buildsPath+".part", buildsPath)
+		}
 		if err != nil {
 			log.Fatalf(
 				karma.Describe("build", build).Reason(err),
@@ -383,13 +381,17 @@ func getAddon(version string) Addon {
 		}
 	}
 
+	return getBuiltAddon(version)
+}
+
+func getBuiltAddon(version string) Addon {
 	targetPath := fmt.Sprintf("target/external-hooks-%s.jar", version)
-	_, err = os.Stat(targetPath)
+	_, err := os.Stat(targetPath)
 	if err != nil {
 		log.Fatalf(
 			err,
-			"find add-on version %s at path %q and %q",
-			version, buildsPath, targetPath,
+			"find add-on version %s at path %q",
+			version, targetPath,
 		)
 	}
 

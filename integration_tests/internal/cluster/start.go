@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -175,10 +177,10 @@ func (cluster *Cluster) EachNode(fn func(node *bitbucket.Node)) {
 	wg.Wait()
 }
 
-func (cluster *Cluster) EachContainer(fn func(container string)) {
+func (cluster *Cluster) eachContainer(nodes []*bitbucket.Node, fn func(container string)) {
 	wg := &sync.WaitGroup{}
 
-	for _, node := range cluster.Nodes {
+	for _, node := range nodes {
 		wg.Add(1)
 		go func(node *bitbucket.Node) {
 			defer wg.Done()
@@ -225,7 +227,12 @@ func (cluster *Cluster) WriteFile(
 	var mutex sync.Mutex
 	var errs []karma.Reason
 
-	cluster.EachContainer(func(container string) {
+	nodes := cluster.Nodes
+	if strings.HasPrefix(filepath.Clean(path), "shared/") {
+		nodes = nodes[:1]
+	}
+
+	cluster.eachContainer(nodes, func(container string) {
 		err := docker.WriteFile(
 			container,
 			bitbucket.BITBUCKET_DATA_DIR,
@@ -254,7 +261,7 @@ func (cluster *Cluster) ReadFile(
 	var errs []karma.Reason
 	var results []string
 
-	cluster.EachContainer(func(container string) {
+	cluster.eachContainer(cluster.Nodes, func(container string) {
 		result, err := docker.ReadFile(
 			container,
 			path,
@@ -438,14 +445,14 @@ func (cluster *Cluster) WaitLog(
 		cancel:  cancel,
 	}
 
-	cluster.EachNode(func(node *bitbucket.Node) {
+	for _, node := range cluster.Nodes {
 		waiter := node.WaitLog(ctx, kind, fn, duration)
 
 		clusterWaiter.waiters = append(
 			clusterWaiter.waiters,
 			waiter,
 		)
-	})
+	}
 
 	return clusterWaiter
 }

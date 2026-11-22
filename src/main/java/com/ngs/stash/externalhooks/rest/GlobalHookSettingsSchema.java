@@ -1,25 +1,23 @@
 package com.ngs.stash.externalhooks.rest;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@XmlRootElement
 public class GlobalHookSettingsSchema {
-  @XmlElement(name = "safe_path")
+  @JsonProperty("safe_path")
   public boolean safePath;
 
-  @XmlElement(name = "exe")
+  @JsonProperty("exe")
   public String exe;
 
-  @XmlElement(name = "params")
+  @JsonProperty("params")
   public String params;
 
-  @XmlElement(name = "async")
+  @JsonProperty("async")
   public boolean async;
 
-  @XmlElement(name = "enabled")
+  @JsonProperty("enabled")
   public boolean enabled;
 
-  @XmlElement(name = "filter_personal_repositories")
+  @JsonProperty("filter_personal_repositories")
   public int filterPersonalRepositories;
 }

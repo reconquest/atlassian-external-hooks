@@ -5,10 +5,14 @@ import java.util.Set;
 
 import javax.annotation.concurrent.GuardedBy;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
 import com.atlassian.event.api.EventListener;
 import com.atlassian.event.api.EventPublisher;
 import com.atlassian.plugin.event.events.PluginEnabledEvent;
 import com.atlassian.plugin.event.events.PluginModuleEnabledEvent;
+import com.atlassian.plugin.spring.scanner.annotation.export.ExportAsService;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.lifecycle.LifecycleAware;
 
@@ -17,6 +21,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
+@Named
+@ExportAsService(LifecycleAware.class)
 public class ExternalHooksLauncher implements LifecycleAware, InitializingBean, DisposableBean {
   private static final Logger logger = LoggerFactory.getLogger(ExternalHooksLauncher.class);
 
@@ -26,9 +32,10 @@ public class ExternalHooksLauncher implements LifecycleAware, InitializingBean, 
   @GuardedBy("this")
   private final Set<LifecycleEvent> lifecycleEvents = EnumSet.noneOf(LifecycleEvent.class);
 
+  @Inject
   public ExternalHooksLauncher(
       @ComponentImport EventPublisher eventPublisher,
-      @ComponentImport ExternalHooksService snakeService) {
+      ExternalHooksService snakeService) {
     this.eventPublisher = eventPublisher;
 
     this.service = snakeService;

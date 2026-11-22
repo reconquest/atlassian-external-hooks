@@ -117,7 +117,7 @@ func waitLog(container string, name string, substring string) error {
 			case <-done:
 				log.Tracef(
 					nil,
-					"%s started at %s took: %s",
+					"%s startup took: %s",
 					name,
 					time.Since(startedAt),
 				)

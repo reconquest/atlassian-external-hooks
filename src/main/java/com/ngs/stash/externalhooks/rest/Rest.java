@@ -5,16 +5,19 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import com.atlassian.activeobjects.external.ActiveObjects;
 import com.atlassian.bitbucket.auth.AuthenticationContext;
@@ -66,9 +69,8 @@ import com.ngs.stash.externalhooks.util.Walker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.atlassian.util.concurrent.atomic.AtomicInteger;
-
 @Path("/")
+@Named
 public class Rest implements JobRunner {
   private static final Logger log = LoggerFactory.getLogger(Rest.class);
 
@@ -84,10 +86,11 @@ public class Rest implements JobRunner {
   private HookInstaller hookInstaller;
   private HooksFactory hooksFactory;
 
+  @Inject
   public Rest(
       @ComponentImport AuthenticationContext authenticationContext,
-      @ComponentImport GlobalHookSettingsDao globalHookSettingsDao,
-      @ComponentImport HookInstaller hookInstaller,
+      GlobalHookSettingsDao globalHookSettingsDao,
+      HookInstaller hookInstaller,
       @ComponentImport UserService userService,
       @ComponentImport ActiveObjects ao,
       @ComponentImport RepositoryService repositoryService,

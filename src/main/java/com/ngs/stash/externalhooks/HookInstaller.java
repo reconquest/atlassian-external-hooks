@@ -6,6 +6,9 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
 import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;
 import com.atlassian.bitbucket.hook.repository.GetRepositoryHookSettingsRequest;
@@ -37,6 +40,7 @@ import com.ngs.stash.externalhooks.hook.ExternalHookScript;
 import com.ngs.stash.externalhooks.util.ScopeUtil;
 import com.ngs.stash.externalhooks.util.Walker;
 
+@Named
 public class HookInstaller {
   private RepositoryHookService repositoryHookService;
 
@@ -44,6 +48,7 @@ public class HookInstaller {
   private Walker walker;
   private SecurityService securityService;
 
+  @Inject
   public HookInstaller(
       @ComponentImport UserService userService,
       @ComponentImport ProjectService projectService,

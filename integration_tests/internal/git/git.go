@@ -64,7 +64,12 @@ func (git *Git) RevList(args ...string) ([]string, error) {
 }
 
 func (git *Git) command(command string, args ...string) *lexec.Execution {
-	args = append([]string{"-C", git.dir, command}, args...)
+	args = append([]string{
+		"-C", git.dir,
+		"-c", "user.name=External Hooks Tester",
+		"-c", "user.email=test@example.invalid",
+		command,
+	}, args...)
 
 	return exec.New("git", args...)
 }

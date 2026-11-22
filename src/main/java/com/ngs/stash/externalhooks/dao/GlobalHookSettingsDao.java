@@ -3,15 +3,21 @@ package com.ngs.stash.externalhooks.dao;
 import java.util.Arrays;
 import java.util.List;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
 import com.atlassian.activeobjects.external.ActiveObjects;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.ngs.stash.externalhooks.ao.GlobalHookSettings;
 
 import net.java.ao.Query;
 
+@Named
 public class GlobalHookSettingsDao {
   private ActiveObjects ao;
 
-  public GlobalHookSettingsDao(ActiveObjects ao) {
+  @Inject
+  public GlobalHookSettingsDao(@ComponentImport ActiveObjects ao) {
     this.ao = ao;
   }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,9 +18,19 @@ import (
 const DEFAULT_LOG_WAIT_TIMEOUT = time.Second * 10
 
 const (
-	BITBUCKET_IMAGE    = "atlassian/bitbucket-server:%s"
+	BITBUCKET_IMAGE    = "atlassian/bitbucket:%s"
 	BITBUCKET_DATA_DIR = "/var/atlassian/application-data/bitbucket"
 )
+
+func bitbucketImage(version string) string {
+	major, _, _ := strings.Cut(version, ".")
+	n, err := strconv.Atoi(major)
+	if err == nil && n < 9 {
+		return "atlassian/bitbucket-server:" + version
+	}
+
+	return fmt.Sprintf(BITBUCKET_IMAGE, version)
+}
 
 type StartExistingOpts struct {
 	Container string
@@ -135,7 +146,7 @@ func StartExisting(opts StartExistingOpts) (*Node, error) {
 		)
 	}
 
-	image := fmt.Sprintf(BITBUCKET_IMAGE, opts.Version)
+	image := bitbucketImage(opts.Version)
 
 	if image != inspect.Config.Image {
 		return nil, karma.

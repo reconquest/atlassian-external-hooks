@@ -3,15 +3,14 @@ package com.ngs.stash.externalhooks.rest;
 import java.util.Collection;
 import java.util.Map;
 
-import javax.xml.bind.annotation.XmlElement;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ngs.stash.externalhooks.SimpleSettingsValidationErrors;
 
 public class FormValidationErrors {
-  @XmlElement(name = "errors_form")
+  @JsonProperty("errors_form")
   public Collection<String> form;
 
-  @XmlElement(name = "errors_fields")
+  @JsonProperty("errors_fields")
   public Map<String, Collection<String>> fields;
 
   public FormValidationErrors(SimpleSettingsValidationErrors errors) {

@@ -1,5 +1,8 @@
 package com.ngs.stash.externalhooks;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
 import com.atlassian.bitbucket.hook.repository.RepositoryHook;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookSearchRequest;
 import com.atlassian.bitbucket.hook.repository.RepositoryHookService;
@@ -18,14 +21,16 @@ import com.ngs.stash.externalhooks.util.ScopeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Named
 public class HooksFactory {
   private static Logger log = LoggerFactory.getLogger(HooksFactory.class);
   private RepositoryHookService repositoryHookService;
   private HookInstaller hookInstaller;
 
+  @Inject
   public HooksFactory(
       @ComponentImport RepositoryHookService repositoryHookService,
-      @ComponentImport HookInstaller hookInstaller) {
+      HookInstaller hookInstaller) {
     this.repositoryHookService = repositoryHookService;
     this.hookInstaller = hookInstaller;
   }

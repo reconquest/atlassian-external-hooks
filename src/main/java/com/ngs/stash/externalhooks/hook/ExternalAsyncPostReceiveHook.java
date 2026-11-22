@@ -9,7 +9,6 @@ import com.atlassian.bitbucket.scope.Scope;
 import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsValidationErrors;
 import com.atlassian.bitbucket.setting.SettingsValidator;
-import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.ngs.stash.externalhooks.Const;
 import com.ngs.stash.externalhooks.HookInstaller;
 
@@ -17,7 +16,7 @@ public class ExternalAsyncPostReceiveHook
     implements PostRepositoryHook<RepositoryHookRequest>, SettingsValidator {
   private HookInstaller hookInstaller;
 
-  public ExternalAsyncPostReceiveHook(@ComponentImport HookInstaller hookInstaller) {
+  public ExternalAsyncPostReceiveHook(HookInstaller hookInstaller) {
     this.hookInstaller = hookInstaller;
   }
 

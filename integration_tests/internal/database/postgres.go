@@ -44,7 +44,7 @@ func (postgres *Postgres) start() error {
 		"-e", "POSTGRES_DB=bitbucket",
 		"-e", "POSTGRES_USER=bitbucket",
 		"-e", "POSTGRES_PASSWORD=bitbucket",
-		"postgres:latest",
+		"postgres:16",
 	)
 	err := execution.Run()
 	if err != nil {

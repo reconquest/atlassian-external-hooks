@@ -113,6 +113,7 @@ func (node *Node) create() error {
 		"docker", "container", "create",
 		"--network", node.Network,
 		"--name", node.container,
+		"-e", "JVM_SUPPORT_RECOMMENDED_ARGS=-XX:-UseContainerSupport",
 		"-v", fmt.Sprintf("%s:%s", node.volumes.data, MESH_DATA_DIR),
 		MESH_IMAGE+":"+MESH_VERSION,
 	)
@@ -220,7 +221,7 @@ func (node *Node) wait() error {
 }
 
 func (node *Node) inspect() error {
-	stdout, _, err := exec.New(
+	stdout, stderr, err := exec.New(
 		"docker",
 		"inspect",
 		"--type", "container",
@@ -228,7 +229,7 @@ func (node *Node) inspect() error {
 		node.container,
 	).NoStdLog().Output()
 	if err != nil {
-		if strings.Contains(err.Error(), "Error: No such container:") {
+		if strings.HasSuffix(strings.TrimSpace(string(stderr)), "No such container: "+node.container) {
 			return errContainerNotFound
 		}
 

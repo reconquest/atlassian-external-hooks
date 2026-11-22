@@ -4,20 +4,23 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
-import javax.inject.Inject;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.atlassian.bitbucket.hook.script.HookScript;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
+import com.atlassian.bitbucket.log.LoggingService;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageRequestImpl;
-import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.auth.LoginUriProvider;
 import com.atlassian.sal.api.user.UserKey;
@@ -26,25 +29,25 @@ import com.atlassian.templaterenderer.TemplateRenderer;
 import com.ngs.stash.externalhooks.Const;
 
 import org.json.simple.JSONObject;
-import org.slf4j.LoggerFactory;
 
-import ch.qos.logback.classic.Level;
-
-@Scanned
 @SuppressWarnings("serial") // suppress because the http servlet is not going to be serialized
+@Named
 public class Diagnostics extends HttpServlet {
   private UserManager userManager;
   private TemplateRenderer templateRenderer;
   private LoginUriProvider loginUriProvider;
   private HookScriptService hookScriptService;
+  private LoggingService loggingService;
 
   @Inject
   public Diagnostics(
       @ComponentImport HookScriptService hookScriptService,
+      @ComponentImport LoggingService loggingService,
       @ComponentImport LoginUriProvider loginUriProvider,
       @ComponentImport UserManager userManager,
       @ComponentImport TemplateRenderer templateRenderer) {
     this.hookScriptService = hookScriptService;
+    this.loggingService = loggingService;
     this.loginUriProvider = loginUriProvider;
     this.templateRenderer = templateRenderer;
     this.userManager = userManager;
@@ -77,12 +80,8 @@ public class Diagnostics extends HttpServlet {
 
     context.put("hook_scripts_total", this.getTotalHookScripts());
 
-    ch.qos.logback.classic.Logger logger =
-        (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Const.PACKAGE);
-
-    context.put(
-        "log_level",
-        logger.getLevel() == null ? Level.INFO.toString() : logger.getLevel().toString());
+    String level = loggingService.getLevel(Const.PACKAGE);
+    context.put("log_level", level == null ? "INFO" : level);
 
     templateRenderer.render("ui/diagnostics.vm", context, response.getWriter());
   }
@@ -154,12 +153,13 @@ public class Diagnostics extends HttpServlet {
       }
 
       if (request.getParameter("action").equals("change_log_level")) {
-        ch.qos.logback.classic.Logger levelSet =
-            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Const.PACKAGE);
-
-        String targetLevel = request.getParameter("log_level");
-        if (targetLevel != null) {
-          levelSet.setLevel(Level.toLevel(targetLevel, Level.INFO));
+        String level = request.getParameter("log_level");
+        if (level != null) {
+          level = level.toUpperCase(Locale.ROOT);
+          if (!Set.of("OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "ALL").contains(level)) {
+            level = "INFO";
+          }
+          loggingService.setLevel(Const.PACKAGE, level);
         }
       }
     }
