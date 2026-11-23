@@ -27,3 +27,12 @@ Supports the following hooks:
 Please [open an issue](https://github.com/reconquest/atlassian-external-hooks/issues/new) for support.
 
 You can always join our Slack community and drop us a line there: [slack.reconquest.io](https://slack.reconquest.io/)
+
+### Bitbucket 9 and 10 builds
+
+`task atlas:package` builds only the current Bitbucket 10 add-on in `target/`.
+For Bitbucket 9, the test harness downloads release 13.1.3 from Atlassian
+Marketplace and caches it in `builds/`.
+`./run_tests` exercises the clustered hook suites on 9.6.5, 10.0.0, 10.2.8 and 10.5.2.
+The test harness permits Basic authentication and unsigned local builds on its
+Bitbucket 10 containers only; these are not production configuration requirements.

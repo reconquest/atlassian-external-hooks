@@ -30,6 +30,7 @@ mesh.logging.logger.com.atlassian.bitbucket.mesh=DEBUG
 )
 
 var (
+	errImageMismatch     = errors.New("mesh container image mismatch")
 	errContainerNotFound = errors.New("container not found")
 )
 
@@ -78,6 +79,13 @@ func Start(opts StartOpts) (*Node, error) {
 	mesh.volumes.shared = filepath.Join(mesh.Volumes, opts.ID+"-bitbucket-shared")
 
 	err := mesh.inspect()
+	if err == errImageMismatch {
+		// Only replace the container; create reuses the replica's bind mounts.
+		if err := mesh.RemoveContainer(); err != nil {
+			return nil, err
+		}
+		err = errContainerNotFound
+	}
 	switch {
 	case err == errContainerNotFound:
 		err := mesh.create(opts.Version)
@@ -319,6 +327,9 @@ func (node *Node) inspect() error {
 		)
 	}
 
+	if inspect.Config.Image != MESH_IMAGE+":"+node.Version {
+		return errImageMismatch
+	}
 	ips := []string{}
 	for _, network := range inspect.NetworkSettings.Networks {
 		if network.IPAddress != "" {
@@ -326,6 +337,9 @@ func (node *Node) inspect() error {
 		}
 	}
 
+	if len(ips) == 0 {
+		return fmt.Errorf("mesh container %s has no IP address", node.container)
+	}
 	node.ip = ips[0]
 
 	return nil

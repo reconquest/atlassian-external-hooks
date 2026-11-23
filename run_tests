@@ -46,7 +46,7 @@ go build -o external-hooks-test -v ./
 
 cd $basedir
 
-if [[ ! -d target ]]; then
+if [[ ! -f target/$(pom-name).jar ]]; then
     task atlas:package
 fi
 

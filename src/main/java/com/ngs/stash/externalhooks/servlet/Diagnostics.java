@@ -6,11 +6,11 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.inject.Inject;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.inject.Inject;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.atlassian.bitbucket.hook.script.HookScript;
 import com.atlassian.bitbucket.hook.script.HookScriptService;
@@ -53,7 +53,7 @@ public class Diagnostics extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    UserKey user = userManager.getRemoteUserKey(request);
+    UserKey user = userManager.getRemoteUserKey();
     if (user == null || !userManager.isSystemAdmin(user)) {
       redirectToLogin(request, response);
       return;
@@ -140,7 +140,7 @@ public class Diagnostics extends HttpServlet {
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    UserKey user = userManager.getRemoteUserKey(request);
+    UserKey user = userManager.getRemoteUserKey();
     if (user == null || !userManager.isSystemAdmin(user)) {
       redirectToLogin(request, response);
       return;

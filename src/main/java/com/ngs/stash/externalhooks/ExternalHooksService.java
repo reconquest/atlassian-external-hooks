@@ -3,7 +3,7 @@ package com.ngs.stash.externalhooks;
 import java.io.IOException;
 import java.util.Date;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import com.atlassian.bitbucket.auth.AuthenticationContext;
 import com.atlassian.bitbucket.cluster.ClusterService;

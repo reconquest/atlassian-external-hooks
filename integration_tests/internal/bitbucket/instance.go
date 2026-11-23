@@ -630,6 +630,11 @@ func (instance *Instance) create() error {
 		"exec /entrypoint.py", // exec is required to propagate INT signal from docker kill
 	}
 
+	// Keep password-based API clients working in disposable Bitbucket 10 test nodes.
+	if instance.version.Major() >= 10 {
+		initScript = append([]string{`export JVM_SUPPORT_RECOMMENDED_ARGS="-Dcom.atlassian.plugins.authentication.basic.auth.filter.force.allow=true -Datlassian.upm.signature.check.disabled=true"`}, initScript...)
+	}
+
 	image := getImageRepo(instance.version)
 
 	execution := exec.New(

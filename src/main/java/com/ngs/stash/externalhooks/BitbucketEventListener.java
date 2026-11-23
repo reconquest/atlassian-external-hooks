@@ -19,9 +19,9 @@ import com.ngs.stash.externalhooks.util.ScopeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import jakarta.inject.Inject;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 public class BitbucketEventListener {
   private static Logger log = LoggerFactory.getLogger(BitbucketEventListener.class);

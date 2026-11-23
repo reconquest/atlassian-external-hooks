@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/cluster"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/database"
@@ -96,12 +95,12 @@ func (runner *Runner) connect(network string, container string) {
 
 func (runner *Runner) upgrade(id string, version bitbucket.Version) {
 	var (
-		running   = semver.New(runner.run.bitbucket.Version())
-		requested = semver.New(version.App)
+		running   = runner.run.bitbucket.Version()
+		requested = version.App
 	)
 
-	if !running.Equal(*requested) {
-		if running.Compare(*requested) == -1 {
+	if order := bitbucket.CompareVersions(running, requested); order != 0 {
+		if order < 0 {
 			log.Infof(
 				nil,
 				"{bitbucket} upgrading: %s -> %s",

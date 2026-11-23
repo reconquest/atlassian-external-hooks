@@ -292,23 +292,31 @@ func main() {
 	// )
 
 	// Cluster upgrade tests are currently broken because of instability in BB startup process.
-	run.Suite(
-		suite.WithParams(
-			TestParams{
-				Bitbucket: bitbucket.Version{
-					App:  "9.6.5",
-					Mesh: "3.6.6",
+	for _, version := range []bitbucket.Version{
+		{App: "9.6.5", Mesh: "3.6.6"},
+		{App: "10.0.0", Mesh: "4.0.0"},
+		{App: "10.2.8", Mesh: "4.2.5"},
+		{App: "10.5.2", Mesh: "4.6.1"},
+	} {
+		addon := latestAddon
+		if version.Major() == 9 {
+			addon = getAddon("13.1.3")
+		}
+		run.Suite(
+			suite.WithParams(
+				TestParams{
+					Bitbucket: version,
+					Cluster:   true,
+					Addon:     addon,
 				},
-				Cluster: true,
-				Addon:   latestAddon,
-			},
-			suite.TestGlobalHooks,
-			suite.TestGlobalHooks_PersonalRepositoriesFilter,
-			suite.TestProjectHooks,
-			suite.TestRepositoryHooks,
-			suite.TestPersonalRepositoriesHooks,
-		),
-	)
+				suite.TestGlobalHooks,
+				suite.TestGlobalHooks_PersonalRepositoriesFilter,
+				suite.TestProjectHooks,
+				suite.TestRepositoryHooks,
+				suite.TestPersonalRepositoriesHooks,
+			),
+		)
+	}
 
 	run.Run(runner.RunOpts{
 		Workdir:   workdir,
@@ -358,6 +366,7 @@ func main() {
 }
 
 var builds = map[string]string{
+	"13.1.3": "6852",
 	"13.1.2": "6842",
 	"12.0.1": "6702",
 	"11.1.0": "6642",

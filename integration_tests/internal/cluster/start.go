@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/bitbucket/mesh"
 	"github.com/reconquest/atlassian-external-hooks/integration_tests/internal/docker"
@@ -40,6 +39,9 @@ func StartNew(opts StartOpts) (*Cluster, error) {
 	opts.RunOpts.Properties = bitbucket.NewProperties().
 		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
 		WithHazelcast()
+	if opts.RunOpts.Version.Major() >= 10 {
+		opts.RunOpts.Properties["setup.baseUrl"] = fmt.Sprintf("http://%s-bitbucket-0:7990", opts.ID)
+	}
 
 	nodes, err := clusterize(
 		func(replica int) (*bitbucket.Node, error) {
@@ -57,7 +59,9 @@ func StartNew(opts StartOpts) (*Cluster, error) {
 
 	cluster := &Cluster{Nodes: nodes, Node: nodes[0]}
 	if !opts.NoMesh {
-		cluster.StartMesh(opts)
+		if err := cluster.StartMesh(opts); err != nil {
+			return nil, err
+		}
 	}
 
 	return cluster, nil
@@ -67,6 +71,9 @@ func StartExisting(cluster *Cluster, opts StartOpts) (*Cluster, error) {
 	opts.RunOpts.Properties = bitbucket.NewProperties().
 		WithLicense(bitbucket.LICENSE_DATACENTER_3H).
 		WithHazelcast()
+	if opts.RunOpts.Version.Major() >= 10 {
+		opts.RunOpts.Properties["setup.baseUrl"] = fmt.Sprintf("http://%s-bitbucket-0:7990", opts.ID)
+	}
 
 	// Restart (upgrade) mesh first to avoid connection exceptions.
 	err := cluster.StartMesh(opts)
@@ -88,19 +95,19 @@ func StartExisting(cluster *Cluster, opts StartOpts) (*Cluster, error) {
 		return nil, err
 	}
 
-	cluster = &Cluster{Nodes: nodes, Node: nodes[0]}
+	cluster.Nodes, cluster.Node = nodes, nodes[0]
 
 	return cluster, nil
 }
 
 func (cluster *Cluster) Upgrade(version bitbucket.Version) error {
 	var (
-		running   = semver.New(cluster.Version())
-		requested = semver.New(version.App)
+		running   = cluster.Version()
+		requested = version.App
 	)
 
-	if !running.Equal(*requested) {
-		if running.Compare(*requested) == -1 {
+	if order := bitbucket.CompareVersions(running, requested); order != 0 {
+		if order < 0 {
 			log.Infof(
 				nil,
 				"{bitbucket} upgrading cluster: %s -> %s",
@@ -158,6 +165,7 @@ func (cluster *Cluster) Upgrade(version bitbucket.Version) error {
 				return err
 			}
 
+			started.MeshNodes = cluster.MeshNodes
 			*cluster = *started
 		} else {
 			return fmt.Errorf(
@@ -178,7 +186,6 @@ func clusterize[T any](
 	mutex := sync.Mutex{}
 
 	pipeErr := make(chan error, CLUSTER_SIZE)
-	done := make(chan struct{})
 
 	starters := sync.WaitGroup{}
 	for replica := 0; replica < CLUSTER_SIZE; replica++ {
@@ -201,17 +208,10 @@ func clusterize[T any](
 		}(replica)
 	}
 
-	go func() {
-		starters.Wait()
-		close(done)
-	}()
-
-	select {
-	case err := <-pipeErr:
+	starters.Wait()
+	close(pipeErr)
+	for err := range pipeErr {
 		return nil, err
-	case <-done:
-		// assign the first node, so the entire clsuter behaves like
-		// bitbucket.Node
 	}
 
 	return cluster, nil
