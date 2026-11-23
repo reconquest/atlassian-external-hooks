@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +44,23 @@ type Version struct {
 	App  string
 	Mesh string
 }
+
+func versionParts(app string) []int {
+	parts := strings.Split(app, ".")
+	numbers := make([]int, len(parts))
+	for i, part := range parts {
+		n, err := strconv.Atoi(part)
+		if err != nil || n < 0 {
+			panic(fmt.Sprintf("invalid Bitbucket version %q", app))
+		}
+		numbers[i] = n
+	}
+	return numbers
+}
+
+func (v Version) Major() int { return versionParts(v.App)[0] }
+
+func CompareVersions(a, b string) int { return slices.Compare(versionParts(a), versionParts(b)) }
 
 type RunOpts struct {
 	Version Version
@@ -306,10 +325,8 @@ func waitAndWatch(instance *Instance) error {
 }
 
 func getImageRepo(version Version) string {
-	switch version.App[0] {
-	case '9':
+	if version.Major() >= 9 {
 		return fmt.Sprintf(BITBUCKET_DC_IMAGE, version.App)
-	default:
-		return fmt.Sprintf(BITBUCKET_SERVER_IMAGE, version.App)
 	}
+	return fmt.Sprintf(BITBUCKET_SERVER_IMAGE, version.App)
 }
